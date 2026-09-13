@@ -1,1 +1,84 @@
-# BE
+# YPC Backend — 청년정책 AI 코디네이터
+
+> 청년정책을 추천하는 서비스가 아니라, **실제 공고문과 사용자 상황을 대조해 자격을 판정하고, 부적격 이유와 향후 가능 시점을 설명하며, 최적 조합과 신청 일정까지 제시하는** 서비스의 백엔드.
+
+**역할 범위**: B(룰 엔진) · D(조합 솔버) · E(일정 역산) + DB · 배치 · 인프라
+(프롬프트 설계는 AI 역할, 화면은 FE 역할 — 경계는 `docs/ARCHITECTURE.md` §4 참조)
+
+---
+
+## 문서
+
+| 문서 | 내용 |
+| --- | --- |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 전체 아키텍처 · ADR 6건 · 무료 티어 실사 · 성능 예산(실측) |
+| [`docs/DB_SCHEMA.md`](docs/DB_SCHEMA.md) | 테이블 14종 설계 · 인덱스 전략 · 스토리지 예산 |
+
+---
+
+## 한 장 요약
+
+**스냅샷 인메모리 아키텍처** — 배치가 만든 컴파일 정책 스냅샷을 API가 RAM에 통째로 올린다. 판정 요청은 DB를 한 번도 건드리지 않는다.
+
+```
+GitHub Actions (Nightly 02:00 KST, 무료)
+  수집 → 크롤링 → LLM 구조화 → Neon Postgres → snapshot.msgpack.zst (~2MB)
+                                                        │
+                                                        ▼ 부팅 시 1회 로드
+FastAPI 단일 컨테이너 (Render Free / Oracle Always Free)
+  RAM 스냅샷 → 룰 엔진(numpy 벡터화) → 역질문 / 설명 / MWIS 솔버 / 일정 역산
+```
+
+### 실측 성능 (PostgreSQL 16.13 + Python 3.11 / numpy 2.4)
+
+| 항목 | 측정값 | PRD 요구 |
+| --- | --- | --- |
+| 룰 평가 (3,000 정책) | **0.068 ms** | — |
+| 판정 API 1건 (예산 합계) | **~43 ms** | p95 ≤ 5,000 ms |
+| MWIS 솔버 (정점 30) | **2.1 ms** | p95 ≤ 2,000 ms |
+| MWIS 정확성 (정점 ≤12, 20건) | **20/20 완전탐색 일치** | 100% |
+| DB 물리 크기 (3,000 정책) | **1.5 MB** | Neon Free 500 MB |
+
+### 무료 인프라 구성
+
+| 레이어 | 선택 | 근거 |
+| --- | --- | --- |
+| DB | **Neon Postgres Free** (0.5GB, 100 CU-h/월) | 판정이 DB를 안 쓰므로 scale-to-zero가 무해 |
+| API | **Render Free** (1차) → Oracle Always Free (부하 시) | Docker 단일 이미지 = 이전 30분 |
+| 배치 | **GitHub Actions cron** | API 프로세스와 분리, 시크릿·로그·재실행 무료 |
+| 스토리지 | **Cloudflare R2** (10GB) | 스냅샷 · 원문 아카이브 |
+
+---
+
+## 시작하기
+
+```bash
+# 1. DB 스키마 적용
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/0001_init.sql
+
+# 2. 제약조건 검증 ([MUST FAIL] 표기 항목은 에러가 나야 정상)
+psql "$DATABASE_URL" -f db/verify_schema.sql
+
+# 3. 엔진 성능 벤치마크
+pip install numpy && python bench/engine_bench.py
+```
+
+## 디렉터리
+
+```
+app/        실시간 API (engine / solver / planner / llm / api)
+batch/      야간 배치 (collect / crawl / parse / agents / build_snapshot)
+db/         마이그레이션 + 스키마 검증
+bench/      성능 벤치마크
+docs/       아키텍처 · DB 설계
+tests/      unit / golden(정확도 하네스) / e2e
+```
+
+## 진행 상태
+
+- [x] 아키텍처 설계 + ADR 6건
+- [x] DB 스키마 설계 · `0001_init.sql` (PostgreSQL 16 검증 완료)
+- [x] 성능 가설 프로토타입 검증 (룰 엔진 / MWIS 솔버)
+- [ ] `app/schemas/` — PolicySchema 확정 (계약면 C1, G1 10/02 Freeze)
+- [ ] `batch/collect/` — 온통청년 OPEN API 수집기 (BE-M0-1)
+- [ ] `app/engine/` — 룰 엔진 코어 (BE-M2-3)
