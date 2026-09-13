@@ -295,3 +295,125 @@ def test_조합_응답도_공용_캐시에_남지_않는다(client):
 
 def test_조합도_잘못된_입력은_422(client):
     assert client.post("/v1/combinations", json={"core": {"birth_date": "몰라"}}).status_code == 422
+
+
+# --- 신청 계획 (S7) ---------------------------------------------------------
+
+PLAN_POLICIES = [
+    {
+        "policy_id": "WITH-DEADLINE",
+        "status": "published",
+        "meta": {"title": "마감 있는 정책", "category": "housing", "authority_level": "central",
+                 "region_code": ["00"], "dept": {"name": "국토교통부", "tel": "1599-0000"}},
+        "source": {"origin_url": "https://example.kr/deadline"},
+        "period": {"apply_end": "2026-10-30"},
+        "eligibility": [
+            {"rule_id": "AGE", "field": "age", "op": "between", "value": [19, 34],
+             "source_quote": "만 19~34세"},
+        ],
+        "documents": [
+            {"name": "주민등록등본", "doc_code": "RESIDENT_REG",
+             "lead_time_business_days": 0, "cost_krw": 400},
+            {"name": "소득금액증명", "doc_code": "INCOME_CERT",
+             "lead_time_business_days": 3, "cost_krw": 0},
+        ],
+    },
+    {
+        "policy_id": "ROLLING",
+        "status": "published",
+        "meta": {"title": "상시 모집 정책", "category": "job", "authority_level": "central",
+                 "region_code": ["00"], "dept": {"name": "고용노동부", "tel": "1350"}},
+        "source": {"origin_url": "https://example.kr/rolling"},
+        "period": {"is_rolling": True},
+        "eligibility": [
+            {"rule_id": "AGE", "field": "age", "op": "between", "value": [19, 34],
+             "source_quote": "만 19~34세"},
+        ],
+        "documents": [
+            {"name": "주민등록등본", "doc_code": "RESIDENT_REG",
+             "lead_time_business_days": 0, "cost_krw": 400},
+        ],
+    },
+]
+
+
+@pytest.fixture
+def plan_client(monkeypatch):
+    monkeypatch.setenv("YPC_FIXED_TODAY", "2026-09-14")  # 월요일
+    load_from_json(global_holder, json.dumps(PLAN_POLICIES).encode(), version="plan-v1")
+
+    from app.main import app
+
+    with TestClient(app) as c:
+        yield c
+
+
+def test_계획은_착수일과_서류를_준다(plan_client):
+    d = plan_client.post("/v1/plan", json=BODY).json()
+    assert d["snapshot_version"] == "plan-v1"
+    assert d["generated_for_date"] == "2026-09-14"
+    assert d["summary"]["total"] == 2
+
+    item = next(p for p in d["plans"] if p["policy_id"] == "WITH-DEADLINE")
+    assert item["status"] == "ON_TRACK"
+    # 마감 10/30(금), 준비 4영업일(서류 max 3 + 버퍼 1) → 10/26(월)
+    assert item["recommended_start_date"] == "2026-10-26"
+    assert item["preparation_business_days"] == 4
+
+
+def test_상시모집은_착수일을_만들지_않는다(plan_client):
+    d = plan_client.post("/v1/plan", json=BODY).json()
+    item = next(p for p in d["plans"] if p["policy_id"] == "ROLLING")
+    assert item["status"] == "ROLLING"
+    assert item["recommended_start_date"] is None
+
+
+def test_같은_서류는_한_번만_떼게_묶인다(plan_client):
+    """두 정책이 등본을 요구해도 사용자는 한 번만 간다."""
+    d = plan_client.post("/v1/plan", json=BODY).json()
+    tasks = [t for t in d["documents"] if t["doc_code"] == "RESIDENT_REG"]
+    assert len(tasks) == 1
+    assert sorted(tasks[0]["required_by"]) == ["ROLLING", "WITH-DEADLINE"]
+    assert d["total_document_cost_krw"] == 400
+
+
+def test_특정_정책만_계획할_수_있다(plan_client):
+    r = plan_client.post("/v1/plan", json=BODY, headers={"X-Policy-Ids": "ROLLING"})
+    assert [p["policy_id"] for p in r.json()["plans"]] == ["ROLLING"]
+
+
+def test_계획_응답도_공용_캐시에_남지_않는다(plan_client):
+    r = plan_client.post("/v1/plan", json=BODY)
+    assert "no-store" in r.headers["cache-control"]
+    assert r.headers["x-snapshot-version"] == "plan-v1"
+
+
+def test_계획도_잘못된_입력은_422(plan_client):
+    assert plan_client.post("/v1/plan", json={"core": {"birth_date": "몰라"}}).status_code == 422
+
+
+def test_ics_를_내려받을_수_있다(plan_client):
+    r = plan_client.post("/v1/plan.ics", json=BODY)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/calendar")
+    assert "attachment" in r.headers["content-disposition"]
+    text = r.content.decode("utf-8")
+    assert text.startswith("BEGIN:VCALENDAR")
+    assert "DTSTART;VALUE=DATE:20261026" in text  # 착수일
+    assert "DTSTART;VALUE=DATE:20261030" in text  # 마감일
+
+
+def test_ics_모든_줄이_75옥텟_이하(plan_client):
+    """한글 제목은 UTF-8 에서 글자당 3바이트라 접지 않으면 캘린더가 줄을 버린다."""
+    text = plan_client.post("/v1/plan.ics", json=BODY).content.decode("utf-8")
+    for line in text.split("\r\n"):
+        assert len(line.encode("utf-8")) <= 75
+
+
+def test_스냅샷이_없으면_계획도_503(monkeypatch):
+    monkeypatch.setattr("app.engine.snapshot.holder", SnapshotHolder())
+    from app.main import app
+
+    with TestClient(app) as c:
+        assert c.post("/v1/plan", json=BODY).status_code == 503
+        assert c.post("/v1/plan.ics", json=BODY).status_code == 503

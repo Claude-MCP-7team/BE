@@ -24,7 +24,18 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from app.engine.compile import compile_snapshot  # noqa: E402
 from app.engine.evaluate import explain, judge_all  # noqa: E402
-from app.schemas.policy import Dept, Meta, PolicySchema, Rule, Source  # noqa: E402
+from app.planner.backplan import build_plan  # noqa: E402
+from app.planner.businessday import bundled_calendar  # noqa: E402
+from app.schemas.policy import (  # noqa: E402
+    Benefit,
+    Dept,
+    Document,
+    Meta,
+    Period,
+    PolicySchema,
+    Rule,
+    Source,
+)
 from app.schemas.user import Core, UserProfile  # noqa: E402
 
 SCALES = (600, 3000)  # 1차 범위 / 전국 확장 시나리오
@@ -208,6 +219,64 @@ def bench_solver() -> None:
     print(f"[ADR-003] MWIS 정점 64개(최악) 정확해 : {(time.perf_counter() - start) * 1000:.1f} ms")
 
 
+def bench_planner() -> None:
+    """일정 역산 (BE-M5). 목표 p95 는 50ms (docs/ARCHITECTURE.md §5).
+
+    달력 산술을 하루씩 훑는 구현으로 두면 3,000건에서 300ms 가 나온다.
+    영업일 색인이 살아 있는지 이 벤치가 지킨다.
+    """
+    rnd = random.Random(11)
+    profile = _sample_profile()
+    today = date(2026, 9, 14)
+    cal = bundled_calendar()
+
+    # 달력 자체의 산술 비용 (색인이 깨지면 여기가 먼저 터진다)
+    t = time.perf_counter()
+    for _ in range(10_000):
+        cal.subtract_business_days(date(2026, 10, 30), 4)
+    calendar_us = (time.perf_counter() - t) / 10_000 * 1_000_000
+    print(f"[BE-M5] 영업일 역산 1회 : {calendar_us:6.2f} us")
+    if calendar_us > 50:
+        raise SystemExit(f"영업일 산술이 {calendar_us:.0f}us — 색인 경로가 깨졌습니다")
+
+    for n in SCALES:
+        policies = _sample_policies(n, rnd)
+        for policy in policies:
+            policy.period = Period(
+                apply_end=rnd.choice(["2026-10-30", "2026-12-01", "2026-09-18", None]),
+                is_rolling=rnd.random() < 0.2,
+            )
+            policy.benefit = Benefit(type="cash_lump", amount_krw=10**6, estimated_total_krw=10**6)
+            policy.documents = [
+                Document(
+                    name=f"서류{j}",
+                    doc_code=f"DOC{j % 20:02d}",
+                    lead_time_business_days=rnd.choice([0, 1, 3, None]),
+                    cost_krw=rnd.choice([0, 400, 1000]),
+                )
+                for j in range(rnd.randint(0, 4))
+            ]
+
+        snapshot = compile_snapshot(policies, version="bench")
+        verdicts = judge_all(snapshot, profile, today)
+
+        build_plan(snapshot, verdicts, today)  # 워밍업
+        t = time.perf_counter()
+        for _ in range(10):
+            plan = build_plan(snapshot, verdicts, today)
+        plan_ms = (time.perf_counter() - t) / 10 * 1000
+
+        print(
+            f"[BE-M5] 정책 {n:5d}건 (적격 {plan.summary.total:4d}) : "
+            f"계획 {plan_ms:6.2f} ms  | 서류 {len(plan.documents):2d}종 "
+            f"급함 {plan.summary.urgent} 불가 {plan.summary.infeasible} "
+            f"마감미상 {plan.summary.unknown_deadline}"
+        )
+        if plan_ms > 50:
+            raise SystemExit(f"계획 생성이 {plan_ms:.1f}ms — 목표 p95(50ms)를 넘었습니다")
+
+
 if __name__ == "__main__":
     bench_rules()
     bench_solver()
+    bench_planner()

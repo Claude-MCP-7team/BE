@@ -21,10 +21,14 @@ import msgspec
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 
 from app.engine import snapshot as snapshot_store
+from app.engine.compile import Snapshot
 from app.engine.evaluate import explain, judge_all
 from app.engine.questions import build_queue
 from app.engine.snapshot import SnapshotNotReady
+from app.planner.backplan import build_plan
+from app.planner.ics import to_ics
 from app.schemas.judgement import DISCLAIMER, JudgementResponse
+from app.schemas.plan import PlanResponse
 from app.schemas.user import UserProfile
 from app.solver.combine import recommend
 
@@ -200,4 +204,64 @@ async def combinations(request: Request) -> Response:
         content=msgspec.json.encode(payload),
         media_type="application/json",
         headers={"Cache-Control": "private, no-store", "X-Snapshot-Version": snapshot.version},
+    )
+
+
+async def _plan_from_request(request: Request) -> tuple[Snapshot, PlanResponse]:
+    """요청 본문 → (스냅샷, 계획). /plan 과 /plan.ics 가 공유한다.
+
+    본문은 UserProfile 이며, 선택적으로 `X-Policy-Ids` 헤더에 쉼표로 구분된
+    정책 목록을 주면 그 정책들만 계획한다 (S6 에서 고른 조합의 일정만 보는 경로).
+    """
+    try:
+        snapshot = snapshot_store.holder.get()
+    except SnapshotNotReady as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    body = await request.body()
+    try:
+        profile = msgspec.json.decode(body, type=UserProfile)
+    except msgspec.ValidationError as e:
+        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+
+    raw_ids = request.headers.get("X-Policy-Ids")
+    policy_ids = [s.strip() for s in raw_ids.split(",") if s.strip()] if raw_ids else None
+
+    today = today_kst()
+    verdicts = judge_all(snapshot, profile, today)
+    plan = build_plan(snapshot, verdicts, today, policy_ids=policy_ids)
+    return snapshot, plan
+
+
+@router.post("/plan")
+async def plan(request: Request) -> Response:
+    """적격 정책의 신청 일정 — 서류·권장 착수일 (US-05, S7).
+
+    판정과 마찬가지로 GET 이 아니라 POST 다. 조건이 본문으로 들어오기 때문이다.
+    세션 저장(BE-M1-2)이 들어오면 `GET /v1/plan/{session_id}` 가 이 위에 얹힌다.
+    """
+    snapshot, payload = await _plan_from_request(request)
+
+    return Response(
+        content=msgspec.json.encode(payload),
+        media_type="application/json",
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Snapshot-Version": snapshot.version,
+        },
+    )
+
+
+@router.post("/plan.ics")
+async def plan_ics(request: Request) -> Response:
+    """같은 계획을 캘린더로. 사용자가 앱을 다시 열지 않아도 마감을 기억하게 한다."""
+    _, payload = await _plan_from_request(request)
+
+    return Response(
+        content=to_ics(payload),
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="ypc-plan.ics"',
+            "Cache-Control": "private, no-store",
+        },
     )

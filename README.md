@@ -38,7 +38,10 @@ FastAPI 단일 컨테이너 (Render Free / Oracle Always Free)
 | 판정 API 1건 (예산 합계) | **~57 ms** | p95 ≤ 5,000 ms |
 | 벡터화 ↔ 기준 구현 대조 | **7,200건 전부 일치** | — |
 | 중복 질문 | **0건** (필드당 1질문) | G3: 0건 |
-| 테스트 | **160건** | — |
+| 신청 계획 (3,000 정책 / 715 적격) | **10.1 ms** | p95 ≤ 50 ms |
+| 영업일 역산 1회 | **1.5 µs** | — |
+| 2026 공휴일 (대체공휴일 포함 21일) | **전수 일치** | G5: 100% |
+| 테스트 | **254건** | — |
 | MWIS 정확성 (정점 3~13, 200건 상위3개) | **200/200 완전탐색 일치** | G4: 100% |
 | DB 물리 크기 (3,000 정책) | **1.5 MB** | Neon Free 500 MB |
 
@@ -71,6 +74,8 @@ SNAPSHOT_PATH=snapshot.json uvicorn app.main:app --reload
 #   POST /v1/judge?include=all   부적격 근거까지
 #   POST /v1/questions           역질문 큐 (필드당 1질문 · 상한 10)
 #   POST /v1/combinations        조합 추천 (보수/최대 2안 × 상위 3개)
+#   POST /v1/plan                신청 계획 (권장 착수일 · 서류 기준 할 일)
+#   POST /v1/plan.ics            같은 계획을 캘린더(.ics)로
 #   GET  /v1/policies/{id}       정책 상세 (공고 원문)
 #   GET  /v1/meta/snapshot       스냅샷 버전·건수
 #   GET  /healthz  /readyz       프로세스 생존 / 서비스 가능
@@ -109,7 +114,8 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `app/api/` — 판정 API · 스냅샷 로더 · 헬스체크 (BE-M2-7)
 - [x] `app/engine/questions.py` — 역질문 큐 병합·정렬·상한 (BE-M3-1~5)
 - [x] `app/solver/` — 상충 그래프 · MWIS 정확해 · 보수/최대 2안 (BE-M4-1~7)
-- [ ] `app/planner/` — 서류 마스터 · 영업일 · 권장 착수일 (BE-M5)
+- [x] `app/planner/` — 영업일 달력 · 권장 착수일 역산 · ICS 내보내기 (BE-M5-2~4)
+- [ ] `document` 서류 마스터 30~50종 수작업 입력 (BE-M5-1)
 - [ ] `app/db/` — asyncpg 풀 + 리포지토리 · 세션 저장 (BE-M1-2)
 - [ ] `batch/` — 크롤러 · A1/A2 오케스트레이션 · 스냅샷 빌더 (BE-M1-4~7)
 
@@ -121,6 +127,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 | C2 `JudgementResult` | BE ↔ FE | 10/07 | `app/schemas/judgement.py` · `docs/contracts/judgement_result.json` |
 | — 역질문 큐 | BE ↔ FE | 10/07 | `app/schemas/question.py` |
 | — 조합 추천 | BE ↔ FE | 10/07 | `app/schemas/combination.py` |
+| — 신청 계획 | BE ↔ FE | 10/07 | `app/schemas/plan.py` |
 
 룰이 참조할 수 있는 사용자 필드 목록은 `docs/contracts/rule_fields.json` 에 있다.
 AI 역할이 이 목록에 없는 `field` 를 만들면 BE 밸리데이터가 `UNKNOWN_FIELD` 로 거부한다.
