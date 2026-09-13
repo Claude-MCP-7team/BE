@@ -79,6 +79,20 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] 아키텍처 설계 + ADR 6건
 - [x] DB 스키마 설계 · `0001_init.sql` (PostgreSQL 16 검증 완료)
 - [x] 성능 가설 프로토타입 검증 (룰 엔진 / MWIS 솔버)
-- [ ] `app/schemas/` — PolicySchema 확정 (계약면 C1, G1 10/02 Freeze)
+- [x] `app/schemas/` — PolicySchema / UserProfile / JudgementResult + 밸리데이터 (테스트 53건)
+- [x] `docs/contracts/` — JSON Schema 계약서 (AI 역할 자체검증용)
+- [x] CI — 린트(역할 경계) · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크
 - [ ] `batch/collect/` — 온통청년 OPEN API 수집기 (BE-M0-1)
+- [ ] `app/db/` — asyncpg 풀 + 리포지토리 (BE-M1-2)
 - [ ] `app/engine/` — 룰 엔진 코어 (BE-M2-3)
+- [ ] `0002_seed_document.sql` — 서류 마스터 30~50종 (BE-M5-1, 선행 권장)
+
+## 계약면
+
+| 계약 | 당사자 | 확정 | 위치 |
+| --- | --- | --- | --- |
+| C1 `PolicySchema` | AI ↔ BE | G1 (10/02 Freeze) | `app/schemas/policy.py` · `docs/contracts/policy_schema.json` |
+| C2 `JudgementResult` | BE ↔ FE | 10/07 | `app/schemas/judgement.py` · `docs/contracts/judgement_result.json` |
+
+룰이 참조할 수 있는 사용자 필드 목록은 `docs/contracts/rule_fields.json` 에 있다.
+AI 역할이 이 목록에 없는 `field` 를 만들면 BE 밸리데이터가 `UNKNOWN_FIELD` 로 거부한다.
