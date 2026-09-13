@@ -113,7 +113,11 @@ class UserProfile(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
         if field == "employment_months":
             return self.employment_months(on)
         if field == "region_code":
-            return self.core.region_code
+            # 원본 코드가 아니라 접두 체인을 돌려준다.
+            # 지역 조건은 '전국 / 시도 / 시군구' 계층이라, 원본만 비교하면
+            # 전국 대상 정책이 모든 사용자에게 부적격으로 나온다.
+            # 집합끼리의 교집합으로 바뀌므로 룰 평가기가 그대로 처리한다.
+            return self.region_chain()
         if field == "similar_program_participation_2y":
             v = self.history.similar_program_participation_2y
             return v if v is not None else self.answers.get(field)

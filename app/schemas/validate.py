@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import msgspec
 
-from app.schemas.enums import KNOWN_FIELDS, TIME_SATISFIABLE_FIELDS
+from app.schemas.enums import KNOWN_FIELDS, LIST_VALUED_FIELDS, TIME_SATISFIABLE_FIELDS
 from app.schemas.judgement import JudgementResult
 from app.schemas.policy import PolicySchema, Rule
 
@@ -149,6 +149,20 @@ def _validate_rule(rule: Rule, path: str) -> list[SchemaViolation]:
 
     # 3. op ↔ value 형태 일치
     out += _validate_op_value(rule, path)
+
+    # 3-2. 목록형 필드에 == / != 는 의미가 모호하다
+    if rule.field in LIST_VALUED_FIELDS and rule.op in ("==", "!="):
+        out.append(
+            SchemaViolation(
+                path=f"{path}.op",
+                code="AMBIGUOUS_LIST_COMPARISON",
+                message=(
+                    f"'{rule.field}' 는 사용자 값이 목록이므로 {rule.op} 의 의미가 "
+                    "'목록 전체가 같은가'인지 '목록이 품는가'인지 갈립니다. "
+                    "in / not_in / contains 를 쓰세요"
+                ),
+            )
+        )
 
     # 4. 역질문 대상이면 질문 템플릿 필수
     if rule.askable and not rule.question_template:

@@ -63,6 +63,11 @@ KNOWN_FIELDS: frozenset[str] = frozenset(
     }
 )
 
+# 사용자 값이 '목록'인 필드. 이런 필드에 == / != 를 쓰면 의미가 갈린다:
+# "내 목록이 이 값과 같은가"인지 "내 목록이 이 값을 품는가"인지 알 수 없다.
+# 그래서 목록형 필드에는 in / not_in / contains 만 허용한다.
+LIST_VALUED_FIELDS: frozenset[str] = frozenset({"received_policy_ids", "region_code"})
+
 # 시간 경과만으로 충족될 수 있는 필드 → 충족 예상일 계산 대상 (PRD §7.2)
 TIME_SATISFIABLE_FIELDS: frozenset[str] = frozenset(
     {"age", "residence_months_continuous", "employment_months"}

@@ -12,88 +12,72 @@ CI 에서 매번 돌려 성능 회귀를 감시한다 (숫자가 무너지면 �
 
 from __future__ import annotations
 
+import pathlib
 import random
+import sys
 import time
 from collections.abc import Iterator
+from datetime import date
 
-import numpy as np
+# `python bench/engine_bench.py` 로 바로 실행할 수 있게 레포 루트를 경로에 넣는다
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-N_POLICIES = 3000  # 전국 확장 시나리오 최대치 (1차 범위는 150~600)
-SENTINEL = np.iinfo(np.int16).min  # "해당 조건 없음"(무제약) 표시
+from app.engine.compile import compile_snapshot  # noqa: E402
+from app.engine.evaluate import explain, judge_all  # noqa: E402
+from app.schemas.policy import Dept, Meta, PolicySchema, Rule, Source  # noqa: E402
+from app.schemas.user import Core, UserProfile  # noqa: E402
+
+SCALES = (600, 3000)  # 1차 범위 / 전국 확장 시나리오
 
 
-# --- ADR-002: 벡터화 룰 평가 ------------------------------------------------
+# --- ADR-001 / 002: 실제 룰 엔진 ---------------------------------------------
 
 
-class CompiledRules:
-    """정책을 '필드별 열 배열'로 뒤집어 둔 것 = 스냅샷의 핵심 자료구조.
+def _sample_policies(n: int, rnd: random.Random) -> list[PolicySchema]:
+    """1차 범위와 비슷한 분포의 정책을 만든다 (지역·소득·거주·취업상태 조건)."""
+    out = []
+    for i in range(n):
+        rules = [
+            Rule(rule_id="AGE", field="age", op="between", value=[19, 34],
+                 source_quote="만 19세 이상 34세 이하"),
+            Rule(rule_id="REG", field="region_code", op="in",
+                 value=rnd.choice([["00"], ["41"], ["41465"], ["11"], ["11680"]]),
+                 source_quote="거주지 요건"),
+        ]
+        if rnd.random() < 0.6:
+            rules.append(Rule(rule_id="RES", field="residence_months_continuous", op=">=",
+                              value=rnd.choice([3, 6, 12]), unit="months",
+                              source_quote="계속하여 거주"))
+        if rnd.random() < 0.7:
+            rules.append(Rule(rule_id="INC", field="household_income_ratio_median", op="<=",
+                              value=rnd.choice([100, 120, 150, 180]),
+                              source_quote="기준 중위소득 이하"))
+        if rnd.random() < 0.5:
+            rules.append(Rule(rule_id="EMP", field="employment_status", op="in",
+                              value=rnd.sample(["employed", "job_seeking", "student"], 2),
+                              source_quote="취업 상태"))
+        excl = []
+        if rnd.random() < 0.25:
+            excl.append(Rule(rule_id="SIM", field="similar_program_participation_2y",
+                             op="==", value=False, askable=True,
+                             question_template="최근 2년 이내 유사사업에 참여한 적 있나요?",
+                             source_quote="타 유사사업 참여자는 제외"))
+        out.append(PolicySchema(
+            policy_id=f"P{i:05d}", status="published",
+            meta=Meta(title=f"정책{i}", category="housing", authority_level="local",
+                      region_code=["41465"], dept=Dept(name="청년정책과", tel="031-000-0000")),
+            source=Source(origin_url=f"https://example.kr/{i}"),
+            eligibility=rules, exclusions=excl,
+        ))
+    return out
 
-    행(정책)마다 파이썬 루프를 도는 대신, 필드마다 numpy 연산 한 번으로
-    전체 정책을 동시에 평가한다.
-    """
 
-    def __init__(self, n: int, rng: np.random.Generator) -> None:
-        self.age_min = rng.integers(18, 30, n).astype(np.int16)
-        self.age_max = rng.integers(30, 40, n).astype(np.int16)
-        self.res_min = self._maybe(rng, n, 0.6, 0, 13)
-        self.inc_max = self._maybe(rng, n, 0.7, 80, 201)
-        self.emp_mask = rng.integers(1, 32, n).astype(np.int8)  # 취업상태 5종 비트마스크
-        # 중앙부처 정책은 전국(0) 대상이라 실제 분포에서 큰 비중을 차지한다.
-        # 지역 매칭률을 현실보다 낮게 잡으면 적격 건수가 0에 수렴해
-        # NEEDS_INFO 경로가 한 번도 실행되지 않는 벤치마크가 된다.
-        self.region = np.where(
-            rng.random(n) < 0.30, 0, rng.integers(1, 300, n)
-        ).astype(np.int32)
-        # 사용자 답변이 있어야 판정 가능한 정책 (역질문 대상)
-        self.needs_answer = rng.random(n) < 0.25
-
-    @staticmethod
-    def _maybe(
-        rng: np.random.Generator, n: int, ratio: float, lo: int, hi: int
-    ) -> np.ndarray:
-        """비율만큼만 조건이 있고 나머지는 무제약인 열을 만든다."""
-        return np.where(
-            rng.random(n) < ratio, rng.integers(lo, hi, n), SENTINEL
-        ).astype(np.int16)
-
-    def nbytes(self) -> int:
-        return sum(
-            c.nbytes
-            for c in (
-                self.age_min,
-                self.age_max,
-                self.res_min,
-                self.inc_max,
-                self.emp_mask,
-                self.region,
-                self.needs_answer,
-            )
-        )
-
-    def judge(
-        self,
-        age: int,
-        res_months: int,
-        income_ratio: int,
-        emp_bit: int,
-        region_chain: np.ndarray,
-        answered: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """전 정책을 동시에 평가해 (적격, 확인필요, 부적격) 마스크를 돌려준다."""
-        ok = (self.age_min <= age) & (age <= self.age_max)
-
-        has = self.res_min != SENTINEL
-        ok &= ~has | (self.res_min <= res_months)
-
-        has = self.inc_max != SENTINEL
-        ok &= ~has | (income_ratio <= self.inc_max)
-
-        ok &= (self.emp_mask & emp_bit) != 0
-        ok &= np.isin(self.region, region_chain)
-
-        # 다른 조건은 통과했는데 정보만 부족한 정책 → NEEDS_INFO
-        unknown = self.needs_answer & ~answered & ok
-        return ok & ~unknown, unknown, ~ok
+def _sample_profile() -> UserProfile:
+    return UserProfile(core=Core(
+        birth_date=date(2001, 3, 14), region_code="41465",
+        residence_start_date=date(2025, 11, 1), employment_status="job_seeking",
+        household_income_ratio_median=120,
+    ))
 
 
 # --- ADR-003: bitset 분기한정 MWIS ------------------------------------------
@@ -160,26 +144,42 @@ def random_graph(n: int, density: float, rnd: random.Random) -> tuple[list[int],
 
 
 def bench_rules() -> None:
-    rng = np.random.default_rng(7)
-    rules = CompiledRules(N_POLICIES, rng)
-    region_chain = np.array([0, 41, 165], dtype=np.int32)
-    answered = np.zeros(N_POLICIES, dtype=bool)
-    args = (25, 4, 120, 2, region_chain, answered)
+    rnd = random.Random(42)
+    profile = _sample_profile()
+    today = date(2026, 9, 13)
 
-    rules.judge(*args)  # 워밍업
-    start = time.perf_counter()
-    for _ in range(1000):
-        eligible, unknown, bad = rules.judge(*args)
-    elapsed_ms = (time.perf_counter() - start)
+    for n in SCALES:
+        policies = _sample_policies(n, rnd)
 
-    print(
-        f"[ADR-002] 룰 평가 {N_POLICIES}개 정책 x 5필드 : {elapsed_ms:.3f} ms/요청  "
-        f"(적격 {eligible.sum()} / 확인필요 {unknown.sum()} / 부적격 {bad.sum()})"
-    )
-    print(
-        f"[ADR-001] 룰 열배열 메모리({N_POLICIES}개 정책, 7필드) : "
-        f"{rules.nbytes() / 1024:.1f} KB"
-    )
+        t = time.perf_counter()
+        snapshot = compile_snapshot(policies, version="bench")
+        compile_ms = (time.perf_counter() - t) * 1000
+
+        judge_all(snapshot, profile, today)  # 워밍업
+        t = time.perf_counter()
+        for _ in range(200):
+            verdicts = judge_all(snapshot, profile, today)
+        judge_ms = (time.perf_counter() - t) / 200 * 1000
+
+        # 최악 가정: 대시보드가 전 정책의 근거를 한 번에 조립한다
+        t = time.perf_counter()
+        for i in range(n):
+            verdict = (
+                "ELIGIBLE" if verdicts.eligible[i]
+                else "INELIGIBLE" if verdicts.ineligible[i]
+                else "NEEDS_INFO"
+            )
+            explain(snapshot, profile, today, i, verdict)
+        explain_ms = (time.perf_counter() - t) * 1000
+
+        s = verdicts.summary()
+        print(
+            f"[ADR-002] 정책 {n:5d}건 (룰 {len(snapshot.rule_refs):5d}) : "
+            f"판정 {judge_ms:6.3f} ms  전체상세 {explain_ms:6.1f} ms  컴파일 {compile_ms:5.1f} ms  "
+            f"| 적격 {s.eligible} 부적격 {s.ineligible} 확인필요 {s.needs_info}"
+        )
+        if judge_ms > 50:
+            raise SystemExit(f"판정이 {judge_ms:.1f}ms — 인메모리 설계 전제가 깨졌습니다")
 
 
 def bench_solver() -> None:
