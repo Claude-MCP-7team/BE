@@ -238,3 +238,34 @@ def test_깨진_스냅샷으로_교체해도_기존_것이_살아남는다():
 
     assert h.get().version == "good"
     assert h.get().size == len(POLICIES)
+
+
+# --- 역질문 큐 (S3) ---------------------------------------------------------
+
+
+def test_역질문_큐를_돌려준다(client):
+    d = client.post("/v1/questions", json=BODY).json()
+    assert d["snapshot_version"] == "test-v1"
+    assert d["needs_info_policies"] == 1
+    assert len(d["questions"]) == 1
+    q = d["questions"][0]
+    assert q["field"] == "household_income_ratio_median"
+    assert q["text"] == "가구 소득이 기준 중위소득 150% 이하인가요?"
+    assert q["resolves"] == 1
+    assert q["source_policy_ids"] == ["ASK-ME"]
+
+
+def test_답을_채우면_큐가_비워진다(client):
+    body = {**BODY, "answers": {"household_income_ratio_median": 120}}
+    d = client.post("/v1/questions", json=body).json()
+    assert d["questions"] == []
+    assert d["needs_info_policies"] == 0
+
+
+def test_역질문_응답도_공용_캐시에_남지_않는다(client):
+    r = client.post("/v1/questions", json=BODY)
+    assert "no-store" in r.headers["cache-control"]
+
+
+def test_역질문도_잘못된_입력은_422(client):
+    assert client.post("/v1/questions", json={"core": {"birth_date": "몰라"}}).status_code == 422
