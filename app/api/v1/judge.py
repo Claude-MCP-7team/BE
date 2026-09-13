@@ -26,6 +26,7 @@ from app.engine.questions import build_queue
 from app.engine.snapshot import SnapshotNotReady
 from app.schemas.judgement import DISCLAIMER, JudgementResponse
 from app.schemas.user import UserProfile
+from app.solver.combine import recommend
 
 router = APIRouter(prefix="/v1", tags=["judge"])
 
@@ -169,6 +170,34 @@ async def questions(request: Request) -> Response:
 
     return Response(
         content=msgspec.json.encode(queue),
+        media_type="application/json",
+        headers={"Cache-Control": "private, no-store", "X-Snapshot-Version": snapshot.version},
+    )
+
+
+@router.post("/combinations")
+async def combinations(request: Request) -> Response:
+    """적격 정책들의 최적 조합을 보수/최대 2안으로 돌려준다 (S6).
+
+    조합 계산은 LLM 이 아니라 솔버가 한다 (PRD §7.4). 정확해이며, 결과가
+    완전탐색과 일치하는지는 테스트가 매번 확인한다.
+    """
+    try:
+        snapshot = snapshot_store.holder.get()
+    except SnapshotNotReady as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    body = await request.body()
+    try:
+        profile = msgspec.json.decode(body, type=UserProfile)
+    except msgspec.ValidationError as e:
+        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+
+    verdicts = judge_all(snapshot, profile, today_kst())
+    payload = recommend(snapshot, verdicts)
+
+    return Response(
+        content=msgspec.json.encode(payload),
         media_type="application/json",
         headers={"Cache-Control": "private, no-store", "X-Snapshot-Version": snapshot.version},
     )

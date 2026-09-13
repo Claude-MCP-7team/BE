@@ -269,3 +269,29 @@ def test_역질문_응답도_공용_캐시에_남지_않는다(client):
 
 def test_역질문도_잘못된_입력은_422(client):
     assert client.post("/v1/questions", json={"core": {"birth_date": "몰라"}}).status_code == 422
+
+
+# --- 조합 추천 (S6) ---------------------------------------------------------
+
+
+def test_조합_추천은_보수_최대_2안을_준다(client):
+    d = client.post("/v1/combinations", json=BODY).json()
+    assert [s["kind"] for s in d["scenarios"]] == ["conservative", "maximal"]
+    assert d["snapshot_version"] == "test-v1"
+    assert "법적 효력이 없습니다" in d["disclaimer"]
+
+
+def test_조합에_적격_정책만_담긴다(client):
+    d = client.post("/v1/combinations", json=BODY).json()
+    assert d["eligible_count"] == 1
+    members = {m["policy_id"] for m in d["scenarios"][0]["combinations"][0]["members"]}
+    assert members == {"MOLIT-RENT"}
+
+
+def test_조합_응답도_공용_캐시에_남지_않는다(client):
+    r = client.post("/v1/combinations", json=BODY)
+    assert "no-store" in r.headers["cache-control"]
+
+
+def test_조합도_잘못된_입력은_422(client):
+    assert client.post("/v1/combinations", json={"core": {"birth_date": "몰라"}}).status_code == 422

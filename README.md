@@ -38,7 +38,8 @@ FastAPI 단일 컨테이너 (Render Free / Oracle Always Free)
 | 판정 API 1건 (예산 합계) | **~57 ms** | p95 ≤ 5,000 ms |
 | 벡터화 ↔ 기준 구현 대조 | **7,200건 전부 일치** | — |
 | 중복 질문 | **0건** (필드당 1질문) | G3: 0건 |
-| MWIS 정확성 (정점 ≤12, 20건) | **20/20 완전탐색 일치** | 100% |
+| 테스트 | **160건** | — |
+| MWIS 정확성 (정점 3~13, 200건 상위3개) | **200/200 완전탐색 일치** | G4: 100% |
 | DB 물리 크기 (3,000 정책) | **1.5 MB** | Neon Free 500 MB |
 
 ### 무료 인프라 구성
@@ -64,7 +65,17 @@ psql "$DATABASE_URL" -f db/verify_schema.sql
 # 3. 엔진 성능 벤치마크
 pip install numpy && python bench/engine_bench.py
 
-# 4. M0 데이터 정합성 조사 (G0 게이트 판정)
+# 4. API 띄우기
+SNAPSHOT_PATH=snapshot.json uvicorn app.main:app --reload
+#   POST /v1/judge               조건 → 전 정책 일괄 판정 (요약 + 적격/확인필요)
+#   POST /v1/judge?include=all   부적격 근거까지
+#   POST /v1/questions           역질문 큐 (필드당 1질문 · 상한 10)
+#   POST /v1/combinations        조합 추천 (보수/최대 2안 × 상위 3개)
+#   GET  /v1/policies/{id}       정책 상세 (공고 원문)
+#   GET  /v1/meta/snapshot       스냅샷 버전·건수
+#   GET  /healthz  /readyz       프로세스 생존 / 서비스 가능
+
+# 5. M0 데이터 정합성 조사 (G0 게이트 판정)
 ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41
 python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 재조사
 ```
@@ -94,10 +105,13 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `docs/contracts/` — JSON Schema 계약서 (AI 역할 자체검증용)
 - [x] CI — 린트(역할 경계) · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크
 - [x] `batch/collect/` — 수집기 + G0 게이트 조사 하네스 (BE-M0-1~4)
-- [ ] `app/db/` — asyncpg 풀 + 리포지토리 (BE-M1-2)
-- [ ] `app/api/` — `POST /v1/judge` + 스냅샷 로더 (BE-M2-7)
 - [x] `app/engine/` — 룰 엔진 코어 · 충족 예상일 · 근거 조립 (BE-M2-3~5)
-- [ ] `0002_seed_document.sql` — 서류 마스터 30~50종 (BE-M5-1, 선행 권장)
+- [x] `app/api/` — 판정 API · 스냅샷 로더 · 헬스체크 (BE-M2-7)
+- [x] `app/engine/questions.py` — 역질문 큐 병합·정렬·상한 (BE-M3-1~5)
+- [x] `app/solver/` — 상충 그래프 · MWIS 정확해 · 보수/최대 2안 (BE-M4-1~7)
+- [ ] `app/planner/` — 서류 마스터 · 영업일 · 권장 착수일 (BE-M5)
+- [ ] `app/db/` — asyncpg 풀 + 리포지토리 · 세션 저장 (BE-M1-2)
+- [ ] `batch/` — 크롤러 · A1/A2 오케스트레이션 · 스냅샷 빌더 (BE-M1-4~7)
 
 ## 계약면
 
@@ -105,6 +119,8 @@ tests/      unit / golden(정확도 하네스) / e2e
 | --- | --- | --- | --- |
 | C1 `PolicySchema` | AI ↔ BE | G1 (10/02 Freeze) | `app/schemas/policy.py` · `docs/contracts/policy_schema.json` |
 | C2 `JudgementResult` | BE ↔ FE | 10/07 | `app/schemas/judgement.py` · `docs/contracts/judgement_result.json` |
+| — 역질문 큐 | BE ↔ FE | 10/07 | `app/schemas/question.py` |
+| — 조합 추천 | BE ↔ FE | 10/07 | `app/schemas/combination.py` |
 
 룰이 참조할 수 있는 사용자 필드 목록은 `docs/contracts/rule_fields.json` 에 있다.
 AI 역할이 이 목록에 없는 `field` 를 만들면 BE 밸리데이터가 `UNKNOWN_FIELD` 로 거부한다.
