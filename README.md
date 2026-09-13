@@ -61,7 +61,16 @@ psql "$DATABASE_URL" -f db/verify_schema.sql
 
 # 3. 엔진 성능 벤치마크
 pip install numpy && python bench/engine_bench.py
+
+# 4. M0 데이터 정합성 조사 (G0 게이트 판정)
+ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41
+python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 재조사
 ```
+
+> ⚠️ 온통청년 API 의 엔드포인트·파라미터명은 **아직 미확정**이다. 공식 명세 페이지가
+> 현재 개발 환경에서 접근 차단되어 원문 확인을 하지 못했다. 기본값은 2차 자료 기준이며
+> 전부 환경변수로 덮어쓸 수 있다 (`ONTONG_BASE_URL`, `ONTONG_KEY_PARAM`, ...).
+> 실제 응답이 다르더라도 코드 수정 없이 조사를 시작할 수 있도록 만들어 두었다.
 
 ## 디렉터리
 
@@ -82,7 +91,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `app/schemas/` — PolicySchema / UserProfile / JudgementResult + 밸리데이터 (테스트 53건)
 - [x] `docs/contracts/` — JSON Schema 계약서 (AI 역할 자체검증용)
 - [x] CI — 린트(역할 경계) · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크
-- [ ] `batch/collect/` — 온통청년 OPEN API 수집기 (BE-M0-1)
+- [x] `batch/collect/` — 수집기 + G0 게이트 조사 하네스 (BE-M0-1~4)
 - [ ] `app/db/` — asyncpg 풀 + 리포지토리 (BE-M1-2)
 - [ ] `app/engine/` — 룰 엔진 코어 (BE-M2-3)
 - [ ] `0002_seed_document.sql` — 서류 마스터 30~50종 (BE-M5-1, 선행 권장)
