@@ -1,0 +1,61 @@
+[project]
+name = "ypc-backend"
+version = "0.1.0"
+description = "청년정책 AI 코디네이터 백엔드 — 룰 엔진 / 조합 솔버 / 일정 역산"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",   # uvloop + httptools 포함
+    "msgspec>=0.19",             # 내부 모델 · 배치 디코딩 (Pydantic 대비 5~10배)
+    "orjson>=3.10",
+    "numpy>=2.0",                # 룰 벡터화 평가
+    "asyncpg>=0.30",             # 동기 드라이버 금지
+    "httpx>=0.28",
+    "cryptography>=44.0",        # AES-256-GCM 프로필 암호화
+]
+
+[project.optional-dependencies]
+batch = [
+    "beautifulsoup4>=4.12",
+    "pdfplumber>=0.11",
+    "lxml>=5.3",
+]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.8",
+    "mypy>=1.14",
+]
+# MWIS 솔버의 ILP 폴백. 정점 64개까지 bitset 분기한정으로 충분해 MVP에서는 쓰지 않는다.
+# CBC 바이너리는 ARM/슬림 이미지에서 자주 깨져 무료 티어 리스크다.
+solver-ilp = ["pulp>=2.9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
+
+# 역할 경계를 린트로 강제한다 (docs/ARCHITECTURE.md §4, §6.4).
+# 결정론 레이어가 LLM 이나 DB 를 직접 import 하면 CI 가 실패한다.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"app.llm".msg = "결정론 레이어(engine/solver/planner)는 LLM 을 호출하지 않습니다 (PRD §5.3)"
+"app.db".msg = "핫 경로에서 DB 를 호출하지 않습니다. 스냅샷을 통해 읽으세요 (ADR-001)"
+
+[tool.ruff.lint.per-file-ignores]
+# API·배치 계층은 위 두 모듈을 정상적으로 사용한다
+"app/api/**" = ["TID251"]
+"app/main.py" = ["TID251"]
+"batch/**" = ["TID251"]
+"tests/**" = ["TID251", "E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["app", "batch"]

@@ -1,0 +1,689 @@
+{
+  "$ref": "#/$defs/PolicySchema",
+  "$defs": {
+    "PolicySchema": {
+      "title": "PolicySchema",
+      "description": "정책 1건의 표준 스키마. 배치 출력이자 룰 엔진 입력.",
+      "type": "object",
+      "properties": {
+        "policy_id": {
+          "type": "string"
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "expired",
+            "published",
+            "unpublished"
+          ],
+          "default": "draft"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "benefit": {
+          "$ref": "#/$defs/Benefit"
+        },
+        "period": {
+          "$ref": "#/$defs/Period"
+        },
+        "eligibility": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Rule"
+          },
+          "default": []
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Rule"
+          },
+          "default": []
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Conflict"
+          },
+          "default": []
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Document"
+          },
+          "default": []
+        },
+        "quality": {
+          "$ref": "#/$defs/Quality"
+        }
+      },
+      "required": [
+        "policy_id",
+        "meta"
+      ],
+      "additionalProperties": false
+    },
+    "Meta": {
+      "title": "Meta",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "education",
+            "housing",
+            "job",
+            "participation",
+            "welfare"
+          ]
+        },
+        "authority_level": {
+          "enum": [
+            "central",
+            "local",
+            "province"
+          ]
+        },
+        "region_code": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "dept": {
+          "$ref": "#/$defs/Dept"
+        }
+      },
+      "required": [
+        "title",
+        "category",
+        "authority_level"
+      ],
+      "additionalProperties": false
+    },
+    "Dept": {
+      "title": "Dept",
+      "description": "담당부서 — ESTIMATED/NEEDS_REVIEW 판정에 반드시 병기된다.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Source": {
+      "title": "Source",
+      "description": "출처 — 모든 판정에 원문 링크를 제공하기 위한 최소 정보 (PRD §7.6).",
+      "type": "object",
+      "properties": {
+        "api": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "api_policy_no": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "origin_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "announcement_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "crawled_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Benefit": {
+      "title": "Benefit",
+      "type": "object",
+      "properties": {
+        "type": {
+          "anyOf": [
+            {
+              "enum": [
+                "cash_lump",
+                "cash_monthly",
+                "loan",
+                "service",
+                "voucher"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "amount_krw": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "duration_months": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "estimated_total_krw": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "amount_confidence": {
+          "enum": [
+            "CONFIRMED",
+            "ESTIMATED",
+            "NEEDS_REVIEW"
+          ],
+          "default": "ESTIMATED"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Period": {
+      "title": "Period",
+      "type": "object",
+      "properties": {
+        "apply_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "apply_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "is_rolling": {
+          "type": "boolean",
+          "default": false
+        },
+        "budget_exhaust_risk": {
+          "anyOf": [
+            {
+              "enum": [
+                "high",
+                "low",
+                "medium"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Rule": {
+      "title": "Rule",
+      "description": "자격요건 / 제외대상 1건.\n\n    source_quote 는 필수다. 근거 없는 룰은 저장되지 않는다 (G1 게이트).\n    DB 에서도 NOT NULL + 공백금지 CHECK 로 같은 규칙을 강제한다.",
+      "type": "object",
+      "properties": {
+        "rule_id": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "!=",
+            "<",
+            "<=",
+            "==",
+            ">",
+            ">=",
+            "between",
+            "contains",
+            "exists",
+            "in",
+            "not_in"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "source_quote": {
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "time_satisfiable": {
+          "type": "boolean",
+          "default": false
+        },
+        "ambiguous": {
+          "type": "boolean",
+          "default": false
+        },
+        "askable": {
+          "type": "boolean",
+          "default": false
+        },
+        "question_template": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confidence": {
+          "enum": [
+            "CONFIRMED",
+            "ESTIMATED",
+            "NEEDS_REVIEW"
+          ],
+          "default": "CONFIRMED"
+        }
+      },
+      "required": [
+        "rule_id",
+        "field",
+        "op",
+        "value",
+        "source_quote"
+      ],
+      "additionalProperties": false
+    },
+    "Conflict": {
+      "title": "Conflict",
+      "description": "중복수혜 제한 — 공고문에서 추출한 원본 서술.\n\n    여기서 간선을 확정하지 않는다. 확정·정규화는 BE 배치가 하고,\n    결과는 policy_conflict_edge 에 들어간다 (AI는 관계 추출까지, 계산은 BE).",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "category_overlap",
+            "explicit_policy",
+            "same_authority"
+          ]
+        },
+        "source_quote": {
+          "type": "string"
+        },
+        "target_policy_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "target_policy_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target_category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target_benefit_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target_authority": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confidence": {
+          "type": "string",
+          "default": "ESTIMATED"
+        }
+      },
+      "required": [
+        "type",
+        "source_quote"
+      ],
+      "additionalProperties": false
+    },
+    "Document": {
+      "title": "Document",
+      "description": "필요서류. 발급 소요일은 공고문이 아니라 서류 마스터 테이블이 권위다.",
+      "type": "object",
+      "properties": {
+        "doc_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "type": "string"
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lead_time_business_days": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cost_krw": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "Quality": {
+      "title": "Quality",
+      "type": "object",
+      "properties": {
+        "parse_confidence": {
+          "type": "number",
+          "default": 0.0
+        },
+        "cross_check": {
+          "enum": [
+            "AGREE",
+            "DISAGREE",
+            "SKIPPED"
+          ],
+          "default": "SKIPPED"
+        },
+        "needs_review_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "last_verified_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+}

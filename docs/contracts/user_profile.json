@@ -1,0 +1,236 @@
+{
+  "$ref": "#/$defs/UserProfile",
+  "$defs": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "type": "object",
+      "properties": {
+        "core": {
+          "$ref": "#/$defs/Core"
+        },
+        "history": {
+          "$ref": "#/$defs/History"
+        },
+        "answers": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default": {}
+        },
+        "consent": {
+          "$ref": "#/$defs/Consent"
+        }
+      },
+      "required": [
+        "core"
+      ],
+      "additionalProperties": false
+    },
+    "Core": {
+      "title": "Core",
+      "description": "온보딩에서 받는 기본조건 (S1, 8~10필드).",
+      "type": "object",
+      "properties": {
+        "birth_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "residence_start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "residence_continuous": {
+          "type": "boolean",
+          "default": true
+        },
+        "education": {
+          "anyOf": [
+            {
+              "enum": [
+                "graduate_school",
+                "high_school_enrolled",
+                "high_school_graduated",
+                "middle_or_below",
+                "university_enrolled",
+                "university_graduated"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "employment_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "employed",
+                "founder",
+                "job_seeking",
+                "neet",
+                "student"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "employment_start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "marital_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "divorced",
+                "married",
+                "single",
+                "widowed"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "household_size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "income_basis": {
+          "anyOf": [
+            {
+              "enum": [
+                "household_excl_parents",
+                "household_incl_parents",
+                "self_only"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "household_income_ratio_median": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "birth_date",
+        "region_code"
+      ],
+      "additionalProperties": false
+    },
+    "History": {
+      "title": "History",
+      "description": "기수혜 이력. None 은 '미확인'이며 역질문 대상이 된다 (False 와 구분).",
+      "type": "object",
+      "properties": {
+        "received_policy_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "similar_program_participation_2y": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Consent": {
+      "title": "Consent",
+      "type": "object",
+      "properties": {
+        "terms_version": {
+          "type": "string",
+          "default": "1.0"
+        },
+        "privacy_agreed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "retention_days": {
+          "type": "integer",
+          "default": 90
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+}

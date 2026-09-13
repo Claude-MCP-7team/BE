@@ -1,0 +1,21 @@
+{
+  "known_fields": [
+    "age",
+    "education",
+    "employment_months",
+    "employment_status",
+    "household_income_ratio_median",
+    "household_size",
+    "marital_status",
+    "received_policy_ids",
+    "region_code",
+    "residence_months_continuous",
+    "similar_program_participation_2y"
+  ],
+  "time_satisfiable_fields": [
+    "age",
+    "employment_months",
+    "residence_months_continuous"
+  ],
+  "note": "룰의 field 는 known_fields 안에 있어야 한다. time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다."
+}

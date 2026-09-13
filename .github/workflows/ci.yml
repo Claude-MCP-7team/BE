@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ypc_test
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 의존성 설치
+        run: pip install -e ".[dev]"
+
+      - name: 린트 (역할 경계 포함)
+        run: ruff check .
+
+      - name: 마이그레이션 적용
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d ypc_test -v ON_ERROR_STOP=1 \
+               -f db/migrations/0001_init.sql
+
+      - name: DB 제약조건 검증
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d ypc_test -f db/verify_schema.sql
+
+      - name: 단위 테스트
+        run: pytest
+
+      - name: 계약 스키마가 최신인지 확인
+        run: |
+          python tools/export_contract.py
+          git diff --exit-code docs/contracts/ || {
+            echo "::error::계약 스키마가 코드와 다릅니다. python tools/export_contract.py 를 실행하고 커밋하세요"
+            exit 1
+          }
+
+      - name: 엔진 벤치마크 (성능 회귀 감시)
+        run: python bench/engine_bench.py
