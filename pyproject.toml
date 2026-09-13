@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ypc-backend"
 version = "0.1.0"
@@ -30,6 +34,11 @@ dev = [
 # MWIS 솔버의 ILP 폴백. 정점 64개까지 bitset 분기한정으로 충분해 MVP에서는 쓰지 않는다.
 # CBC 바이너리는 ARM/슬림 이미지에서 자주 깨져 무료 티어 리스크다.
 solver-ilp = ["pulp>=2.9"]
+
+# db/ · bench/ 는 SQL·벤치 스크립트 디렉터리라 배포 패키지가 아니다.
+# 명시하지 않으면 setuptools flat-layout 자동탐지가 이들을 패키지로 오인해 빌드가 실패한다.
+[tool.setuptools.packages.find]
+include = ["app*", "batch*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

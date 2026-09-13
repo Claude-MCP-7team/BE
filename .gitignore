@@ -16,3 +16,4 @@ snapshot*.msgpack*
 .DS_Store
 data/raw/
 docs/m0/
+.venv/
