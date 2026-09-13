@@ -356,9 +356,14 @@ def test_계획은_착수일과_서류를_준다(plan_client):
 
     item = next(p for p in d["plans"] if p["policy_id"] == "WITH-DEADLINE")
     assert item["status"] == "ON_TRACK"
-    # 마감 10/30(금), 준비 4영업일(서류 max 3 + 버퍼 1) → 10/26(월)
-    assert item["recommended_start_date"] == "2026-10-26"
-    assert item["preparation_business_days"] == 4
+    # 공고가 소득금액증명을 3일로 적었지만 마스터(D008)는 온라인 즉시 0일이다.
+    # 마스터가 이긴다 — 공고는 수백 건이 제각각 틀리고 마스터는 한 곳에서 고친다.
+    # 준비 1영업일(max 0 + 버퍼 1) → 마감 10/30(금)에서 10/29(목)
+    assert item["recommended_start_date"] == "2026-10-29"
+    assert item["preparation_business_days"] == 1
+    income = next(x for x in item["documents"] if x["doc_code"] == "D008")
+    assert income["lead_time_business_days"] == 0
+    assert income["channel"]  # 마스터가 채널을 알려준다
 
 
 def test_상시모집은_착수일을_만들지_않는다(plan_client):
@@ -369,12 +374,17 @@ def test_상시모집은_착수일을_만들지_않는다(plan_client):
 
 
 def test_같은_서류는_한_번만_떼게_묶인다(plan_client):
-    """두 정책이 등본을 요구해도 사용자는 한 번만 간다."""
+    """두 정책이 등본을 요구해도 사용자는 한 번만 간다.
+
+    공고의 doc_code 가 마스터 코드가 아니어도 서류명으로 마스터를 찾아
+    같은 D001 로 합쳐진다 (별칭 '주민등록등본' → D001).
+    """
     d = plan_client.post("/v1/plan", json=BODY).json()
-    tasks = [t for t in d["documents"] if t["doc_code"] == "RESIDENT_REG"]
+    tasks = [t for t in d["documents"] if t["doc_code"] == "D001"]
     assert len(tasks) == 1
     assert sorted(tasks[0]["required_by"]) == ["ROLLING", "WITH-DEADLINE"]
-    assert d["total_document_cost_krw"] == 400
+    # 마스터 기준 등본은 온라인 0원 (방문하면 400원)
+    assert tasks[0]["cost_krw"] == 0
 
 
 def test_특정_정책만_계획할_수_있다(plan_client):
@@ -399,7 +409,7 @@ def test_ics_를_내려받을_수_있다(plan_client):
     assert "attachment" in r.headers["content-disposition"]
     text = r.content.decode("utf-8")
     assert text.startswith("BEGIN:VCALENDAR")
-    assert "DTSTART;VALUE=DATE:20261026" in text  # 착수일
+    assert "DTSTART;VALUE=DATE:20261029" in text  # 착수일
     assert "DTSTART;VALUE=DATE:20261030" in text  # 마감일
 
 

@@ -35,6 +35,21 @@ class PlanDocument(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     notes: str | None = None
     source_quote: str | None = None
 
+    # --- 서류 마스터에서 오는 값 (BE-M5-1) ---------------------------------
+    # 소요일이 범위인 서류(재직증명서 1~5일)는 역산에 최댓값을 쓰되
+    # 화면에는 범위를 그대로 보여준다.
+    lead_time_min_business_days: int | None = None
+    issue_kind: str | None = None
+    channel: str | None = None
+    # 유효기간(일). 이 값이 있으면 "너무 일찍 떼도 안 된다"가 생긴다.
+    validity_days: int | None = None
+    # 이 날 이전에 발급하면 제출일에 이미 만료된다 (YYYY-MM-DD).
+    issue_not_before: str | None = None
+    # 창구 방문이 필요한가 — 하루를 통째로 써야 하는 일이다.
+    requires_visit: bool = False
+    # 마스터 값이 아직 검증되지 않았다 (검증상태 '확인필요').
+    master_unverified: bool = False
+
 
 class DocumentTask(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     """서류 기준으로 묶은 할 일. 같은 서류를 여러 정책이 요구하면 한 번만 뗀다.
@@ -47,13 +62,24 @@ class DocumentTask(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     doc_code: str | None = None
     issuer: str | None = None
     lead_time_business_days: int = 0
+    lead_time_min_business_days: int | None = None
     lead_time_estimated: bool = False
     cost_krw: int | None = None
+    issue_kind: str | None = None
+    channel: str | None = None
+    requires_visit: bool = False
+    master_unverified: bool = False
     # 이 서류를 요구하는 정책들
     required_by: list[str] = msgspec.field(default_factory=list)
     required_by_titles: list[str] = msgspec.field(default_factory=list)
     # 이 서류를 요구하는 정책 중 가장 이른 착수일 — 이 날까지는 손에 있어야 한다
     needed_by_date: str | None = None
+    # 유효기간이 있는 서류는 이 날 이전에 떼면 제출 시점에 만료된다.
+    # 여러 정책이 같은 서류를 쓰면 가장 늦은 제출일이 기준이 된다.
+    validity_days: int | None = None
+    issue_not_before: str | None = None
+    # 한 번 떼서 모든 정책에 쓸 수 있는가. False 면 유효기간 때문에 나눠 떼야 한다.
+    single_issue_covers_all: bool = True
     notes: str | None = None
 
 
@@ -76,6 +102,10 @@ class PolicyPlan(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     preparation_business_days: int = 0
 
     documents: list[PlanDocument] = msgspec.field(default_factory=list)
+
+    # 유효기간 있는 서류를 너무 일찍 떼면 제출일에 만료된다.
+    # 이 날 이전에 발급하면 못 쓴다 (가장 짧은 유효기간이 결정한다).
+    issue_not_before_date: str | None = None
 
     # 왜 이 상태인지 한 줄로. 화면이 그대로 노출해도 되는 문장.
     reason: str = ""
@@ -111,5 +141,9 @@ class PlanResponse(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     # 서류 기준으로 합친 할 일 목록
     documents: list[DocumentTask] = msgspec.field(default_factory=list)
     total_document_cost_krw: int = 0
+    # 창구 방문이 필요한 서류 수 — 온라인으로 끝나는지 사용자가 먼저 알아야 한다
+    visit_required_count: int = 0
+    # 마스터 값이 미검증인 서류 수 (검증상태 '확인필요')
+    unverified_document_count: int = 0
     calendar_source_ref: str = ""
     disclaimer: str = ""

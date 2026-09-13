@@ -23,6 +23,9 @@ from app.planner.businessday import (
     bundled_calendar,
     calendar_from_rows,
 )
+from app.planner.documents import NAME_ALIASES
+from app.planner.documents import master as doc_master
+from app.planner.documents import resolve as doc_resolve
 from app.planner.ics import to_ics
 from app.schemas.plan import PlanResponse
 from app.schemas.policy import Benefit, Dept, Document, Meta, Period, PolicySchema, Rule, Source
@@ -371,15 +374,20 @@ def test_부적격_정책은_계획에_없다() -> None:
 
 
 def test_같은_서류를_여러_정책이_요구하면_한_줄로_합친다() -> None:
-    doc = Document(name="주민등록등본", doc_code="RESIDENT_REG", lead_time_business_days=0)
-    other = Document(name="주민등록표 등본", doc_code="RESIDENT_REG", lead_time_business_days=0)
+    """표기가 달라도 마스터의 같은 코드로 모이면 한 줄이 된다.
+
+    '주민등록등본'과 '주민등록표 등본'은 공고마다 다르게 적히지만 같은 서류다.
+    이름으로 합치면 두 줄로 남아 사용자가 주민센터에 두 번 간다.
+    """
+    doc = Document(name="주민등록등본", lead_time_business_days=0)
+    other = Document(name="주민등록표 등본", lead_time_business_days=0)
     plan = _plan_of(
         [
             _policy("P1", apply_end="2026-04-30", documents=[doc]),
             _policy("P2", apply_end="2026-05-30", documents=[other]),
         ]
     )
-    tasks = [t for t in plan.documents if t.doc_code == "RESIDENT_REG"]
+    tasks = [t for t in plan.documents if t.doc_code == "D001"]
     assert len(tasks) == 1
     assert sorted(tasks[0].required_by) == ["P1", "P2"]
 
@@ -677,3 +685,213 @@ def test_색인_구간_경계를_넘는_계산도_맞는다() -> None:
     assert cal.add_business_days(date(2026, 12, 31), 2) == date(2027, 1, 4)
     # 2025-01-02(목) 에서 2영업일 앞 → 2025-01-01은 신정, 2024-12-31(화), 12-30(월)
     assert cal.subtract_business_days(date(2025, 1, 2), 2) == date(2024, 12, 30)
+
+
+# --- 서류 마스터 (BE-M5-1) -------------------------------------------------
+
+
+def test_마스터가_36종을_읽는다() -> None:
+    table = doc_master()
+    assert len(table) == 36
+    assert table["D001"].name == "주민등록표 등본"
+
+
+def test_소요일은_범위로_들어오고_역산은_최댓값을_쓴다() -> None:
+    """재직증명서는 회사 규정에 따라 1~5일이다. 평균을 쓰면 절반이 마감을 놓친다."""
+    spec = doc_master()["D032"]
+    assert (spec.lead_min_business_days, spec.lead_max_business_days) == (1, 5)
+    assert spec.planning_lead_days == 5
+    assert spec.has_lead_variance
+
+
+def test_수수료는_발급_가능한_채널_중_최저가() -> None:
+    """등본은 온라인 0원, 방문 400원. 온라인이 되면 0원으로 계산한다."""
+    assert doc_master()["D001"].cheapest_fee_krw == 0
+
+
+def test_온라인_불가_서류는_방문_수수료를_쓴다() -> None:
+    """온라인 수수료가 빈칸인 것은 0원이 아니라 '그 채널로 발급 안 됨'이다."""
+    spec = doc_master()["D020"]  # 졸업증명서(대학) — 정부24 신청 + 창구 수령
+    assert spec.fee_online_krw is None
+    assert spec.cheapest_fee_krw == 1000
+    assert spec.requires_visit
+
+
+def test_방문_필요_서류를_구분한다() -> None:
+    assert doc_master()["D007"].requires_visit  # OFFLINE_ONLY
+    assert doc_master()["D020"].requires_visit  # ANYWHERE_VISIT
+    assert not doc_master()["D001"].requires_visit  # ONLINE_INSTANT
+
+
+def test_유효기간이_없는_서류도_있다() -> None:
+    """근로계약서 사본은 만료 개념이 없다. 0 과 None 은 다르다."""
+    assert doc_master()["D034"].validity_days is None
+    assert doc_master()["D011"].validity_days == 30
+
+
+def test_전_항목이_아직_미검증이다() -> None:
+    """검증상태가 전부 '확인필요'다 — 화면이 추정치임을 밝혀야 한다."""
+    assert all(not s.verified for s in doc_master().values())
+
+
+def test_doc_code_가_이름보다_우선한다() -> None:
+    """코드는 배치가 확인한 결과, 이름은 실패할 수 있는 추측이다."""
+    spec = doc_resolve("D011", "주민등록등본")
+    assert spec is not None and spec.doc_code == "D011"
+
+
+def test_표기가_달라도_같은_서류를_찾는다() -> None:
+    for name in ("주민등록등본", "주민등록표 등본", "주민등록표등본"):
+        spec = doc_resolve(None, name)
+        assert spec is not None and spec.doc_code == "D001", name
+
+
+def test_괄호_주기를_떼고_찾는다() -> None:
+    spec = doc_resolve(None, "가족관계증명서")
+    assert spec is not None and spec.doc_code == "D003"
+
+
+def test_모르는_서류는_추측하지_않는다() -> None:
+    """'재직'과 '퇴직'은 한 글자 차이인데 뜻이 정반대다. 비슷하다고 맞추면 안 된다."""
+    assert doc_resolve(None, "무슨무슨증명서") is None
+    assert doc_resolve(None, "") is None
+    assert doc_resolve("없는코드", "없는이름") is None
+
+
+def test_재직과_퇴직은_다른_서류로_구분된다() -> None:
+    재직 = doc_resolve(None, "재직증명서")
+    퇴직 = doc_resolve(None, "퇴직증명서")
+    assert 재직 is not None and 재직.doc_code == "D032"
+    assert 퇴직 is not None and 퇴직.doc_code == "D033"
+
+
+def test_별칭이_실존하는_코드를_가리킨다() -> None:
+    table = doc_master()
+    for alias, code in NAME_ALIASES.items():
+        assert code in table, f"별칭 {alias} → 없는 코드 {code}"
+
+
+def test_마스터_값이_공고_값을_이긴다() -> None:
+    """공고는 수백 건이 제각각 틀리고, 마스터는 한 곳에서 고치면 전부 고쳐진다."""
+    doc = Document(name="주민등록표 등본", lead_time_business_days=7, cost_krw=99999)
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=[doc])])
+    item = _by_id(plan, "P1").documents[0]
+    assert item.lead_time_business_days == 0  # 마스터: 온라인 즉시
+    assert item.cost_krw == 0
+    assert item.doc_code == "D001"
+
+
+def test_마스터에_없는_서류는_공고_값으로_떨어진다() -> None:
+    doc = Document(name="지자체 자체 양식", lead_time_business_days=2, cost_krw=500)
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=[doc])])
+    item = _by_id(plan, "P1").documents[0]
+    assert item.doc_code is None
+    assert item.lead_time_business_days == 2
+    assert item.master_unverified is False  # 마스터를 안 거쳤다
+
+
+def test_미검증_서류_수가_집계된다() -> None:
+    doc = Document(name="주민등록표 등본")
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=[doc])])
+    assert plan.unverified_document_count == 1
+
+
+def test_방문_필요_서류_수가_집계된다() -> None:
+    docs = [Document(name="졸업증명서(대학)"), Document(name="주민등록표 등본")]
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=docs)])
+    assert plan.visit_required_count == 1
+
+
+# --- 유효기간: 너무 일찍 떼도 안 된다 -------------------------------------
+
+
+def test_유효기간이_발급_하한을_만든다() -> None:
+    """납세증명서는 30일. 마감 두 달 전에 떼면 제출일에 만료된 종이다."""
+    doc = Document(name="납세증명서(국세완납)")  # D011, 유효 30일
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=[doc])])
+    item = _by_id(plan, "P1")
+    # 발급일 당일을 1일째로 세므로 4/30 제출이면 4/1 이후에 떼야 한다
+    assert item.issue_not_before_date == "2026-04-01"
+    assert "만료" in item.reason
+
+
+def test_유효기간이_없으면_하한도_없다() -> None:
+    doc = Document(name="근로계약서 사본")  # D034, 유효기간 없음
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=[doc])])
+    assert _by_id(plan, "P1").issue_not_before_date is None
+
+
+def test_가장_짧은_유효기간이_구간을_정한다() -> None:
+    """30일짜리와 90일짜리를 함께 내면 30일 기준으로 움직여야 둘 다 살아 있다."""
+    docs = [
+        Document(name="납세증명서(국세완납)"),  # 30일
+        Document(name="주민등록표 등본"),  # 90일
+    ]
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=docs)])
+    assert _by_id(plan, "P1").issue_not_before_date == "2026-04-01"
+
+
+def test_서류마다_자기_유효기간의_하한을_갖는다() -> None:
+    """90일짜리를 30일짜리와 같은 날 떼라고 하면 불필요한 재방문이 생긴다."""
+    docs = [Document(name="납세증명서(국세완납)"), Document(name="주민등록표 등본")]
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=docs)])
+    by_code = {d.doc_code: d for d in _by_id(plan, "P1").documents}
+    assert by_code["D011"].issue_not_before == "2026-04-01"  # 30일
+    assert by_code["D001"].issue_not_before == "2026-01-31"  # 90일
+
+
+def test_유효기간_하한도_함께_보고된다() -> None:
+    """준비 대기(1영업일)보다 유효기간 하한이 이르면 착수일은 그대로 두되,
+    '이 날 이전엔 떼지 마라'를 따로 알려준다."""
+    doc = Document(name="납세증명서(국세완납)")  # 0일 발급, 30일 유효
+    plan = _plan_of(
+        [_policy("P1", apply_end="2026-06-30", documents=[doc])], today=date(2026, 3, 2)
+    )
+    item = _by_id(plan, "P1")
+    assert item.issue_not_before_date == "2026-06-01"
+    assert item.recommended_start_date == "2026-06-29"
+
+
+def test_유효기간은_달력일이지_영업일이_아니다() -> None:
+    """법이 '발급일로부터 N일'로 쓴다. 영업일로 세면 구간이 잘못 넓어진다."""
+    doc = Document(name="납세증명서(국세완납)")
+    plan = _plan_of([_policy("P1", apply_end="2026-03-31", documents=[doc])])
+    # 3/31 - 29일 = 3/2 (주말·공휴일 무관)
+    assert _by_id(plan, "P1").issue_not_before_date == "2026-03-02"
+
+
+def test_한_번_떼서_전부_커버되면_그렇다고_말한다() -> None:
+    docs = [Document(name="주민등록표 등본")]  # 90일
+    plan = _plan_of(
+        [
+            _policy("P1", apply_end="2026-04-30", documents=docs),
+            _policy("P2", apply_end="2026-05-15", documents=docs),
+        ]
+    )
+    task = next(t for t in plan.documents if t.doc_code == "D001")
+    assert task.single_issue_covers_all is True
+
+
+def test_유효기간_때문에_두_번_떼야_하면_알려준다() -> None:
+    """첫 정책 때 뗀 서류를 들고 갔다가 두 번째에서 만료로 반려당하는 걸 막는다."""
+    docs = [Document(name="납세증명서(국세완납)")]  # 30일
+    plan = _plan_of(
+        [
+            _policy("P1", apply_end="2026-04-30", documents=docs),
+            _policy("P2", apply_end="2026-08-31", documents=docs),
+        ]
+    )
+    task = next(t for t in plan.documents if t.doc_code == "D011")
+    assert task.single_issue_covers_all is False
+    assert task.validity_days == 30
+
+
+def test_계획_응답에_마스터_필드가_직렬화된다() -> None:
+    docs = [Document(name="졸업증명서(대학)"), Document(name="납세증명서(국세완납)")]
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=docs)])
+    back = msgspec.json.decode(msgspec.json.encode(plan), type=PlanResponse)
+    grad = next(d for d in back.plans[0].documents if d.doc_code == "D020")
+    assert grad.requires_visit
+    assert grad.lead_time_min_business_days == 1
+    assert grad.lead_time_business_days == 3
+    assert grad.channel

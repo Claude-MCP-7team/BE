@@ -41,7 +41,7 @@ FastAPI 단일 컨테이너 (Render Free / Oracle Always Free)
 | 신청 계획 (3,000 정책 / 715 적격) | **10.1 ms** | p95 ≤ 50 ms |
 | 영업일 역산 1회 | **1.5 µs** | — |
 | 2026 공휴일 (대체공휴일 포함 21일) | **전수 일치** | G5: 100% |
-| 테스트 | **301건** | — |
+| 테스트 | **327건** | — |
 | MWIS 정확성 (정점 3~13, 200건 상위3개) | **200/200 완전탐색 일치** | G4: 100% |
 | DB 물리 크기 (3,000 정책) | **1.5 MB** | Neon Free 500 MB |
 
@@ -121,7 +121,8 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `app/engine/questions.py` — 역질문 큐 병합·정렬·상한 (BE-M3-1~5)
 - [x] `app/solver/` — 상충 그래프 · MWIS 정확해 · 보수/최대 2안 (BE-M4-1~7)
 - [x] `app/planner/` — 영업일 달력 · 권장 착수일 역산 · ICS 내보내기 (BE-M5-2~4)
-- [ ] `document` 서류 마스터 30~50종 수작업 입력 (BE-M5-1)
+- [x] 서류 마스터 36종 · 유효기간 구간 계산 (BE-M5-1, `data/documents/master_v2.csv`)
+- [ ] 서류 마스터 검증 — 전 항목이 아직 `확인필요` 상태
 - [ ] `app/db/` — asyncpg 풀 + 리포지토리 · 세션 저장 (BE-M1-2)
 - [x] `batch/build_snapshot.py` — 스냅샷 빌더 · 검증 관문 (BE-M1-6~7)
 - [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
@@ -136,6 +137,10 @@ tests/      unit / golden(정확도 하네스) / e2e
 | — 역질문 큐 | BE ↔ FE | 10/07 | `app/schemas/question.py` |
 | — 조합 추천 | BE ↔ FE | 10/07 | `app/schemas/combination.py` |
 | — 신청 계획 | BE ↔ FE | 10/07 | `app/schemas/plan.py` |
+
+서류 발급 소요일·수수료·유효기간의 권위는 `data/documents/master_v2.csv` 다 (36종).
+공고문이 다른 값을 적어도 마스터가 이긴다 — 공고는 수백 건이 제각각 틀리지만
+마스터는 한 곳에서 고치면 전부 고쳐진다. 마스터에 없는 서류만 공고 값으로 떨어진다.
 
 룰이 참조할 수 있는 사용자 필드 목록은 `docs/contracts/rule_fields.json` 에 있다.
 AI 역할이 이 목록에 없는 `field` 를 만들면 BE 밸리데이터가 `UNKNOWN_FIELD` 로 거부한다.

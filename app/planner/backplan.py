@@ -19,15 +19,21 @@
   상시 모집(ROLLING)과 마감 미상(UNKNOWN)은 다르다. 전자는 역산할 필요가
   없고, 후자는 역산할 수 없다. 둘을 같은 상태로 뭉뚱그리면, 확인이 필요한
   정책이 '여유 있음'으로 보인다.
+
+**너무 일찍 떼는 것도 틀린 계획이다.**
+  납세증명서는 유효기간이 30일이다. 마감 두 달 전에 미리 떼어두면 제출일에는
+  만료된 종이다. 그래서 계획은 '언제까지'만이 아니라 '언제 이후에'도 말한다.
+  서류 마스터(BE-M5-1)가 유효기간을 알려주고, 여기서 구간으로 바꾼다.
 """
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from app.engine.compile import Snapshot
 from app.engine.evaluate import Verdicts
 from app.planner.businessday import CalendarCoverageError, HolidayCalendar, bundled_calendar
+from app.planner.documents import DocumentSpec, resolve
 from app.schemas.judgement import DISCLAIMER
 from app.schemas.plan import (
     DocumentTask,
@@ -84,6 +90,8 @@ def build_plan(
         plans=plans,
         documents=tasks,
         total_document_cost_krw=sum(t.cost_krw or 0 for t in tasks),
+        visit_required_count=sum(1 for t in tasks if t.requires_visit),
+        unverified_document_count=sum(1 for t in tasks if t.master_unverified),
         calendar_source_ref=cal.source_ref,
         disclaimer=DISCLAIMER,
     )
@@ -166,19 +174,62 @@ def _plan_for(policy: PolicySchema, today: date, cal: HolidayCalendar) -> Policy
             f"(여유 영업일 {plan.slack_business_days}일)."
         )
 
+    # 유효기간: 너무 일찍 떼면 제출일에 만료된다.
+    # 마감일(=제출일)에서 가장 짧은 유효기간만큼 거슬러 올라간 날이 하한이다.
+    plan.issue_not_before_date = _issue_not_before(docs, deadline)
+    if plan.issue_not_before_date and plan.recommended_start_date:
+        if plan.issue_not_before_date > plan.recommended_start_date:
+            # 유효기간이 발급 대기보다 빡빡하다 — 하한이 착수일을 밀어낸다
+            plan.recommended_start_date = plan.issue_not_before_date
+            plan.slack_business_days = cal.business_days_between(
+                today, date.fromisoformat(plan.issue_not_before_date)
+            )
+        # 서류마다 자기 유효기간에 맞는 하한을 따로 붙인다 —
+        # 90일짜리를 30일짜리와 같은 날 떼라고 하면 불필요한 재방문이 생긴다.
+        for doc_item in docs:
+            if doc_item.validity_days:
+                doc_item.issue_not_before = (
+                    deadline - timedelta(days=doc_item.validity_days - 1)
+                ).isoformat()
+        shortest = min(d.validity_days for d in docs if d.validity_days)
+        plan.reason += (
+            f" 유효기간 {shortest}일 서류가 있어 "
+            f"{plan.issue_not_before_date} 이전에 발급하면 제출일에 만료됩니다."
+        )
+
     if plan.estimated:
         plan.reason += " 일부 서류의 발급 소요일은 추정치입니다."
 
     return plan
 
 
+def _issue_not_before(docs: list[PlanDocument], submit_on: date) -> str | None:
+    """이 날 이전에 발급하면 제출일에 만료되는 경계.
+
+    가장 짧은 유효기간이 구간을 결정한다 — 30일짜리와 90일짜리를 함께 내는
+    날이면 30일짜리 기준으로 움직여야 둘 다 살아 있다.
+    유효기간은 달력일이지 영업일이 아니다 (법이 '발급일로부터 N일'로 쓴다).
+    """
+    windows = [d.validity_days for d in docs if d.validity_days]
+    if not windows:
+        return None
+    # 발급일 당일을 1일째로 세므로, N일 유효 서류는 제출일 기준 N-1일 전까지 유효하다
+    return (submit_on - timedelta(days=min(windows) - 1)).isoformat()
+
+
 def _plan_document(doc: Document) -> PlanDocument:
     """공고의 서류 항목을 계획용으로 바꾼다.
 
-    소요일의 권위는 서류 마스터(document 테이블)다 — 공고문은 "등본 1부"까지만
-    적고 며칠 걸리는지는 쓰지 않는다. 배치가 마스터를 매핑하며 값을 채워 넣고,
-    매핑에 실패하면 여기서 추정값으로 메운다.
+    소요일·수수료·유효기간의 권위는 서류 마스터다 — 공고문은 "등본 1부"까지만
+    적고 며칠 걸리는지, 얼마인지, 언제까지 유효한지는 쓰지 않는다.
+    공고에 값이 적혀 있어도 마스터가 이긴다: 공고는 수백 건이 제각각 틀리지만
+    마스터는 한 곳에서 고치면 전부 고쳐진다.
+    마스터에 없는 서류만 공고 값 → 추정값 순으로 떨어진다 (관리자 큐 대상).
     """
+    spec = resolve(doc.doc_code, doc.name)
+    if spec is not None:
+        return _from_spec(doc, spec)
+
     lead = doc.lead_time_business_days
     estimated = lead is None
     return PlanDocument(
@@ -189,6 +240,31 @@ def _plan_document(doc: Document) -> PlanDocument:
         cost_krw=doc.cost_krw,
         lead_time_estimated=estimated,
         notes=doc.notes,
+        source_quote=doc.source_quote,
+    )
+
+
+def _from_spec(doc: Document, spec: DocumentSpec) -> PlanDocument:
+    """마스터 항목을 계획용 서류로. 역산에는 소요일 범위의 최댓값을 쓴다.
+
+    평균을 쓰면 편차가 큰 서류(재직증명서 1~5일)에서 절반이 마감을 놓친다.
+    화면에는 최소~최대를 그대로 보여준다.
+    """
+    return PlanDocument(
+        name=spec.name,
+        doc_code=spec.doc_code,
+        issuer=doc.issuer or spec.channel,
+        lead_time_business_days=spec.planning_lead_days,
+        lead_time_min_business_days=spec.lead_min_business_days,
+        cost_krw=spec.cheapest_fee_krw,
+        # 마스터 값은 추정이 아니다. 다만 아직 검증되지 않았다면 따로 표시한다.
+        lead_time_estimated=False,
+        issue_kind=spec.issue_kind,
+        channel=spec.channel,
+        validity_days=spec.validity_days,
+        requires_visit=spec.requires_visit,
+        master_unverified=not spec.verified,
+        notes=doc.notes or spec.notes,
         source_quote=doc.source_quote,
     )
 
@@ -218,6 +294,7 @@ def _document_tasks(policies: list[PolicySchema], plans: list[PolicyPlan]) -> li
     이름으로 합친다.
     """
     start_by_policy = {p.policy_id: p.recommended_start_date for p in plans}
+    deadline_by_policy = {p.policy_id: p.deadline_date for p in plans}
     planned = {p.policy_id for p in plans}
 
     tasks: dict[str, DocumentTask] = {}
@@ -234,8 +311,14 @@ def _document_tasks(policies: list[PolicySchema], plans: list[PolicyPlan]) -> li
                     doc_code=doc.doc_code,
                     issuer=doc.issuer,
                     lead_time_business_days=doc.lead_time_business_days,
+                    lead_time_min_business_days=doc.lead_time_min_business_days,
                     lead_time_estimated=doc.lead_time_estimated,
                     cost_krw=doc.cost_krw,
+                    issue_kind=doc.issue_kind,
+                    channel=doc.channel,
+                    requires_visit=doc.requires_visit,
+                    master_unverified=doc.master_unverified,
+                    validity_days=doc.validity_days,
                     notes=doc.notes,
                 )
                 tasks[key] = task
@@ -257,6 +340,24 @@ def _document_tasks(policies: list[PolicySchema], plans: list[PolicyPlan]) -> li
             start = start_by_policy.get(policy.policy_id)
             if start and (task.needed_by_date is None or start < task.needed_by_date):
                 task.needed_by_date = start
+
+            # 유효기간이 있으면 '가장 늦게 내는 정책'이 발급 하한을 정한다.
+            # 30일짜리 서류를 두 달 간격의 두 정책에 쓰려면 한 번으로는 안 된다.
+            deadline = deadline_by_policy.get(policy.policy_id)
+            if doc.validity_days and deadline:
+                bound = (
+                    date.fromisoformat(deadline) - timedelta(days=doc.validity_days - 1)
+                ).isoformat()
+                if task.issue_not_before is None or bound > task.issue_not_before:
+                    task.issue_not_before = bound
+
+    # 한 번 떼서 전부 커버되는지 확인한다.
+    # 발급 하한(유효기간)이 사용 기한(가장 이른 착수일)보다 늦으면, 같은 서류를
+    # 두 번 떼야 한다는 뜻이다. 이걸 말해주지 않으면 사용자는 첫 정책 때 뗀
+    # 서류를 들고 갔다가 두 번째 정책에서 만료로 반려당한다.
+    for task in tasks.values():
+        if task.issue_not_before and task.needed_by_date:
+            task.single_issue_covers_all = task.issue_not_before <= task.needed_by_date
 
     ordered = list(tasks.values())
     # 기한이 이른 것 먼저, 기한 미상은 뒤로. 같으면 여러 정책이 쓰는 서류를 위로.
