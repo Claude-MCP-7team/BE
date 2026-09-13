@@ -41,7 +41,7 @@ FastAPI 단일 컨테이너 (Render Free / Oracle Always Free)
 | 신청 계획 (3,000 정책 / 715 적격) | **10.1 ms** | p95 ≤ 50 ms |
 | 영업일 역산 1회 | **1.5 µs** | — |
 | 2026 공휴일 (대체공휴일 포함 21일) | **전수 일치** | G5: 100% |
-| 테스트 | **254건** | — |
+| 테스트 | **301건** | — |
 | MWIS 정확성 (정점 3~13, 200건 상위3개) | **200/200 완전탐색 일치** | G4: 100% |
 | DB 물리 크기 (3,000 정책) | **1.5 MB** | Neon Free 500 MB |
 
@@ -80,7 +80,13 @@ SNAPSHOT_PATH=snapshot.json uvicorn app.main:app --reload
 #   GET  /v1/meta/snapshot       스냅샷 버전·건수
 #   GET  /healthz  /readyz       프로세스 생존 / 서비스 가능
 
-# 5. M0 데이터 정합성 조사 (G0 게이트 판정)
+# 5. 스냅샷 빌드 (검증 관문 통과분만 출력)
+python -m batch.build_snapshot data/policies.json -o snapshot.json
+#   --check-only     쓰지 않고 검사만
+#   --allow-partial  검증 실패분을 빼고 빌드 (누락은 사용자에게 안 보인다)
+#   --force          직전 대비 급감 검사를 건너뛴다
+
+# 6. M0 데이터 정합성 조사 (G0 게이트 판정)
 ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41
 python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 재조사
 ```
@@ -117,7 +123,9 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `app/planner/` — 영업일 달력 · 권장 착수일 역산 · ICS 내보내기 (BE-M5-2~4)
 - [ ] `document` 서류 마스터 30~50종 수작업 입력 (BE-M5-1)
 - [ ] `app/db/` — asyncpg 풀 + 리포지토리 · 세션 저장 (BE-M1-2)
-- [ ] `batch/` — 크롤러 · A1/A2 오케스트레이션 · 스냅샷 빌더 (BE-M1-4~7)
+- [x] `batch/build_snapshot.py` — 스냅샷 빌더 · 검증 관문 (BE-M1-6~7)
+- [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
+- [ ] `batch/crawl` · `batch/agents` — 원문 크롤러 · A1/A2 오케스트레이션 (BE-M1-4~5)
 
 ## 계약면
 
