@@ -6,20 +6,27 @@
   # 2. 이미 받아둔 원본으로 다시 조사 (네트워크 불필요)
   python -m batch.collect.cli survey data/raw/20260914T020000Z
 
-두 경우 모두 docs/m0/ 아래에 G0 판정 리포트를 남긴다.
+  # 3. 원본 → PolicySchema 목록 (build_snapshot 의 입력)
+  python -m batch.collect.cli normalize data/raw/20260914T020000Z -o data/policies.json
+
+1·2 는 docs/m0/ 아래에 G0 판정 리포트를 남긴다.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import collections
 import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import msgspec
+
 from app.core.console import force_utf8_console
 from batch.collect.client import CollectConfig, YouthCenterClient, load_raw
+from batch.collect.normalize import record_to_policy
 from batch.collect.parse import Record
 from batch.collect.survey import build_report, render_markdown
 
@@ -75,6 +82,27 @@ def cmd_survey(args: argparse.Namespace) -> int:
     return 0 if write_report(records, str(directory)) else 1
 
 
+def cmd_normalize(args: argparse.Namespace) -> int:
+    directory = Path(args.directory)
+    records = load_raw(directory) if directory.is_dir() else []
+    if not records:
+        print(f"레코드가 없습니다: {directory}", file=sys.stderr)
+        return 2
+    crawled_at = directory.name.split("-")[0]  # 원본 디렉터리명이 수집 시각이다
+    policies = [record_to_policy(r, crawled_at=crawled_at) for r in records]
+    out = Path(args.output)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(msgspec.json.format(msgspec.json.encode(policies), indent=2))
+
+    status = collections.Counter(p.status for p in policies)
+    review = collections.Counter(f for p in policies for f in p.quality.needs_review_fields)
+    print(f"변환 {len(policies)}건 → {out}")
+    print(f"  상태: {dict(status)}")
+    print(f"  룰 수: {sum(len(p.eligibility) for p in policies)}")
+    print(f"  표현 못 한 조건(needs_review): {dict(review)}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="batch.collect.cli", description="M0 데이터 정합성 조사")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -87,9 +115,15 @@ def main(argv: list[str] | None = None) -> int:
     p_survey = sub.add_parser("survey", help="저장된 원본으로 조사")
     p_survey.add_argument("directory", help="data/raw/<timestamp>")
 
+    p_norm = sub.add_parser("normalize", help="원본 → PolicySchema JSON")
+    p_norm.add_argument("directory", help="data/raw/<timestamp>")
+    p_norm.add_argument("-o", "--output", default="data/policies.json")
+
     args = parser.parse_args(argv)
     if args.command == "fetch":
         return asyncio.run(cmd_fetch(args))
+    if args.command == "normalize":
+        return cmd_normalize(args)
     return cmd_survey(args)
 
 

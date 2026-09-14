@@ -137,6 +137,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `app/db/` — asyncpg 풀 · 세션 저장 (AES-256-GCM) · `/v1/sessions` (BE-M1-2)
 - [x] `batch/build_snapshot.py` — 스냅샷 빌더 · 검증 관문 (BE-M1-6~7)
 - [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
+- [x] `batch/collect/normalize` — API 구조화 필드 → PolicySchema (LLM 없이 실데이터 스냅샷)
 - [ ] `batch/crawl` · `batch/agents` — 원문 크롤러 · A1/A2 오케스트레이션 (BE-M1-4~5)
 
 ## 계약면

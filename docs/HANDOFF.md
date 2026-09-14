@@ -79,6 +79,22 @@ python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 �
 → 링크 게이트를 합집합으로 볼지, 조합 가중치를 금액→건수로 바꿀지(Q2)는 **팀 결정** 후 크롤러 작업.
 레코드는 60개 필드 전부 문자열이며 빈 값은 `""` 또는 공백(`"        "`)이다 — `.strip()` 없이 비교하면 틀린다.
 
+**LLM 없이 실데이터 스냅샷이 나온다** (`batch/collect/normalize.py`, 코드값 의미는 그 도크스트링):
+
+```bash
+python -m batch.collect.cli fetch                       # 전국 2,774건, 3페이지
+python -m batch.collect.cli normalize data/raw/<타임스탬프> -o data/policies.json
+python -m batch.build_snapshot data/policies.json -o data/snapshot.json
+SNAPSHOT_PATH=data/snapshot.json uvicorn app.main:app
+```
+
+실측(2026-09-14): 2,774건 전부 검증 통과, 룰 5,636개, published 1,555 / expired 914 / draft 305(원문 링크 없음).
+25세 부천 사용자 → 적격 322 · 확인필요 135 · 부적격 2,317, 판정 3ms. 역질문은 3필드로 병합.
+구조화된 것(지역·나이·결혼·취업·학력·기간)만 룰이 되고 소득·서류·중복수혜는 `needs_review_fields` 에 남는다 — A2(LLM) 몫.
+
+⚠️ **엔진·API 는 `status` 를 보지 않는다.** expired 914건과 draft 305건도 published 와 똑같이 판정되어 나간다.
+빌더나 API 에서 거를지, 응답에 status 를 실어 FE 가 표시할지 정해야 한다. 지금은 마감된 정책이 '적격'으로 보인다.
+
 ### ③ 서류 마스터 검증 (BE-M5-1 잔여)
 `data/documents/master_v2.csv` 36종이 **전부 `검증상태=확인필요`** 다.
 실제로 확인된 항목만 `확인완료` 로 바꾸면 `master_unverified` 가 false 가 되고 화면의 추정치 표시가 사라진다. 코드 변경은 필요 없다 — CSV 만 고치면 된다.

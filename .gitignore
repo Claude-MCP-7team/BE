@@ -15,5 +15,7 @@ snapshot*.msgpack*
 *.log
 .DS_Store
 data/raw/
+data/policies.json
+data/snapshot.json*
 docs/m0/
 .venv/
