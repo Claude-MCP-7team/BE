@@ -41,7 +41,7 @@ FastAPI 단일 컨테이너 (Render Free / Oracle Always Free)
 | 신청 계획 (3,000 정책 / 715 적격) | **10.1 ms** | p95 ≤ 50 ms |
 | 영업일 역산 1회 | **1.5 µs** | — |
 | 2026 공휴일 (대체공휴일 포함 21일) | **전수 일치** | G5: 100% |
-| 테스트 | **327건** | — |
+| 테스트 | **384건** (DB 통합 28건 포함) | — |
 | MWIS 정확성 (정점 3~13, 200건 상위3개) | **200/200 완전탐색 일치** | G4: 100% |
 | DB 물리 크기 (3,000 정책) | **1.5 MB** | Neon Free 500 MB |
 
@@ -69,13 +69,23 @@ psql "$DATABASE_URL" -f db/verify_schema.sql
 pip install numpy && python bench/engine_bench.py
 
 # 4. API 띄우기
-SNAPSHOT_PATH=snapshot.json uvicorn app.main:app --reload
+#    세션 저장을 쓰려면 DATABASE_URL 과 PROFILE_ENC_KEYS 가 함께 필요하다.
+#    키가 없으면 세션 API 만 503 이고 판정은 정상 동작한다 (평문 저장 폴백 없음).
+#    키 생성: python -c "from app.core.crypto import generate_key; print(generate_key())"
+SNAPSHOT_PATH=snapshot.json \
+  DATABASE_URL=postgresql://... \
+  PROFILE_ENC_KEYS="1:<base64-32bytes>" \
+  uvicorn app.main:app --reload
 #   POST /v1/judge               조건 → 전 정책 일괄 판정 (요약 + 적격/확인필요)
 #   POST /v1/judge?include=all   부적격 근거까지
 #   POST /v1/questions           역질문 큐 (필드당 1질문 · 상한 10)
 #   POST /v1/combinations        조합 추천 (보수/최대 2안 × 상위 3개)
 #   POST /v1/plan                신청 계획 (권장 착수일 · 서류 기준 할 일)
 #   POST /v1/plan.ics            같은 계획을 캘린더(.ics)로
+#   POST   /v1/sessions          익명 세션 발급 (+프로필 저장)
+#   GET    /v1/sessions/{id}     저장된 프로필 조회
+#   PUT    /v1/sessions/{id}     프로필 전체 수정
+#   DELETE /v1/sessions/{id}     즉시 파기
 #   GET  /v1/policies/{id}       정책 상세 (공고 원문)
 #   GET  /v1/meta/snapshot       스냅샷 버전·건수
 #   GET  /healthz  /readyz       프로세스 생존 / 서비스 가능
@@ -123,7 +133,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `app/planner/` — 영업일 달력 · 권장 착수일 역산 · ICS 내보내기 (BE-M5-2~4)
 - [x] 서류 마스터 36종 · 유효기간 구간 계산 (BE-M5-1, `data/documents/master_v2.csv`)
 - [ ] 서류 마스터 검증 — 전 항목이 아직 `확인필요` 상태
-- [ ] `app/db/` — asyncpg 풀 + 리포지토리 · 세션 저장 (BE-M1-2)
+- [x] `app/db/` — asyncpg 풀 · 세션 저장 (AES-256-GCM) · `/v1/sessions` (BE-M1-2)
 - [x] `batch/build_snapshot.py` — 스냅샷 빌더 · 검증 관문 (BE-M1-6~7)
 - [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
 - [ ] `batch/crawl` · `batch/agents` — 원문 크롤러 · A1/A2 오케스트레이션 (BE-M1-4~5)

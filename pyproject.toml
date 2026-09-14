@@ -62,6 +62,9 @@ select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
 "app/api/**" = ["TID251"]
 "app/main.py" = ["TID251"]
 "batch/**" = ["TID251"]
+# app/db 자기 자신은 당연히 app.db 를 import 한다. 이 금지는 '핫 경로가 DB 를
+# 부르지 않는다'는 규칙이지, DB 계층이 스스로를 못 쓴다는 뜻이 아니다.
+"app/db/**" = ["TID251"]
 "tests/**" = ["TID251", "E501"]
 
 [tool.mypy]

@@ -18,7 +18,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 
 from app.api.v1 import judge as judge_api
+from app.api.v1 import sessions as sessions_api
 from app.core.config import settings
+from app.db import pool as db_pool
 from app.engine import snapshot as snapshot_store
 from app.engine.snapshot import load_from_json
 
@@ -37,7 +39,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             log.exception("스냅샷 적재 실패 — 미준비 상태로 기동합니다")
     else:
         log.warning("SNAPSHOT_PATH 가 없습니다 — 미준비 상태로 기동합니다")
+
+    # DB 는 판정 경로에 없다 (ADR-001). 연결에 실패해도 기동을 막지 않는다 —
+    # 스냅샷만 있으면 판정은 되고, 세션 저장만 503 이 된다.
+    await db_pool.db.connect()
+
     yield
+
+    await db_pool.db.close()
 
 
 app = FastAPI(
@@ -47,6 +56,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.include_router(judge_api.router)
+app.include_router(sessions_api.router)
 
 
 @app.get("/healthz", include_in_schema=False)
@@ -57,8 +67,15 @@ async def healthz() -> dict[str, str]:
 
 @app.get("/readyz", include_in_schema=False)
 async def readyz(response: Response) -> dict[str, object]:
-    """요청 처리 가능 여부. 스냅샷이 없으면 503."""
-    info = snapshot_store.holder.info
+    """요청 처리 가능 여부.
+
+    준비 판정의 기준은 **스냅샷뿐이다.** DB 가 죽었다고 503 을 내면 로드밸런서가
+    인스턴스를 빼버리는데, 그 인스턴스는 판정을 멀쩡히 할 수 있다. 저장만 안 될
+    뿐인 상태를 '서비스 불가'로 보고하면 장애가 아닌 것을 장애로 만든다.
+    DB 상태는 진단용으로 함께 싣되 판정에는 넣지 않는다.
+    """
+    info = dict(snapshot_store.holder.info)
+    info["database"] = db_pool.db.info
     if not info.get("ready"):
         response.status_code = 503
     return info

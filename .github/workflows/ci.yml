@@ -44,8 +44,28 @@ jobs:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d ypc_test -f db/verify_schema.sql
 
-      - name: 단위 테스트
+      - name: 단위 테스트 (DB 통합 테스트 포함)
+        env:
+          # 이 값이 없으면 세션 저장소 테스트가 조용히 skip 된다.
+          # 안 도는 테스트는 없는 테스트다.
+          # 비밀번호는 DSN 에 박지 않고 PGPASSWORD 로 준다 (asyncpg 가 libpq 환경변수를
+          # 읽는다) — DSN 이 로그나 에러 메시지에 그대로 찍히는 경로가 많다.
+          DATABASE_URL: postgresql://postgres@localhost:5432/ypc_test
+          PGPASSWORD: postgres
         run: pytest
+
+      - name: DB 통합 테스트가 실제로 실행됐는지 확인
+        env:
+          DATABASE_URL: postgresql://postgres@localhost:5432/ypc_test
+          PGPASSWORD: postgres
+        run: |
+          # skip 된 채로 초록불이 뜨면 DB 계층이 검증되지 않은 채 배포된다
+          pytest tests/unit/test_db_sessions.py -q --no-header -p no:cacheprovider \
+            | tee /tmp/db-tests.log
+          if grep -qE '[0-9]+ skipped' /tmp/db-tests.log; then
+            echo "::error::DB 통합 테스트가 skip 되었습니다 — DATABASE_URL 을 확인하세요"
+            exit 1
+          fi
 
       - name: 계약 스키마가 최신인지 확인
         run: |
