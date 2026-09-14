@@ -98,14 +98,14 @@ python -m batch.build_snapshot data/policies.json -o snapshot.json
 #   --force          직전 대비 급감 검사를 건너뛴다
 
 # 6. M0 데이터 정합성 조사 (G0 게이트 판정)
-ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41
+ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41000   # 41000=경기 전체
 python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 재조사
 ```
 
-> ⚠️ 온통청년 API 의 엔드포인트·파라미터명은 **아직 미확정**이다. 공식 명세 페이지가
-> 현재 개발 환경에서 접근 차단되어 원문 확인을 하지 못했다. 기본값은 2차 자료 기준이며
-> 전부 환경변수로 덮어쓸 수 있다 (`ONTONG_BASE_URL`, `ONTONG_KEY_PARAM`, ...).
-> 실제 응답이 다르더라도 코드 수정 없이 조사를 시작할 수 있도록 만들어 두었다.
+> 온통청년 API 는 2026-09-14 실제 응답으로 확정했다 (`/go/ythip/getPlcy`, JSON, 전체 2,774건 =
+> 1,000건 × 3페이지). 지역은 `zipCd` 에 법정동 5자리(`41000` = 경기 전체)로 준다.
+> 상세는 `batch/collect/client.py` 도크스트링. 명세가 또 바뀌면 환경변수(`ONTONG_BASE_URL`,
+> `ONTONG_KEY_PARAM`, ...)로 코드 수정 없이 덮어쓸 수 있다.
 
 ## 디렉터리
 

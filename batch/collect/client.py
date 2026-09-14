@@ -1,11 +1,20 @@
 """온통청년 OPEN API 수집기.
 
-⚠️ 엔드포인트와 파라미터명은 **미확정**이다.
-   공식 명세 페이지(youthcenter.go.kr, data.go.kr)가 현재 개발 환경의 네트워크
-   정책에서 차단되어 원문 확인을 하지 못했다. 아래 기본값은 2차 자료에서 얻은
-   것이므로 BE-M0-1 에서 실제 응답으로 검증한 뒤 확정한다.
-   전부 환경변수로 덮어쓸 수 있게 해두었으므로, 값이 다르더라도 코드 수정 없이
-   조사를 시작할 수 있다.
+엔드포인트·파라미터명은 2026-09-14 실제 응답으로 확정했다 (전체 2,774건 기준):
+
+  GET https://www.youthcenter.go.kr/go/ythip/getPlcy
+      apiKeyNm=<키>  rtnType=json  pageNum=1..  pageSize=<=1000
+      zipCd=41000   ← 법정동 코드 5자리. 시도 전체는 <시도코드>000 이고,
+                      전국 정책도 함께 나온다 (클라이언트 접두사 필터와 건수 일치)
+
+  응답: {"resultCode":200, "result":{"pagging":{"totCount":N,...},
+                                     "youthPolicyList":[{...60개 필드}]}}
+  잘못된 키: HTTP 403 {"errorCode":"e001","errorMsg":"invalid api key."}
+
+구 엔드포인트(/opi/youthPlcyList.do, openApiVlak)는 응답하지 않으며(타임아웃),
+구 지역 파라미터(srchPolyBizSecd)는 신 API 가 무시하고 전체를 돌려준다 — 넘겨도
+에러가 아니라 필터가 조용히 풀리므로 쓰지 말 것.
+환경변수 덮어쓰기는 명세가 다시 바뀔 때를 위해 남겨둔다.
 
 응답 원본은 항상 디스크에 남긴다. 같은 데이터를 다시 받지 않고 여러 번
 분석할 수 있어야 조사 비용이 줄고, 조사 결과를 나중에 재현할 수 있다.
@@ -23,8 +32,8 @@ import httpx
 
 from batch.collect.parse import Record, parse_payload
 
-DEFAULT_BASE_URL = "https://www.youthcenter.go.kr/opi/youthPlcyList.do"
-DEFAULT_PAGE_SIZE = 100
+DEFAULT_BASE_URL = "https://www.youthcenter.go.kr/go/ythip/getPlcy"
+DEFAULT_PAGE_SIZE = 1000  # 실측 상한. 전체가 3페이지로 끝난다
 MAX_RETRIES = 4
 BACKOFF_BASE_SECONDS = 2.0
 
@@ -36,11 +45,10 @@ class CollectConfig:
     api_key: str
     base_url: str = DEFAULT_BASE_URL
 
-    # 요청 파라미터명 — 실제 응답으로 확인 후 확정
-    key_param: str = "openApiVlak"
-    page_param: str = "pageIndex"
-    size_param: str = "display"
-    region_param: str = "srchPolyBizSecd"
+    key_param: str = "apiKeyNm"
+    page_param: str = "pageNum"
+    size_param: str = "pageSize"
+    region_param: str = "zipCd"
 
     page_size: int = DEFAULT_PAGE_SIZE
     max_pages: int = 50
@@ -58,10 +66,10 @@ class CollectConfig:
         return cls(
             api_key=api_key,
             base_url=os.environ.get("ONTONG_BASE_URL", DEFAULT_BASE_URL),
-            key_param=os.environ.get("ONTONG_KEY_PARAM", "openApiVlak"),
-            page_param=os.environ.get("ONTONG_PAGE_PARAM", "pageIndex"),
-            size_param=os.environ.get("ONTONG_SIZE_PARAM", "display"),
-            region_param=os.environ.get("ONTONG_REGION_PARAM", "srchPolyBizSecd"),
+            key_param=os.environ.get("ONTONG_KEY_PARAM", "apiKeyNm"),
+            page_param=os.environ.get("ONTONG_PAGE_PARAM", "pageNum"),
+            size_param=os.environ.get("ONTONG_SIZE_PARAM", "pageSize"),
+            region_param=os.environ.get("ONTONG_REGION_PARAM", "zipCd"),
             page_size=int(os.environ.get("ONTONG_PAGE_SIZE", DEFAULT_PAGE_SIZE)),
             raw_dir=Path(os.environ.get("ONTONG_RAW_DIR", "data/raw")),
         )
@@ -89,12 +97,13 @@ class YouthCenterClient:
             await self._client.aclose()
 
     async def fetch_page(self, page: int, region: str | None = None) -> bytes:
-        """1페이지를 받는다. 네트워크 오류만 재시도하고 4xx 는 즉시 올린다."""
+        """1페이지를 받는다. 네트워크 오류만 재시도하고 4xx(잘못된 키 = 403) 는 즉시 올린다."""
         cfg = self.config
         params: dict[str, str | int] = {
             cfg.key_param: cfg.api_key,
             cfg.page_param: page,
             cfg.size_param: cfg.page_size,
+            "rtnType": "json",
         }
         if region:
             params[cfg.region_param] = region

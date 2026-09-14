@@ -65,15 +65,19 @@ BE 답변은 이미 달아뒀다 ([코멘트](https://github.com/Claude-MCP-7tea
 답변이 왔으면 그것부터 반영하고, 안 왔으면 아래로 진행한다.
 
 ### ② `batch/crawl` + `batch/agents` (BE-M1-4~5)
-**막혀 있다.** 온통청년 OPEN API 의 엔드포인트·파라미터명이 미확정이고, 공식 명세 페이지가 이전 개발 환경에서 네트워크 차단되어 원문을 확인하지 못했다.
-
-- 수집기(`batch/collect/`)는 이미 있고 **전부 환경변수로 덮어쓸 수 있게** 만들어 뒀다 (`ONTONG_BASE_URL`, `ONTONG_KEY_PARAM` 등) — 실제 응답이 달라도 코드 수정 없이 조사를 시작할 수 있다.
-- 로컬 Claude Code 는 네트워크가 열려 있을 수 있으니 **먼저 실제 API 응답을 한 번 받아보고 파라미터를 확정**한 뒤 크롤러를 짜는 게 맞다. 추측으로 짜면 다시 짜게 된다.
+**API 는 확정됐다** (2026-09-14 실응답 기준, 상세는 `batch/collect/client.py` 도크스트링).
+`/go/ythip/getPlcy` · JSON · 1,000건/페이지 · 지역은 `zipCd=41000`(법정동 5자리, 전국 정책 포함).
+구 엔드포인트는 죽었고 구 지역 파라미터는 조용히 무시된다.
 
 ```bash
-ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41
+ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41000
 python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 재조사, G0 게이트 판정
 ```
+
+**G0 실측 (경기 544건):** 정책 건수 ✅ · 원문 링크 단일필드 65.3% ❌ (3개 URL 필드 합집합은 79.2%) ·
+수혜액 명시율 ❌ — 구조화된 수혜액 필드가 없고 `plcySprtCn` 본문 금액 패턴이 24%.
+→ 링크 게이트를 합집합으로 볼지, 조합 가중치를 금액→건수로 바꿀지(Q2)는 **팀 결정** 후 크롤러 작업.
+레코드는 60개 필드 전부 문자열이며 빈 값은 `""` 또는 공백(`"        "`)이다 — `.strip()` 없이 비교하면 틀린다.
 
 ### ③ 서류 마스터 검증 (BE-M5-1 잔여)
 `data/documents/master_v2.csv` 36종이 **전부 `검증상태=확인필요`** 다.

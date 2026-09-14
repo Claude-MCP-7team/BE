@@ -1,7 +1,7 @@
 """M0 조사 CLI.
 
   # 1. 실제 API 에서 수집 + 조사 (인증키 필요)
-  ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41
+  ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41000
 
   # 2. 이미 받아둔 원본으로 다시 조사 (네트워크 불필요)
   python -m batch.collect.cli survey data/raw/20260914T020000Z
@@ -80,7 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_fetch = sub.add_parser("fetch", help="API 에서 수집하고 조사")
-    p_fetch.add_argument("--region", help="지역 코드 (예: 41=경기)")
+    p_fetch.add_argument(
+        "--region", help="법정동 코드 5자리 (예: 41000=경기 전체, 전국 정책 포함). 생략하면 전체"
+    )
 
     p_survey = sub.add_parser("survey", help="저장된 원본으로 조사")
     p_survey.add_argument("directory", help="data/raw/<timestamp>")
