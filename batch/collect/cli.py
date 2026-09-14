@@ -18,6 +18,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.core.console import force_utf8_console
 from batch.collect.client import CollectConfig, YouthCenterClient, load_raw
 from batch.collect.parse import Record
 from batch.collect.survey import build_report, render_markdown
@@ -91,4 +92,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    force_utf8_console()
     raise SystemExit(main())

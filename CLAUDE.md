@@ -64,6 +64,10 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 한국어 Windows 의 기본값은 cp949 라서, 생략하면 같은 코드가 개발자 기계에 따라
 동작하거나 `UnicodeDecodeError` 로 죽는다. ruff `PLW1514` 가 CI 에서 잡는다.
 
+CLI 진입점(`if __name__ == "__main__"`)에서는 `force_utf8_console()` 을 먼저 부른다.
+한글을 `print` 하면 콘솔 코드페이지 때문에 `UnicodeEncodeError` 로 죽는데, 출력에는
+`encoding=` 을 줄 자리가 없어서 스트림 자체를 바꿔야 한다.
+
 cp949 환경을 흉내 내 미리 확인: `PYTHONUTF8=0 pytest`
 
 ## Windows 로컬 PostgreSQL 함정

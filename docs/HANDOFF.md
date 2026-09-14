@@ -222,7 +222,12 @@ python -c "from app.core.crypto import generate_key; print(generate_key())"
 같은 코드가 개발자 기계에 따라 동작하거나 `UnicodeDecodeError` 로 죽는다. 이 저장소는
 SQL·JSON·리포트에 전부 한글이 들어가므로 생략하면 언젠가 반드시 걸린다.
 
-ruff 의 `PLW1514` 규칙을 켜 두어 CI 가 잡는다. 로컬에서 미리 확인하려면:
+**출력도 마찬가지다.** CLI 가 한글을 `print` 하면 콘솔 코드페이지(cp949 / cp1252)가
+표현하지 못해 `UnicodeEncodeError` 로 죽는다. 파일과 달리 `encoding=` 을 줄 자리가 없어서
+`app/core/console.py` 의 `force_utf8_console()` 을 CLI 진입점에서 먼저 부른다.
+
+ruff 의 `PLW1514` 규칙과 `tests/unit/test_locale_safety.py`, 그리고 CI 의 `windows-cp949`
+잡이 함께 잡는다. 로컬에서 미리 확인하려면:
 
 ```bash
 PYTHONUTF8=0 pytest        # cp949 로캘 흉내 (git-bash)

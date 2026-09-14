@@ -17,6 +17,7 @@ import msgspec
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+from app.core.console import force_utf8_console  # noqa: E402
 from app.schemas.enums import KNOWN_FIELDS, TIME_SATISFIABLE_FIELDS  # noqa: E402
 from app.schemas.judgement import JudgementResult  # noqa: E402
 from app.schemas.policy import PolicySchema  # noqa: E402
@@ -58,5 +59,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    force_utf8_console()
     print("계약 스키마 내보내기:")
     main()

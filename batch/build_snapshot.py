@@ -36,6 +36,7 @@ from pathlib import Path
 
 import msgspec
 
+from app.core.console import force_utf8_console
 from app.schemas.policy import PolicySchema
 from app.schemas.validate import SchemaViolation, validate_policy
 
@@ -284,4 +285,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":  # pragma: no cover
+    force_utf8_console()
     raise SystemExit(main())

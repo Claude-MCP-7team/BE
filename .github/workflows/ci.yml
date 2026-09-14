@@ -104,3 +104,8 @@ jobs:
         env:
           PYTHONUTF8: "0"
         run: python tools/export_contract.py
+
+      - name: 벤치마크 (cp949 로캘)
+        env:
+          PYTHONUTF8: "0"
+        run: python bench/engine_bench.py

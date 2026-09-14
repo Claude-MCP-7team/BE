@@ -22,6 +22,7 @@ from datetime import date
 # `python bench/engine_bench.py` 로 바로 실행할 수 있게 레포 루트를 경로에 넣는다
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+from app.core.console import force_utf8_console  # noqa: E402
 from app.engine.compile import compile_snapshot  # noqa: E402
 from app.engine.evaluate import explain, judge_all  # noqa: E402
 from app.planner.backplan import build_plan  # noqa: E402
@@ -277,6 +278,7 @@ def bench_planner() -> None:
 
 
 if __name__ == "__main__":
+    force_utf8_console()
     bench_rules()
     bench_solver()
     bench_planner()
