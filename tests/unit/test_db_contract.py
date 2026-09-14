@@ -12,7 +12,7 @@ import pytest
 from app.schemas import enums
 
 MIGRATION = pathlib.Path(__file__).resolve().parents[2] / "db" / "migrations" / "0001_init.sql"
-SQL = MIGRATION.read_text()
+SQL = MIGRATION.read_text(encoding="utf-8")
 
 
 def check_values(column: str) -> set[str]:

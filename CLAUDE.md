@@ -58,6 +58,14 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 - 검증할 값이 실제 동작에서 나온 것인지 확인할 것 — 서버를 띄워 HTTP 로 받아보는 게
   이 프로젝트의 기본 검증 방식이다
 
+## 파일 입출력
+
+`open()` · `read_text()` · `write_text()` 에 **반드시 `encoding="utf-8"`** 을 쓴다.
+한국어 Windows 의 기본값은 cp949 라서, 생략하면 같은 코드가 개발자 기계에 따라
+동작하거나 `UnicodeDecodeError` 로 죽는다. ruff `PLW1514` 가 CI 에서 잡는다.
+
+cp949 환경을 흉내 내 미리 확인: `PYTHONUTF8=0 pytest`
+
 ## Windows 로컬 PostgreSQL 함정
 
 - initdb 는 한글 경로에서 실패한다 → `C:\ypcpg\data` 같은 ASCII 경로 사용

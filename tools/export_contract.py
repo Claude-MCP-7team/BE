@@ -35,7 +35,9 @@ def main() -> None:
     ]:
         schema = msgspec.json.schema(typ)
         path = OUT / f"{name}.json"
-        path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n")
+        path.write_text(
+            json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
         print(f"  {path.relative_to(OUT.parent.parent)}")
 
     # 룰이 참조 가능한 필드 목록도 계약의 일부다.
@@ -49,7 +51,9 @@ def main() -> None:
         ),
     }
     path = OUT / "rule_fields.json"
-    path.write_text(json.dumps(fields, ensure_ascii=False, indent=2) + "\n")
+    path.write_text(
+        json.dumps(fields, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"  {path.relative_to(OUT.parent.parent)}")
 
 

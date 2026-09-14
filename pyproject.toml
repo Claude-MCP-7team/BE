@@ -49,7 +49,15 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
+# PLW1514: 인코딩을 지정하지 않은 텍스트 파일 열기.
+#   한국어 Windows 는 기본 인코딩이 cp949 라서, 지정하지 않으면 개발자 로캘에 따라
+#   같은 코드가 어떤 기계에서는 동작하고 어떤 기계에서는 UnicodeDecodeError 를 낸다.
+#   이 저장소는 SQL·JSON·리포트에 전부 한글이 들어가므로 반드시 명시한다.
+#   아직 preview 규칙이라 explicit-preview-rules 로 이것만 켠다 — preview 를 통째로
+#   켜면 아직 안정되지 않은 다른 규칙까지 따라 들어와 CI 가 예고 없이 깨진다.
+preview = true
+explicit-preview-rules = true
+select = ["E", "F", "I", "UP", "B", "SIM", "TID", "PLW1514"]
 
 # 역할 경계를 린트로 강제한다 (docs/ARCHITECTURE.md §4, §6.4).
 # 결정론 레이어가 LLM 이나 DB 를 직접 import 하면 CI 가 실패한다.

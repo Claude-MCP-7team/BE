@@ -216,6 +216,19 @@ python -c "from app.core.crypto import generate_key; print(generate_key())"
    ```
 3. **asyncpg 는 홈 디렉터리에서 SSL 인증서를 찾는다** — 홈 경로에 한글이 있으면 `OSError: [Errno 42] Illegal byte sequence` 가 난다. 로컬 DSN 에 **`?sslmode=disable`** 를 붙일 것. (CI 는 해당 없음)
 
+### 파일 입출력에는 반드시 `encoding="utf-8"` 을 쓴다
+
+한국어 Windows 의 기본 인코딩은 **cp949** 다. `Path.read_text()` 처럼 인코딩을 생략하면
+같은 코드가 개발자 기계에 따라 동작하거나 `UnicodeDecodeError` 로 죽는다. 이 저장소는
+SQL·JSON·리포트에 전부 한글이 들어가므로 생략하면 언젠가 반드시 걸린다.
+
+ruff 의 `PLW1514` 규칙을 켜 두어 CI 가 잡는다. 로컬에서 미리 확인하려면:
+
+```bash
+PYTHONUTF8=0 pytest        # cp949 로캘 흉내 (git-bash)
+$env:PYTHONUTF8=0; pytest  # PowerShell
+```
+
 ### 실행
 
 ```bash

@@ -77,3 +77,30 @@ jobs:
 
       - name: 엔진 벤치마크 (성능 회귀 감시)
         run: python bench/engine_bench.py
+
+  # 한국어 Windows 는 기본 인코딩이 cp949 다. ubuntu 러너는 UTF-8 이라
+  # encoding 을 생략한 파일 입출력이 여기서는 통과하고 팀원 기계에서만 죽는다.
+  # 실제로 그렇게 터진 적이 있어서 (test_db_contract.py, UnicodeDecodeError)
+  # 로캘이 다른 환경을 CI 에 한 칸 둔다.
+  windows-cp949:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 의존성 설치
+        run: pip install -e ".[dev]"
+
+      - name: 단위 테스트 (cp949 로캘)
+        env:
+          # 파이썬의 UTF-8 모드를 끈다 = 로캘 기본 인코딩(cp949)을 그대로 쓴다
+          PYTHONUTF8: "0"
+        run: pytest
+
+      - name: 계약 내보내기 (cp949 로캘)
+        env:
+          PYTHONUTF8: "0"
+        run: python tools/export_contract.py

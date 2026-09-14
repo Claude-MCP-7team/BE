@@ -32,12 +32,15 @@ def write_report(records: list[Record], source: str) -> bool:
     stamp = datetime.now(UTC).strftime("%Y%m%d")
 
     md_path = REPORT_DIR / f"g0-report-{stamp}.md"
-    md_path.write_text(f"<!-- source: {source} -->\n" + render_markdown(report))
+    md_path.write_text(
+        f"<!-- source: {source} -->\n" + render_markdown(report), encoding="utf-8"
+    )
 
     # 샘플 50건은 AI 역할이 프롬프트 설계에 바로 쓴다
     sample_path = REPORT_DIR / f"sample-{stamp}.json"
     sample_path.write_text(
-        json.dumps(records[:50], ensure_ascii=False, indent=2, default=str) + "\n"
+        json.dumps(records[:50], ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
     )
 
     print(f"\n리포트: {md_path}")
