@@ -13,6 +13,7 @@
 | --- | --- |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 전체 아키텍처 · ADR 6건 · 무료 티어 실사 · 성능 예산(실측) |
 | [`docs/DB_SCHEMA.md`](docs/DB_SCHEMA.md) | 테이블 14종 설계 · 인덱스 전략 · 스토리지 예산 |
+| [`docs/HANDOFF.md`](docs/HANDOFF.md) | **인수인계** — 현재 상태 · 작업 순서 · 설계 결정 · 개발 환경 함정 |
 
 ---
 
