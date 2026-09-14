@@ -332,7 +332,7 @@
     },
     "Rule": {
       "title": "Rule",
-      "description": "자격요건 / 제외대상 1건.\n\n    source_quote 는 필수다. 근거 없는 룰은 저장되지 않는다 (G1 게이트).\n    DB 에서도 NOT NULL + 공백금지 CHECK 로 같은 규칙을 강제한다.",
+      "description": "자격요건 / 제외대상 1건.\n\nsource_quote 는 필수다. 근거 없는 룰은 저장되지 않는다 (G1 게이트).\nDB 에서도 NOT NULL + 공백금지 CHECK 로 같은 규칙을 강제한다.",
       "type": "object",
       "properties": {
         "rule_id": {
@@ -481,7 +481,7 @@
     },
     "Conflict": {
       "title": "Conflict",
-      "description": "중복수혜 제한 — 공고문에서 추출한 원본 서술.\n\n    여기서 간선을 확정하지 않는다. 확정·정규화는 BE 배치가 하고,\n    결과는 policy_conflict_edge 에 들어간다 (AI는 관계 추출까지, 계산은 BE).",
+      "description": "중복수혜 제한 — 공고문에서 추출한 원본 서술.\n\n여기서 간선을 확정하지 않는다. 확정·정규화는 BE 배치가 하고,\n결과는 policy_conflict_edge 에 들어간다 (AI는 관계 추출까지, 계산은 BE).",
       "type": "object",
       "properties": {
         "type": {
