@@ -19,6 +19,11 @@
   어제 600건이던 것이 오늘 40건이 됐다면 수집이 깨진 것이지 정책이 사라진 게
   아니다. 사람이 확인하기 전에는 내보내지 않는다.
 
+**게시 상태가 아닌 정책은 내보내지 않는다.**
+  엔진과 API 는 status 를 보지 않는다 — 스냅샷에 있으면 판정한다. 마감된(expired)
+  정책이 '적격'으로 나가면 사용자는 없는 창구에 서류를 준비한다. 거르는 곳은
+  여기 한 군데다. 리포트에 상태별 건수를 남겨서 조용히 사라지지는 않게 한다.
+
 **버전은 내용 해시다.**
   같은 데이터면 같은 버전이어야 API 의 ETag 가 의미를 가진다. 타임스탬프만
   쓰면 내용이 같아도 매일 캐시가 통째로 무효화된다.
@@ -30,6 +35,7 @@ import argparse
 import gzip
 import hashlib
 import sys
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -67,6 +73,7 @@ class BuildReport:
     total_input: int = 0
     accepted: int = 0
     rejected: list[RejectedPolicy] = field(default_factory=list)
+    skipped_by_status: Counter[str] = field(default_factory=Counter)  # 게시 상태가 아닌 것
     warnings: list[str] = field(default_factory=list)
     previous_count: int | None = None
     output_path: str | None = None
@@ -84,6 +91,10 @@ class BuildReport:
             f"  통과      {self.accepted}건",
             f"  거부      {len(self.rejected)}건",
         ]
+        if self.skipped_by_status:
+            detail = ", ".join(f"{k} {v}" for k, v in sorted(self.skipped_by_status.items()))
+            total = sum(self.skipped_by_status.values())
+            lines.append(f"  미게시    {total}건 ({detail}) — 판정에서 제외")
         if self.previous_count is not None:
             delta = self.accepted - self.previous_count
             lines.append(f"  직전 대비 {self.previous_count} → {self.accepted} ({delta:+d})")
@@ -141,6 +152,10 @@ def build(
             )
             continue
         seen[policy.policy_id] = index
+
+        if policy.status != "published":
+            report.skipped_by_status[policy.status] += 1
+            continue
 
         violations = validate_policy(policy)
         if violations:

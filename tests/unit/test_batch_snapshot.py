@@ -67,6 +67,18 @@ def _many(n: int) -> list[PolicySchema]:
 # --- 검증 · 거부 ----------------------------------------------------------
 
 
+def test_게시_상태가_아닌_정책은_내보내지_않고_리포트에_남긴다() -> None:
+    """엔진은 status 를 보지 않는다. 마감 정책이 스냅샷에 있으면 '적격'으로 나간다."""
+    ps = _many(3)
+    ps[1].status = "expired"
+    ps[2].status = "draft"
+    accepted, report = build(ps)
+    assert [p.policy_id for p in accepted] == ["P0000"]
+    assert report.skipped_by_status == {"expired": 1, "draft": 1}
+    assert not report.rejected  # 위반이 아니므로 빌드는 계속된다
+    assert "미게시    2건" in report.render()
+
+
 def test_정상_정책은_그대로_통과한다() -> None:
     accepted, report = build(_many(5))
     assert len(accepted) == 5
