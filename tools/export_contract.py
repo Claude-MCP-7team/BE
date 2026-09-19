@@ -9,6 +9,7 @@ BE 는 같은 정의로 디코딩한다. 한쪽만 바뀌면 CI 가 diff 로 잡
 
 from __future__ import annotations
 
+import inspect
 import json
 import pathlib
 import sys
@@ -26,6 +27,36 @@ from app.schemas.user import UserProfile  # noqa: E402
 OUT = pathlib.Path(__file__).resolve().parent.parent / "docs" / "contracts"
 
 
+def normalize_descriptions(node: object) -> object:
+    """description 을 인터프리터 버전과 무관한 형태로 맞춘다.
+
+    msgspec 은 구조체의 docstring 을 그대로 description 에 싣는데, 그 문자열은
+    파이썬 버전마다 다르다. 3.13 부터 컴파일러가 docstring 의 공통 들여쓰기를
+    제거하고, 3.11 은 두 번째 줄부터의 들여쓰기를 그대로 남긴다.
+
+    그래서 같은 커밋을 3.11 에서 내보내면 들여쓰기가 있는 JSON 이, 3.14 에서
+    내보내면 없는 JSON 이 나온다. 어느 쪽을 커밋해도 반대쪽 기계에서 CI 의
+    드리프트 검사가 실패하는데, 그 실패는 계약이 바뀌었다는 뜻이 아니라
+    인터프리터가 다르다는 뜻이라서 읽는 사람을 잘못된 곳으로 보낸다.
+    (실제로 한 번 그렇게 됐다 — 2069740 이 3.14 출력을 커밋해 CI 가 깨졌다.)
+
+    inspect.cleandoc 은 이미 dedent 된 문자열에 다시 적용해도 결과가 같으므로
+    (멱등), 두 버전 모두에서 같은 출력을 만든다. 계약면의 의미는 바뀌지 않는다:
+    JSON Schema 의 description 은 사람이 읽는 설명이고 들여쓰기는 파이썬
+    소스의 사정일 뿐이다.
+    """
+    if isinstance(node, dict):
+        return {
+            key: inspect.cleandoc(value)
+            if key == "description" and isinstance(value, str)
+            else normalize_descriptions(value)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [normalize_descriptions(item) for item in node]
+    return node
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -34,7 +65,7 @@ def main() -> None:
         ("user_profile", UserProfile),
         ("judgement_result", JudgementResult),
     ]:
-        schema = msgspec.json.schema(typ)
+        schema = normalize_descriptions(msgspec.json.schema(typ))
         path = OUT / f"{name}.json"
         path.write_text(
             json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
