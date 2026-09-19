@@ -4,9 +4,9 @@
       uvicorn app.main:app --port 8765
   python tools/demo_scenario.py --base http://127.0.0.1:8765
 
-data/manual/ 의 실제 공고 3건을 전제로 한다. 화면(FE)이 아니라 응답 JSON 을 그대로
+data/manual/ 의 실제 공고 5건을 전제로 한다. 화면(FE)이 아니라 응답 JSON 을 그대로
 읽어 보여주므로, 판정·역질문·재판정·조합·계획이 실제로 연결되는지 사람이 눈으로 확인하는
-용도다 (마일스톤 §M5 9/28 E2E 시나리오 1·4·5·6).
+용도다 (마일스톤 §M5 9/28 E2E 시나리오 1~6 전부).
 """
 
 from __future__ import annotations
@@ -43,6 +43,8 @@ GAPYEONG: Profile = {
         "employment_start_date": "2025-01-02",
     }
 }
+# 시나리오 D — 가평 사용자인데 소득 55% → 가평 월세와 국토부 청년월세 둘 다 적격 → 상충 (시나리오 5)
+GAPYEONG_LOW_INCOME: Profile = {"core": {**GAPYEONG["core"], "household_income_ratio_median": 55}}
 # 시나리오 C — 23세(2026-10-15 에 24세) · 수원 · 2020-03-01 부터 거주 → FUTURE_PASS (시나리오 3)
 SUWON_23: Profile = {
     "core": {
@@ -103,6 +105,15 @@ def main() -> int:
         for combo in scenario["combinations"]:
             names = ", ".join(m["policy_id"] for m in combo["members"])
             print(f"  {scenario['label']} #{combo['rank']}: {combo['total_krw']:,}원 = {names}")
+
+    judge("D-1  같은 가평 사용자, 소득 55% → 월세 정책 2개 동시 적격", GAPYEONG_LOW_INCOME)
+    print("\n=== D-2  조합 추천 — 중복수혜 상충이 있으면 보수/최대 2안이 갈린다")
+    for scenario in post("/v1/combinations", GAPYEONG_LOW_INCOME)["scenarios"]:
+        for combo in scenario["combinations"]:
+            names = ", ".join(m["policy_id"] for m in combo["members"])
+            print(f"  {scenario['label']} #{combo['rank']}: {combo['total_krw']:,}원 = {names}")
+            for ex in combo.get("excluded", []):
+                print(f"      제외 {ex.get('policy_id')}: {str(ex.get('reason') or ex)[:90]}")
 
     print("\n=== B-3  신청 계획")
     for plan in post("/v1/plan", GAPYEONG)["plans"]:
