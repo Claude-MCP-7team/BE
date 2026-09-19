@@ -179,6 +179,34 @@ class UserProfile(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     def region_chain(self) -> list[str]:
         return region_chain(self.core.region_code)
 
+    def _counted_or_answered(self, field: str, on: date) -> int | None:
+        """날짜에서 센 값이 우선, 없으면 역질문 답변으로 메운다.
+
+        이 폴백이 없으면 **물어본 답을 버린다.** `questions.py` 는 근속·거주
+        개월수를 실제로 질문하는데(`_ANSWER_TYPES` 에 있다), 여기서 답변을 보지
+        않으면 사용자가 답해도 값이 여전히 None 이라 그 정책은 계속 NEEDS_INFO 에
+        남는다. 화면에서는 답을 입력했는데 아무 일도 일어나지 않는 것으로 보이고,
+        틀린 판정이 아니라 판정이 아예 안 나오는 쪽이라 신고도 안 들어온다.
+
+        센 값을 먼저 보는 이유는 나머지 필드와 같다 — 역질문 답변이 온보딩에서
+        받은 값을 덮어쓰면 안 된다.
+
+        `age` 에는 같은 폴백을 두지 않는다. `birth_date` 가 필수라 age 는 절대
+        None 이 되지 않으므로 질문 자체가 나가지 않고, 답변으로 덮을 수 있게 하면
+        생년월일과 나이가 어긋난 프로필이 만들어진다.
+        """
+        counted = (
+            self.residence_months(on)
+            if field == "residence_months_continuous"
+            else self.employment_months(on)
+        )
+        if counted is not None:
+            return counted
+        answered = self.answers.get(field)
+        # 범위 가드(check_bounds)가 이 두 필드를 정수로 강제하므로 여기서
+        # 다시 형 변환하지 않는다. 통과하지 못한 값은 애초에 들어오지 못한다.
+        return answered if isinstance(answered, int) else None
+
     def resolve(self, field: str, on: date) -> Any:
         """룰의 field 명으로 사용자 값을 꺼낸다. None 이면 '미확인' → NEEDS_INFO.
 
@@ -189,9 +217,9 @@ class UserProfile(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
         if field == "age":
             return self.age(on)
         if field == "residence_months_continuous":
-            return self.residence_months(on)
+            return self._counted_or_answered("residence_months_continuous", on)
         if field == "employment_months":
-            return self.employment_months(on)
+            return self._counted_or_answered("employment_months", on)
         if field == "region_code":
             # 원본 코드가 아니라 접두 체인을 돌려준다.
             # 지역 조건은 '전국 / 시도 / 시군구' 계층이라, 원본만 비교하면

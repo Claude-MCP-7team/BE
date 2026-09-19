@@ -152,7 +152,7 @@ def _fallback_text(field: str) -> str:
     """
     return {
         "age": "만 나이가 어떻게 되시나요?",
-        "residence_months_continuous": "현재 주소지에 언제부터 계속 살고 계신가요?",
+        "residence_months_continuous": "현재 주소지에 몇 개월째 살고 계신가요?",
         "employment_months": "지금 직장에서 몇 개월째 일하고 계신가요?",
         "employment_status": "현재 어떤 상태에 가장 가까우신가요?",
         "education": "최종 학력이 어떻게 되시나요?",
