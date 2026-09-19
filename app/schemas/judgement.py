@@ -71,6 +71,19 @@ class JudgementResult(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     unmatched: list[UnmatchedRule] = msgspec.field(default_factory=list)
     unknown: list[UnknownRule] = msgspec.field(default_factory=list)
 
+    # 오늘은 부적격이지만 시간이 지나면 충족되는 정책의 '가능해지는 날' (YYYY-MM-DD).
+    #
+    # 마일스톤이 말하는 네 번째 판정 상태(FUTURE_PASS)를 화면이 그릴 수 있는
+    # 단일 신호다. verdict 를 네 값으로 늘리지 않은 이유: verdict 는 '오늘
+    # 자격이 있는가'이고 이건 '언제부터 있는가'라, 한 필드에 섞으면 FE 가
+    # 필터와 배지 중 어느 뜻으로 쓸지 정할 수 없게 된다.
+    #
+    # 미충족 조건이 **전부** 시간으로 해결될 때만 채운다. 하나라도 소득처럼
+    # 시간과 무관한 조건이거나 연령 상한처럼 영구 불가면 None 이다 — 그 경우
+    # 날짜를 주면 '기다리면 된다'는 틀린 안내가 된다. 미확인 조건이 남아
+    # 있어도 None 이다: 그날 적격이 된다고 약속할 수 없다.
+    future_eligible_from: str | None = None
+
     # 룰로 옮기지 못해 엔진이 평가하지 않은 조건의 필드명.
     # 비어 있지 않으면 이 판정은 공고문 전체가 아니라 '옮길 수 있었던 부분'에
     # 대한 것이다. 화면은 무엇을 확인 못 했는지 사용자에게 알려야 한다 —
@@ -98,6 +111,10 @@ class JudgementSummary(msgspec.Struct, kw_only=True, forbid_unknown_fields=True)
     eligible: int = 0
     ineligible: int = 0
     needs_info: int = 0
+
+    # ineligible 중 '시간이 지나면 가능한' 건수. total 에 다시 더하면 안 된다 —
+    # 별도 분류가 아니라 부적격의 부분집합이다. 화면의 네 번째 배지가 쓰는 값.
+    future_eligible: int = 0
 
     @property
     def total(self) -> int:

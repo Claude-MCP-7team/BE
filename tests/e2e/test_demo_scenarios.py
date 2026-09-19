@@ -160,6 +160,21 @@ def test_시나리오3_충족_예상일이_날짜로_나온다(client, profile):
     assert 거주["satisfiable_from"] == "2027-04-01"
     assert 거주["permanently_unsatisfiable"] is False
 
+    # 화면이 네 번째 배지를 그리는 신호. 조건별 날짜를 FE 가 직접 훑지 않아도 된다.
+    assert result["future_eligible_from"] == "2027-04-01"
+
+
+def test_시나리오3_기본_응답에_충족_예상일이_실려온다(client, profile):
+    """부적격이라고 빼버리면 기본 화면에서 '언제부터 가능한가'가 사라진다."""
+    body = client.post("/v1/judge", json=profile).json()  # include 기본값
+
+    ids = {item["policy_id"] for item in body["results"]}
+    assert FUTURE in ids
+    assert INELIGIBLE not in ids  # 소득 초과 — 기다려도 안 된다
+
+    assert body["summary"]["future_eligible"] == 1
+    assert body["summary"]["future_eligible"] <= body["summary"]["ineligible"]
+
 
 # --- Scenario 4: UNKNOWN → 역질문 → 재판정 ---------------------------------
 

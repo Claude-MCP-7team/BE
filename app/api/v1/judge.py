@@ -89,7 +89,12 @@ async def judge(
     today = today_kst()
     verdicts = judge_all(snapshot, profile, today)
 
+    # 부적격도 상세를 조립한다. 충족 예상일이 있는지는 근거를 만들어 봐야
+    # 알 수 있고(조건마다 날짜를 계산해야 한다), 그 정보가 없으면 "언제부터
+    # 가능한가"가 기본 응답에서 통째로 사라진다. 3,000 정책 전체 상세가 31ms 라
+    # 예산(p95 5,000ms) 안이다.
     results = []
+    future_eligible = 0
     for i in range(snapshot.size):
         if verdicts.eligible[i]:
             verdict = "ELIGIBLE"
@@ -97,14 +102,24 @@ async def judge(
             verdict = "NEEDS_INFO"
         else:
             verdict = "INELIGIBLE"
-        if include == "default" and verdict == "INELIGIBLE":
+
+        result = explain(snapshot, profile, today, i, verdict)
+        if result.future_eligible_from:
+            future_eligible += 1
+        # 기본 응답에서 빼는 것은 '영영 안 되는' 부적격뿐이다. 수백 건의 근거를
+        # 매번 실어 봐야 대부분 읽히지 않는다. 반면 시간이 지나면 가능한 정책은
+        # 사용자가 지금 행동을 정하는 데 쓰는 정보라 빼면 안 된다.
+        if include == "default" and verdict == "INELIGIBLE" and not result.future_eligible_from:
             continue
-        results.append(explain(snapshot, profile, today, i, verdict))
+        results.append(result)
+
+    summary = verdicts.summary()
+    summary.future_eligible = future_eligible
 
     payload = JudgementResponse(
         session_id=request.headers.get("X-Session-Id", "anonymous"),
         snapshot_version=snapshot.version,
-        summary=verdicts.summary(),
+        summary=summary,
         results=results,
         latency_ms=int((time.perf_counter() - started) * 1000),
         disclaimer=DISCLAIMER,

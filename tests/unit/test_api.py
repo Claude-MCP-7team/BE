@@ -63,6 +63,18 @@ POLICIES = [
              "source_quote": "기준 중위소득 150% 이하"},
         ],
     },
+    {
+        # 기다려도 안 되는 부적격 — 기본 응답에서 빠지는지 확인하는 대조군
+        "policy_id": "TOO-OLD",
+        "status": "published",
+        "meta": {"title": "중장년 정책", "category": "job", "authority_level": "local",
+                 "region_code": ["41465"], "dept": {"name": "일자리과", "tel": "031-222-2222"}},
+        "source": {"origin_url": "https://example.kr/too-old"},
+        "eligibility": [
+            {"rule_id": "AGE", "field": "age", "op": "between", "value": [50, 64],
+             "source_quote": "만 50세 이상 64세 이하"},
+        ],
+    },
 ]
 
 
@@ -90,15 +102,28 @@ def test_판정은_3분류_건수를_요약으로_준다(client):
     s = d["summary"]
     assert s["eligible"] + s["ineligible"] + s["needs_info"] == len(POLICIES)
     assert s["eligible"] == 1  # 전국 정책만
-    assert s["ineligible"] == 1  # 용인 (거주 3개월 < 6)
+    assert s["ineligible"] == 2  # 용인(거주 미달) + 중장년(연령 상한)
     assert s["needs_info"] == 1  # 소득 미입력
 
 
-def test_기본_응답은_부적격_상세를_싣지_않는다(client):
-    """부적격이 다수인데 매번 근거까지 실어보내면 응답이 몇 배로 커진다."""
+def test_요약의_future_eligible_은_부적격의_부분집합이다(client):
+    """네 번째 배지가 쓰는 값. 총계에 다시 더하면 정책 수가 부풀려진다."""
+    s = post(client).json()["summary"]
+    assert s["future_eligible"] == 1  # 용인만 — 중장년은 기다려도 안 된다
+    assert s["future_eligible"] <= s["ineligible"]
+    assert s["eligible"] + s["ineligible"] + s["needs_info"] == len(POLICIES)
+
+
+def test_기본_응답은_영영_안_되는_부적격만_뺀다(client):
+    """부적격 수백 건의 근거를 매번 실으면 응답이 몇 배가 되고 대부분 안 읽힌다.
+
+    다만 '시간이 지나면 가능한' 부적격은 다르다. 사용자가 지금 무엇을 할지
+    정하는 데 쓰는 정보라, 빼면 기본 화면에서 "언제부터 가능한가"가 사라진다.
+    """
     ids = {r["policy_id"] for r in post(client).json()["results"]}
-    assert "YONGIN-RENT" not in ids
-    assert ids == {"MOLIT-RENT", "ASK-ME"}
+    assert "TOO-OLD" not in ids  # 연령 상한 초과 — 기다려도 안 된다
+    assert "YONGIN-RENT" in ids  # 거주기간 미달 — 2026-11-15 부터 가능
+    assert ids == {"MOLIT-RENT", "ASK-ME", "YONGIN-RENT"}
 
 
 def test_include_all_이면_부적격_근거까지_준다(client):

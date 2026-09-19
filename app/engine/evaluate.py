@@ -213,20 +213,26 @@ def explain(
 
         unmatched.append(_unmatched(rule, user_value, profile, today, origin))
 
+    future_from = future_eligible_date(unmatched, unknown)
+
     # 평가하지 못한 조건이 남아 있는데 '적격'이라고 확정하면, 사용자는 그 조건
     # 때문에 반려될 수 있다는 걸 모른 채 서류를 준비한다. 근거 없는 조건은 자동
     # 확정하지 않는다는 규칙(마일스톤 §11)이 여기에 걸린다.
     #
-    # 부적격에는 적용하지 않는다. 조건은 전부 충족해야 하는 관계라, 확인 못 한
-    # 조건이 더 있다고 해서 이미 확인된 미충족이 뒤집히지 않는다. 명확한 탈락에
-    # '확인 필요'를 붙이면 진짜 확인이 필요한 판정과 구별이 사라진다.
-    if review_fields and verdict != "INELIGIBLE":
+    # 단순 부적격에는 적용하지 않는다. 조건은 전부 충족해야 하는 관계라, 확인
+    # 못 한 조건이 더 있다고 해서 이미 확인된 미충족이 뒤집히지 않는다. 명확한
+    # 탈락에 '확인 필요'를 붙이면 진짜 확인이 필요한 판정과 구별이 사라진다.
+    #
+    # 다만 충족 예상일을 함께 내보낼 때는 다시 적용한다. '오늘 안 된다'와
+    # '그날 된다'는 다른 주장이고, 뒤쪽은 확인 못 한 조건이 얼마든지 뒤집는다.
+    if review_fields and (verdict != "INELIGIBLE" or future_from is not None):
         worst_confidence = _worse(worst_confidence, "NEEDS_REVIEW")
 
     return JudgementResult(
         policy_id=policy.policy_id,
         verdict=verdict,  # type: ignore[arg-type]
         confidence=worst_confidence,  # type: ignore[arg-type]
+        future_eligible_from=future_from,
         needs_review_fields=review_fields,
         matched=matched,
         unmatched=unmatched,
@@ -235,6 +241,35 @@ def explain(
         dept_tel=policy.meta.dept.tel,
         origin_url=origin,
     )
+
+
+def future_eligible_date(
+    unmatched: list[UnmatchedRule], unknown: list[UnknownRule]
+) -> str | None:
+    """미충족이 전부 시간으로 해결될 때, 그 전부가 충족되는 날 (YYYY-MM-DD).
+
+    가장 늦은 조건이 전체를 결정한다. 19세 하한과 거주 36개월을 함께 요구하면
+    둘 다 만족하는 날부터 신청할 수 있고, 이른 쪽 날짜를 주면 그날 신청했다가
+    반려된다.
+
+    하나라도 다음에 해당하면 None 이다. 날짜를 주는 것이 '기다리면 된다'는
+    약속이기 때문에, 약속할 수 없는 경우를 날짜로 덮으면 안 된다:
+      - 시간과 무관한 조건 (소득·가구원수 등)
+      - 영구 불가 (연령 상한 초과)
+      - 미확인 조건이 남아 있음 — 그날 적격이 될지 알 수 없다
+    """
+    if unknown or not unmatched:
+        return None
+
+    dates: list[str] = []
+    for rule in unmatched:
+        if rule.permanently_unsatisfiable or not rule.time_satisfiable:
+            return None
+        if not rule.satisfiable_from:
+            return None
+        dates.append(rule.satisfiable_from)
+    # ISO 날짜는 사전순 비교가 시간순과 일치한다
+    return max(dates)
 
 
 def _unmatched(rule, user_value, profile: UserProfile, today: date, origin: str | None):

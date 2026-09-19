@@ -448,3 +448,91 @@ def test_옮기지_못한_조건이_없으면_그대로_확정이다():
 
     assert r.confidence == "CONFIRMED"
     assert r.needs_review_fields == []
+
+
+# --- 충족 예상일 (마일스톤의 네 번째 상태 FUTURE_PASS) ----------------------
+
+
+def test_미충족이_전부_시간으로_해결되면_가장_늦은_날이_나온다():
+    """이른 쪽 날짜를 주면 그날 신청했다가 다른 조건 때문에 반려된다."""
+    policy = P(
+        "A",
+        [
+            R("AGE", "age", ">=", 30),  # 2001-03-14 생 → 2031-03-14
+            R("RES", "residence_months_continuous", ">=", 6),  # 더 이른 날
+        ],
+    )
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(residence_start_date=date(2026, 5, 15)), TODAY, 0, "INELIGIBLE")
+
+    dates = sorted(u.satisfiable_from for u in r.unmatched)
+    assert r.future_eligible_from == dates[-1]
+    assert r.future_eligible_from == "2031-03-14"
+
+
+def test_시간과_무관한_조건이_섞이면_날짜를_주지_않는다():
+    """소득은 기다린다고 해결되지 않는다. 날짜를 주면 '기다리면 된다'는 틀린 안내다."""
+    policy = P(
+        "A",
+        [
+            R("RES", "residence_months_continuous", ">=", 6),
+            R("INC", "household_income_ratio_median", "<=", 50),
+        ],
+    )
+    snap = compile_snapshot([policy])
+
+    r = explain(
+        snap,
+        profile(residence_start_date=date(2026, 5, 15), household_income_ratio_median=120),
+        TODAY,
+        0,
+        "INELIGIBLE",
+    )
+
+    assert r.future_eligible_from is None
+
+
+def test_연령_상한_초과에는_날짜를_주지_않는다():
+    policy = P("A", [R("AGE", "age", "between", [19, 20])])
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(), TODAY, 0, "INELIGIBLE")
+
+    assert r.unmatched[0].permanently_unsatisfiable is True
+    assert r.future_eligible_from is None
+
+
+def test_미확인_조건이_남아_있으면_날짜를_주지_않는다():
+    """그날 적격이 된다고 약속할 수 없다 — 소득을 모르면 결과를 모른다."""
+    policy = P(
+        "A",
+        [
+            R("RES", "residence_months_continuous", ">=", 6),
+            R("INC", "household_income_ratio_median", "<=", 150),
+        ],
+    )
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(residence_start_date=date(2026, 5, 15)), TODAY, 0, "INELIGIBLE")
+
+    assert r.unknown  # 소득 미입력
+    assert r.future_eligible_from is None
+
+
+def test_적격_정책에는_날짜가_없다():
+    policy = P("A", [R("AGE", "age", "between", [19, 34])])
+    snap = compile_snapshot([policy])
+
+    assert explain(snap, profile(), TODAY, 0, "ELIGIBLE").future_eligible_from is None
+
+
+def test_충족예상일을_줄_때는_못_본_조건이_신뢰도를_낮춘다():
+    """'오늘 안 된다'와 '그날 된다'는 다른 주장이고, 뒤쪽은 얼마든지 뒤집힌다."""
+    policy = _with_review(P("A", [R("RES", "residence_months_continuous", ">=", 6)]), "무주택 여부")
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(residence_start_date=date(2026, 5, 15)), TODAY, 0, "INELIGIBLE")
+
+    assert r.future_eligible_from == "2026-11-15"
+    assert r.confidence == "NEEDS_REVIEW"
