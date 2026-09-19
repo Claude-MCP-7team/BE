@@ -53,8 +53,25 @@ C2 설명문에는 다섯 번째 겹이 있다: **설명 속 모든 숫자는 �
 | 골든 정답표 | `tests/golden/` | 실제 공고 11건의 정답 룰·금지 필드·doc_code. 재현율 채점기 |
 | 데모 데이터 | `data/manual/` | 실제 공고 11건 (7건은 온통청년 API 원본 레코드 그대로) |
 | E2E 스크립트 | `tools/demo_scenario.py` | 시나리오 1~6 HTTP 재현 |
+| **MCP 서버** | `tools/mcp_server.py`, `.mcp.json` | 판정 API 를 Claude Code 의 도구로. Claude 가 대화형 코디네이터가 되고 판정은 여전히 코드가 |
 
 LLM 호출은 `app/llm/client.py` 한 곳. 모델은 Claude Opus 5, 구조화 출력(JSON Schema 강제), 프롬프트 캐시. 정책 1건 = 호출 1회.
+
+### 4-1. MCP — "클로드 코드를 창의적으로 활용" 에 대한 답
+
+경진대회 심사기준 1번이 *클로드 코드의 기능을 창의적으로 활용한 정도*다. 코드를 Claude Code 로 짠 건 모든 팀이 같다.
+이 프로젝트는 **Claude Code 자체를 제품의 대화 인터페이스**로 쓴다:
+
+```
+사용자 ──(대화)──▶ Claude Code ──(MCP 도구)──▶ 판정 API (결정론)
+                       │ find_region_code · judge · questions · combinations · plan · policy
+                       └── 역질문·설명은 Claude 가 말로, 판정·날짜·조합은 코드가 숫자로
+```
+
+- 심사위원 앞에서 Claude Code 를 열고 "나 24살이고 용인 수지구 살아…" 라고 치면 끝. 화면(FE) 없이도 전체 흐름이 시연된다.
+- **API 키가 필요 없다.** 대화하는 LLM 은 시연자의 Claude 구독이고, 판정은 우리 서버다.
+- 설계 원칙이 그대로다: Claude 는 도구를 고르고 결과를 옮길 뿐, `judge` 가 준 verdict 를 바꿀 수 없다. 서버 지시문(instructions)에 "결과에 없는 금액·날짜를 말하지 마라"가 박혀 있다.
+- 교육 3일차(MCP 연동)와 4일차(멀티에이전트) 내용을 실제 제품에 적용한 형태.
 
 ---
 
