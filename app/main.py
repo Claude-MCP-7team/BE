@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import judge as judge_api
 from app.api.v1 import sessions as sessions_api
 from app.core.config import settings
+from app.core.problem import install as install_problem_handlers
 from app.db import pool as db_pool
 from app.engine import snapshot as snapshot_store
 from app.engine.snapshot import load_from_json
@@ -82,6 +83,10 @@ if settings.cors_origins:
     )
 else:
     log.warning("CORS_ORIGINS 가 없습니다 — 브라우저에서는 이 API 를 부를 수 없습니다")
+
+# 에러는 전부 RFC 9457 problem+json 으로 나간다 (ARCHITECTURE.md §5).
+# 라우터보다 먼저 걸어야 라우팅 단계의 검증 오류도 같은 모양이 된다.
+install_problem_handlers(app)
 
 app.include_router(judge_api.router)
 app.include_router(sessions_api.router)

@@ -166,6 +166,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 | — 역질문 큐 | BE ↔ FE | 10/07 | `app/schemas/question.py` |
 | — 조합 추천 | BE ↔ FE | 10/07 | `app/schemas/combination.py` |
 | — 정책 목록 | BE ↔ FE | 10/07 | `app/schemas/catalog.py` |
+| — 에러 (RFC 9457) | BE ↔ FE | 10/07 | `app/core/problem.py` · `docs/contracts/problems.json` |
 | — 신청 계획 | BE ↔ FE | 10/07 | `app/schemas/plan.py` |
 
 서류 발급 소요일·수수료·유효기간의 권위는 `data/documents/master_v2.csv` 다 (36종).

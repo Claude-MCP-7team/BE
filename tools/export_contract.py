@@ -19,6 +19,7 @@ import msgspec
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from app.core.console import force_utf8_console  # noqa: E402
+from app.core.problem import ALL_TYPES  # noqa: E402
 from app.schemas.enums import KNOWN_FIELDS, TIME_SATISFIABLE_FIELDS  # noqa: E402
 from app.schemas.judgement import JudgementResult  # noqa: E402
 from app.schemas.policy import PolicySchema  # noqa: E402
@@ -82,6 +83,24 @@ def main() -> None:
             "time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다."
         ),
     }
+    # 에러 유형도 계약이다. FE 는 상태 코드가 아니라 이 code 로 분기한다.
+    problems = {
+        "media_type": "application/problem+json",
+        "note": (
+            "RFC 9457. type 은 상대 URI(/problems/<code>) 이며 code 가 계약이다. "
+            "detail 은 FastAPI 기본형과 같은 자리라 기존 코드가 계속 동작한다."
+        ),
+        "types": [
+            {"code": t.code, "type": t.uri, "status": t.status, "title": t.title}
+            for t in ALL_TYPES
+        ],
+    }
+    path = OUT / "problems.json"
+    path.write_text(
+        json.dumps(problems, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"  {path.relative_to(OUT.parent.parent)}")
+
     path = OUT / "rule_fields.json"
     path.write_text(
         json.dumps(fields, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

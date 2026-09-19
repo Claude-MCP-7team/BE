@@ -1,0 +1,54 @@
+{
+  "media_type": "application/problem+json",
+  "note": "RFC 9457. type 은 상대 URI(/problems/<code>) 이며 code 가 계약이다. detail 은 FastAPI 기본형과 같은 자리라 기존 코드가 계속 동작한다.",
+  "types": [
+    {
+      "code": "snapshot-not-ready",
+      "type": "/problems/snapshot-not-ready",
+      "status": 503,
+      "title": "정책 스냅샷이 아직 적재되지 않았습니다"
+    },
+    {
+      "code": "policy-not-found",
+      "type": "/problems/policy-not-found",
+      "status": 404,
+      "title": "그런 정책이 없습니다"
+    },
+    {
+      "code": "session-not-found",
+      "type": "/problems/session-not-found",
+      "status": 404,
+      "title": "세션이 없거나 만료되었습니다"
+    },
+    {
+      "code": "session-store-unavailable",
+      "type": "/problems/session-store-unavailable",
+      "status": 503,
+      "title": "세션 저장소를 사용할 수 없습니다"
+    },
+    {
+      "code": "session-not-readable",
+      "type": "/problems/session-not-readable",
+      "status": 500,
+      "title": "저장된 프로필을 읽을 수 없습니다"
+    },
+    {
+      "code": "invalid-profile",
+      "type": "/problems/invalid-profile",
+      "status": 422,
+      "title": "조건 입력이 올바르지 않습니다"
+    },
+    {
+      "code": "invalid-request",
+      "type": "/problems/invalid-request",
+      "status": 422,
+      "title": "요청이 올바르지 않습니다"
+    },
+    {
+      "code": "internal-error",
+      "type": "/problems/internal-error",
+      "status": 500,
+      "title": "서버에서 처리하지 못했습니다"
+    }
+  ]
+}

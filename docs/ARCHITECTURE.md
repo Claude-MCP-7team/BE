@@ -228,7 +228,9 @@ BE/
 - 모든 응답에 `snapshot_version` 포함 → FE가 캐시 무효화 시점을 스스로 판단
 - 판정 응답에 `ETag: W/"{snapshot_version}:{profile_hash}"` → 재조회 시 304
 - `NEEDS_INFO`/`ESTIMATED`/`NEEDS_REVIEW` 항목은 **반드시** `source_quote` + `source_url` + `dept_tel` 동반 (스키마 레벨 필수 필드)
-- 에러는 RFC 9457 `application/problem+json`
+- 에러는 RFC 9457 `application/problem+json`. **FE 는 상태 코드가 아니라 `type` 으로 분기한다** —
+  같은 503 이 "스냅샷 미적재(아무것도 안 된다)"와 "세션 저장소 불가(판정은 된다)" 두 뜻으로 쓰인다.
+  유형 표는 `docs/contracts/problems.json` (코드가 원본: `app/core/problem.py`)
 
 ---
 

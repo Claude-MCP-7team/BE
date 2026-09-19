@@ -19,9 +19,16 @@ from uuid import UUID
 
 import asyncpg
 import msgspec
-from fastapi import APIRouter, HTTPException, Path, Request, Response
+from fastapi import APIRouter, Path, Request, Response
 
 from app.core.crypto import DecryptionFailed
+from app.core.problem import (
+    INVALID_PROFILE,
+    SESSION_NOT_FOUND,
+    SESSION_NOT_READABLE,
+    SESSION_STORE_UNAVAILABLE,
+    Problem,
+)
 from app.db import DatabaseUnavailable, SessionNotFound
 from app.db import pool as db_pool
 from app.db.sessions import SessionRepository
@@ -43,15 +50,15 @@ def _repo() -> SessionRepository:
     from app.core.config import settings
 
     if not db_pool.db.ready:
-        raise HTTPException(
-            status_code=503,
-            detail="세션 저장소를 사용할 수 없습니다 (판정 기능은 정상 동작합니다)",
+        raise Problem(
+            SESSION_STORE_UNAVAILABLE,
+            "세션 저장소를 사용할 수 없습니다 (판정 기능은 정상 동작합니다)",
         )
     cipher = settings.profile_cipher()
     if cipher is None:
-        raise HTTPException(
-            status_code=503,
-            detail="프로필 암호화 키가 설정되지 않아 세션을 저장하지 않습니다",
+        raise Problem(
+            SESSION_STORE_UNAVAILABLE,
+            "프로필 암호화 키가 설정되지 않아 세션을 저장하지 않습니다",
         )
     return SessionRepository(db_pool.db, cipher)
 
@@ -60,7 +67,7 @@ def _decode_profile(body: bytes) -> UserProfile:
     try:
         return msgspec.json.decode(body, type=UserProfile)
     except msgspec.ValidationError as e:
-        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+        raise Problem(INVALID_PROFILE, str(e)) from e
 
 
 @router.post("/sessions", status_code=201)
@@ -78,7 +85,7 @@ async def create_session(request: Request) -> Response:
         session_id = await repo.create(profile)
     except (DatabaseUnavailable, asyncpg.PostgresError, OSError) as e:
         log.warning("세션 생성 실패: %s", e)
-        raise HTTPException(status_code=503, detail="세션을 생성하지 못했습니다") from e
+        raise Problem(SESSION_STORE_UNAVAILABLE, "세션을 생성하지 못했습니다") from e
 
     return Response(
         content=msgspec.json.encode({"session_id": str(session_id)}),
@@ -95,16 +102,14 @@ async def get_session(session_id: SessionId) -> Response:
     try:
         stored = await repo.get(session_id)
     except SessionNotFound as e:
-        raise HTTPException(status_code=404, detail="세션이 없거나 만료되었습니다") from e
+        raise Problem(SESSION_NOT_FOUND) from e
     except DecryptionFailed as e:
         # 복호화 실패는 데이터 문제이지 사용자 잘못이 아니다. 평문을 지어내느니
         # 실패를 알린다 — 틀린 프로필로 판정하는 것이 판정 못 하는 것보다 나쁘다.
         log.error("프로필 복호화 실패: session=%s", session_id)
-        raise HTTPException(
-            status_code=500, detail="저장된 프로필을 읽을 수 없습니다"
-        ) from e
+        raise Problem(SESSION_NOT_READABLE) from e
     except (DatabaseUnavailable, asyncpg.PostgresError, OSError) as e:
-        raise HTTPException(status_code=503, detail="세션 저장소를 사용할 수 없습니다") from e
+        raise Problem(SESSION_STORE_UNAVAILABLE) from e
 
     payload = {
         "session_id": str(stored.session_id),
@@ -134,9 +139,9 @@ async def put_session(session_id: SessionId, request: Request) -> Response:
     try:
         await repo.save_profile(session_id, profile)
     except SessionNotFound as e:
-        raise HTTPException(status_code=404, detail="세션이 없거나 만료되었습니다") from e
+        raise Problem(SESSION_NOT_FOUND) from e
     except (DatabaseUnavailable, asyncpg.PostgresError, OSError) as e:
-        raise HTTPException(status_code=503, detail="세션 저장소를 사용할 수 없습니다") from e
+        raise Problem(SESSION_STORE_UNAVAILABLE) from e
 
     return Response(status_code=204, headers={"Cache-Control": "private, no-store"})
 
@@ -148,8 +153,8 @@ async def delete_session(session_id: SessionId) -> Response:
     try:
         deleted = await repo.delete(session_id)
     except (DatabaseUnavailable, asyncpg.PostgresError, OSError) as e:
-        raise HTTPException(status_code=503, detail="세션 저장소를 사용할 수 없습니다") from e
+        raise Problem(SESSION_STORE_UNAVAILABLE) from e
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="세션이 없거나 이미 삭제되었습니다")
+        raise Problem(SESSION_NOT_FOUND, "세션이 없거나 이미 삭제되었습니다")
     return Response(status_code=204)

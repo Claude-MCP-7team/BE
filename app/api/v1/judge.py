@@ -16,9 +16,15 @@ import time
 from typing import Annotated, Literal
 
 import msgspec
-from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 
 from app.core.clock import today_kst
+from app.core.problem import (
+    INVALID_PROFILE,
+    POLICY_NOT_FOUND,
+    SNAPSHOT_NOT_READY,
+    Problem,
+)
 from app.engine import snapshot as snapshot_store
 from app.engine.compile import Snapshot
 from app.engine.evaluate import explain, judge_all
@@ -64,13 +70,13 @@ async def judge(
     try:
         snapshot = snapshot_store.holder.get()
     except SnapshotNotReady as e:
-        raise HTTPException(status_code=503, detail=str(e)) from e
+        raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
     try:
         profile = msgspec.json.decode(body, type=UserProfile)
     except msgspec.ValidationError as e:
-        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+        raise Problem(INVALID_PROFILE, str(e)) from e
 
     etag = f'W/"{snapshot.version}:{profile_hash(profile)}:{include}:{explain_mode}"'
     if if_none_match == etag:
@@ -164,7 +170,7 @@ async def policy_list(
     try:
         snapshot = snapshot_store.holder.get()
     except SnapshotNotReady as e:
-        raise HTTPException(status_code=503, detail=str(e)) from e
+        raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     # 목록은 프로필이 섞이지 않으므로 질의만으로 캐시 키가 성립한다.
     key = f"{region}|{category}|{authority_level}|{q}|{limit}|{offset}"
@@ -267,12 +273,12 @@ async def policy_detail(policy_id: str) -> Response:
     try:
         snapshot = snapshot_store.holder.get()
     except SnapshotNotReady as e:
-        raise HTTPException(status_code=503, detail=str(e)) from e
+        raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     try:
         index = snapshot.index_of(policy_id)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=f"없는 정책입니다: {policy_id}") from e
+        raise Problem(POLICY_NOT_FOUND, f"없는 정책입니다: {policy_id}", policy_id=policy_id) from e
 
     return Response(
         content=msgspec.json.encode(snapshot.policies[index]),
@@ -302,13 +308,13 @@ async def questions(request: Request) -> Response:
     try:
         snapshot = snapshot_store.holder.get()
     except SnapshotNotReady as e:
-        raise HTTPException(status_code=503, detail=str(e)) from e
+        raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
     try:
         profile = msgspec.json.decode(body, type=UserProfile)
     except msgspec.ValidationError as e:
-        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+        raise Problem(INVALID_PROFILE, str(e)) from e
 
     today = today_kst()
     verdicts = judge_all(snapshot, profile, today)
@@ -331,13 +337,13 @@ async def combinations(request: Request) -> Response:
     try:
         snapshot = snapshot_store.holder.get()
     except SnapshotNotReady as e:
-        raise HTTPException(status_code=503, detail=str(e)) from e
+        raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
     try:
         profile = msgspec.json.decode(body, type=UserProfile)
     except msgspec.ValidationError as e:
-        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+        raise Problem(INVALID_PROFILE, str(e)) from e
 
     verdicts = judge_all(snapshot, profile, today_kst())
     payload = recommend(snapshot, verdicts)
@@ -358,13 +364,13 @@ async def _plan_from_request(request: Request) -> tuple[Snapshot, PlanResponse]:
     try:
         snapshot = snapshot_store.holder.get()
     except SnapshotNotReady as e:
-        raise HTTPException(status_code=503, detail=str(e)) from e
+        raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
     try:
         profile = msgspec.json.decode(body, type=UserProfile)
     except msgspec.ValidationError as e:
-        raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
+        raise Problem(INVALID_PROFILE, str(e)) from e
 
     raw_ids = request.headers.get("X-Policy-Ids")
     policy_ids = [s.strip() for s in raw_ids.split(",") if s.strip()] if raw_ids else None

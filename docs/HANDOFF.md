@@ -86,8 +86,9 @@ BE 답변은 이미 달아뒀다 ([코멘트](https://github.com/Claude-MCP-7tea
 
 여기에 두 개가 더 붙었다 (§8 #14·#15):
 
-3. **에러 규격** — `ARCHITECTURE.md` 는 RFC 9457 `problem+json` 을 약속하는데 코드는
-   FastAPI 기본 `{"detail": ...}` 다. 문서와 코드 중 어느 쪽에 맞출지 정해야 한다.
+3. **에러 유형** — RFC 9457 로 맞췄고 `type` 으로 분기하면 된다. `detail` 은 그대로라
+   기존 코드는 안 깨지지만, 같은 상태 코드의 다른 원인을 구분하려면 `type` 을 봐야 한다.
+   유형 표: `docs/contracts/problems.json`.
 4. **네 번째 판정 상태** — BE 는 `verdict` 3값 + `future_eligible_from` 으로 냈다 (§3).
    Design 이 4상태 배지를 전제로 만들고 있으니 이 매핑을 공유해야 한다.
 
@@ -241,6 +242,31 @@ mypy   # files = ["app", "batch"], strict = true
 ### 조합은 2안을 모두 낸다
 공고문이 "동일 목적의 타 사업과 중복 수혜 불가"라고만 쓰고 '동일 목적'을 정의하지 않는다. 한쪽으로 단정하면 사용자가 손해를 본다 — 지키면 받을 걸 놓치고, 무시하면 반려된다.
 그래서 보수/최대 둘 다 계산하고 제외된 정책마다 **원문 인용 + 담당부서 전화번호**를 붙인다.
+
+### 에러는 상태 코드가 아니라 유형으로 구분한다
+
+FastAPI 기본 에러(`{"detail": "..."}`)는 FE 에게 상태 코드밖에 주지 않는데, 같은 코드가
+다른 뜻인 경우가 있다:
+
+| 상태 | `type` | 뜻 |
+| --- | --- | --- |
+| 503 | `/problems/snapshot-not-ready` | 아직 아무것도 안 된다. 잠시 후 다시 |
+| 503 | `/problems/session-store-unavailable` | **저장만** 안 된다. 판정은 정상이다 |
+
+뒤쪽에 "잠시 후 다시 시도하세요"를 띄우면, 멀쩡히 쓸 수 있는 기능을 앞에 두고 사용자를
+돌려보내게 된다. 그래서 RFC 9457 `application/problem+json` 으로 내보내고 `type` 에
+기계가 읽는 식별자를 싣는다. 유형 표는 `docs/contracts/problems.json` 이고 코드가
+원본(`app/core/problem.py`)이라 CI 드리프트 검사가 따라온다.
+
+**`detail` 은 자리를 그대로 유지한다.** RFC 9457 에도 `detail` 멤버가 있어서, FastAPI
+기본형에서 `body.detail` 을 읽던 FE 코드는 규격이 바뀌어도 계속 동작한다. 형식을 바꾸면서
+소비자를 깨뜨리지 않는 드문 경우라, 이것이 이 형식을 고른 이유 중 하나다.
+
+`type` 은 상대 URI(`/problems/<code>`)다. RFC 9457 이 허용하고, 배포 주소가 정해지지 않은
+상태에서 절대 URI 를 박으면 주소가 바뀔 때 계약이 따라 깨진다.
+
+처리되지 않은 예외는 예외 문자열을 내보내지 않는다 — 경로·쿼리·내부 상태가 섞여 나올 수
+있고, 그걸 읽는 사람이 사용자라는 보장이 없다. 로그에만 전문이 남는다.
 
 ### 마감 여부는 status 가 아니라 날짜로 판단한다
 
@@ -561,7 +587,6 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 16 | 실공고로 중복수혜 조합(시나리오 5)을 보여줄 데이터 | 데이터 | 상충 쌍이던 국토부 청년월세가 2026-05-29 에 마감됐다. 신청기간이 열려 있는 전국·경기 단위 주거 정책 1건이 더 필요하다 (`data/manual/README.md`). 합성 데이터로는 `data/demo/` 에서 돌고 `tests/e2e` 가 단언한다 |
 | 9 | 배포 Base URL | 팀 | `Dockerfile`·`render.yaml`·CORS 는 준비됨 (`docs/DEPLOY.md`). 실제로 띄우고 URL 을 FE 에 주는 것만 남았다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
-| 14 | 에러 응답 규격 | 팀 | `ARCHITECTURE.md` 는 RFC 9457 `problem+json` 을 약속하는데 코드는 FastAPI 기본 `{"detail": ...}` 다. 문서와 코드가 다르다 |
 | 15 | FE Mock JSON | FE·BE | `docs/contracts/*.json` 은 스키마지 예시 인스턴스가 아니다. `data/demo/` 가 그 역할을 대신할 수 있다 |
 
 ### #11 — A2 비용 추정 (실데이터 기준)
@@ -592,6 +617,7 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 10 | `needs_review_fields` 를 confidence 에 반영 | 반영한다. 단순 부적격은 제외 (§3) |
 | 12 | 충족 예상일이 다른 룰과 모순 | 후보 날짜로 전 조건을 재평가해 막는다 (§3) |
 | 13 | `apply_end` 가 지난 정책이 `ELIGIBLE`·조합 후보로 나온다 | 빌더가 마감 기간을 직접 보고 거른다 + `normalize` 가 status 를 바로잡는다 (§3) |
+| 14 | 에러 응답 규격 | RFC 9457 `problem+json` 으로 맞췄다. 유형 표는 `docs/contracts/problems.json` (§3) |
 
 ---
 
