@@ -1,7 +1,16 @@
 # 인수인계 — YPC 백엔드
 
 > 이 문서만 읽고 이어서 작업할 수 있도록 쓴다.
-> 마지막 갱신: `ec2a29b` 시점. 작업 재개 시 `git log --oneline -5` 로 실제 HEAD 를 먼저 확인할 것.
+> 마지막 갱신: `3904cf9` 시점.
+>
+> **재개할 때 이 순서로 먼저 확인할 것.** 이 문서가 오래돼서 다음 세션이
+> 틀린 전제로 시작한 적이 있다 — 클론이 7커밋 뒤처져 있는데 문서를 믿고
+> "동기화됨"으로 판단했고, 문서에 "CI 통과"라고 적힌 동안 CI 는 나흘째 빨간불이었다.
+>
+> ```bash
+> git fetch origin && git log --oneline -5 && git status -sb   # 실제 HEAD·뒤처짐
+> gh run list --branch dev --limit 3                           # 실제 CI 상태
+> ```
 
 ---
 
@@ -12,7 +21,11 @@
 
 **핵심 구조 한 줄:** 배치가 만든 정책 스냅샷을 API 가 부팅 시 RAM 에 통째로 올리고, 판정 요청은 DB 를 한 번도 건드리지 않는다 (ADR-001).
 
-현재 **판정 · 역질문 · 조합 · 일정 · 세션 저장이 모두 동작**한다. 남은 건 크롤러와 AI 오케스트레이션이다.
+현재 **판정 · 역질문 · 조합 · 일정 · 세션 저장 · 정책 목록 · A2 구조화 · C2 설명문이 모두 동작**한다.
+제출용 E2E 시나리오 6종(`tests/e2e/`)이 키 없이 돌고, 고정 데모 데이터(`data/demo/`)가 커밋되어 있다.
+
+남은 것은 **코드보다 정렬**이다: FE 계약 확정(소득 단위·경로 접두사·에러 규격), 배포,
+마감된 정책 처리(§8 #13), 서류 마스터 검증. 자세한 것은 §8.
 
 ---
 
@@ -20,13 +33,13 @@
 
 | 항목 | 값 |
 | --- | --- |
-| HEAD | `ec2a29b` Store profiles so that a database dump reveals nothing |
-| 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 (= `team` 리모트) |
-| 개인 백업 | `seo99126-debug/MCP` 의 `main` (= `origin` 리모트) |
-| 미푸시 커밋 | 0 |
-| 미커밋 변경 | 0 |
-| 테스트 | **384건 통과** (DB 통합 28건 포함) |
-| CI | 통과 (lint · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크) |
+| HEAD | `3904cf9` Do not promise a date on which another condition has expired |
+| 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 |
+| 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
+| 테스트 | **470건 통과** (DB 통합 28건 포함) |
+| CI | 통과 (lint · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949) |
+
+> ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
 
 > ⚠️ `main` 브랜치는 아직 `5a991da`(README 1개)에 멈춰 있다. 작업물은 전부 `dev` 에 있다.
 > `dev` → `main` 머지는 팀 합의 후 PR 로 한다.
@@ -40,18 +53,27 @@ cd ypc-backend
 python -m venv .venv && . .venv/Scripts/activate   # Windows: .venv/Scripts/activate
 pip install -e ".[dev,batch]"
 
-pytest            # 356 passed, 28 skipped (DB 없으면 통합 테스트는 skip)
+pytest            # 442 passed, 28 skipped (DB 없으면 통합 테스트는 skip)
 ruff check .
 python bench/engine_bench.py
+pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
 ```
 
-`DATABASE_URL` 이 있으면 384건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+`DATABASE_URL` 이 있으면 470건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+
+**API 키 없이도 전 경로가 돈다.** `data/demo/` 의 고정 정책 5건이 그 바닥을 받친다:
+
+```bash
+python -m batch.build_snapshot data/demo/policies.demo.json -o data/snapshot.json
+SNAPSHOT_PATH=data/snapshot.json YPC_FIXED_TODAY=2026-10-01 uvicorn app.main:app
+```
 
 ---
 
 ## 2. 작업 순서 제안
 
-의존성과 리스크를 고려한 순서다.
+의존성과 리스크를 고려한 순서다. **코드 진도는 일정을 앞서 있고, 막고 있는 것은
+대부분 팀 간 정렬이다** — 혼자 더 짜는 것보다 ①을 닫는 게 제출에 가깝다.
 
 ### ① FE 이슈 #2 답변 확인 (제일 먼저)
 https://github.com/Claude-MCP-7team/FE/issues/2
@@ -62,7 +84,15 @@ BE 답변은 이미 달아뒀다 ([코멘트](https://github.com/Claude-MCP-7tea
 1. **소득 입력 단위** — 현재는 중위소득 비율(정수 %)을 받는다. FE 가 원 단위로 받겠다면 BE 가 가구원수별 중위소득 표로 환산해야 하고, 그러면 `household_size` 가 필수가 되며 환산 기준연도를 응답에 실어야 한다.
 2. **경로 접두사** — BE 는 `/v1/*`, FE 제안은 `/api/*`. `/api/v1/*` 로 통일 제안해둔 상태.
 
-답변이 왔으면 그것부터 반영하고, 안 왔으면 아래로 진행한다.
+여기에 두 개가 더 붙었다 (§8 #14·#15):
+
+3. **에러 규격** — `ARCHITECTURE.md` 는 RFC 9457 `problem+json` 을 약속하는데 코드는
+   FastAPI 기본 `{"detail": ...}` 다. 문서와 코드 중 어느 쪽에 맞출지 정해야 한다.
+4. **네 번째 판정 상태** — BE 는 `verdict` 3값 + `future_eligible_from` 으로 냈다 (§3).
+   Design 이 4상태 배지를 전제로 만들고 있으니 이 매핑을 공유해야 한다.
+
+**답이 안 오면 BE 안으로 선언하고 진행하는 편이 낫다.** 9/27 기능 동결까지 시간이
+없고, 기다리는 비용이 고치는 비용보다 크다.
 
 ### ② `batch/crawl` + `batch/agents` (BE-M1-4~5)
 **API 는 확정됐다** (2026-09-14 실응답 기준, 상세는 `batch/collect/client.py` 도크스트링).
@@ -150,6 +180,15 @@ CI 가 mypy 를 돌리지 않아서 통과는 하지만, `app/engine/evaluate.py
 mypy   # files = ["app", "batch"], strict = true
 ```
 
+### ⑤ 마감된 정책 처리 (§8 #13) — 데모에 보이는 문제
+기간이 끝난 정책이 `ELIGIBLE` 로 나오고 조합에 480만원으로 들어간다. 판단 근거와
+고칠 자리 후보는 §8 에 적어뒀다.
+
+### ⑥ 제출물 (M5)
+- **배포** — `Dockerfile`·CORS 설정이 아직 없다. Render Free 예정 (§8 #9)
+- **E2E 는 있다** — `pytest tests/e2e` 가 시나리오 6종을 돌린다. 발표 대본이기도 하다
+- **데모 데이터도 고정돼 있다** — `data/demo/`. 기준일은 `YPC_FIXED_TODAY=2026-10-01`
+
 ---
 
 ## 3. 반드시 알아야 할 설계 결정
@@ -206,6 +245,86 @@ mypy   # files = ["app", "batch"], strict = true
 공고문이 "동일 목적의 타 사업과 중복 수혜 불가"라고만 쓰고 '동일 목적'을 정의하지 않는다. 한쪽으로 단정하면 사용자가 손해를 본다 — 지키면 받을 걸 놓치고, 무시하면 반려된다.
 그래서 보수/최대 둘 다 계산하고 제외된 정책마다 **원문 인용 + 담당부서 전화번호**를 붙인다.
 
+### 네 번째 판정 상태는 verdict 가 아니라 날짜다
+
+마일스톤은 PASS / FAIL / UNKNOWN / **FUTURE_PASS** 네 상태를 말하는데 `Verdict` 는
+세 값이다. 늘리지 않은 이유: verdict 는 "오늘 자격이 있는가"이고 FUTURE_PASS 는
+"언제부터인가"라, 한 필드에 섞으면 FE 가 그 값을 **필터로 쓸지 배지로 쓸지** 정할 수
+없게 된다. 대신 신호를 따로 준다.
+
+- `JudgementResult.future_eligible_from` — 가능해지는 날 (없으면 `null`)
+- `summary.future_eligible` — 배지 건수. **부적격의 부분집합**이라 총계에 더하면 안 된다
+
+화면은 이렇게 그린다:
+
+| verdict | future_eligible_from | 배지 |
+| --- | --- | --- |
+| `ELIGIBLE` | — | 신청 가능 |
+| `NEEDS_INFO` | — | 확인 필요 |
+| `INELIGIBLE` | 날짜 있음 | **FUTURE_PASS** (그 날짜 표시) |
+| `INELIGIBLE` | `null` | 부적격 |
+
+**기본 응답(`include=default`)에서 빼는 것은 '영영 안 되는' 부적격뿐이다.** 원래
+부적격을 전부 뺀 이유는 응답 크기였는데, 시간이 지나면 가능한 정책은 그 범주가
+아니다 — 사용자가 지금 행동을 정하는 데 쓰는 정보다.
+
+### 날짜는 약속이라, 약속할 수 없으면 주지 않는다
+
+`future_eligible_from` 은 다음 중 하나라도 걸리면 `null` 이다:
+
+- 미충족 중 시간과 무관한 조건이 있다 (소득은 기다린다고 해결되지 않는다)
+- 영구 불가가 있다 (연령 상한 초과)
+- **미확인 조건이 남아 있다** — 오늘 답을 모르는데 그날 적격이라고 할 수 없다
+- **그날 다른 조건이 깨진다** — 이게 제일 잡기 어렵다
+
+마지막이 실제로 있었다: 25세 사용자에게 거주 36개월을 요구하면서 연령 상한이
+26세인 정책은, 거주 요건을 채우는 2029년에 이미 28세다. 미충족 조건만 보면
+날짜가 나오고 사용자는 3년을 기다렸다 반려된다. `timeline.py` 는 **한 룰 안에서**
+하한을 넘다 상한을 지나치는 경우만 막는다 (룰 단위로 호출되니까). 그래서 정책을
+조립하는 곳에서 **그 날짜로 전 조건을 다시 평가**한다 — 만료일을 따로 계산하면
+한쪽만 고쳐질 때 조용히 어긋난다.
+
+또 하나: 날짜를 낼 때는 `quality.needs_review_fields` 가 다시 신뢰도를 낮춘다.
+"오늘 안 된다"는 못 본 조건이 있어도 유효하지만, "그날 된다"는 얼마든지 뒤집힌다.
+
+### 못 본 조건이 있으면 확정으로 내보내지 않는다
+
+A2 가 룰로 옮기지 못한 조건(무주택·세대주·보증금 등)은
+`quality.needs_review_fields` 에 남는다. 엔진이 그 조건을 **평가하지 않았는데**
+`CONFIRMED` · `ELIGIBLE` 로 내보내면, 사용자는 그 조건 때문에 반려될 수 있다는 걸
+모른 채 서류를 준비한다.
+
+그래서 confidence 를 `NEEDS_REVIEW` 로 낮춘다. 그러면 `validate.py` 규칙이 담당부서
+연락처를 강제하므로 "확인 필요"가 **확인할 수단**과 함께 나간다. `JudgementResult.
+needs_review_fields` 로 무엇을 못 봤는지도 함께 준다 — confidence 만 낮추면 사용자가
+뭘 확인해야 할지 모른다.
+
+**단순 부적격에는 적용하지 않는다.** 조건은 전부 충족해야 하는 관계라, 확인 못 한
+조건이 더 있다고 해서 이미 확인된 미충족이 뒤집히지 않는다. 명확한 탈락에 '확인
+필요'를 붙이면 진짜 확인이 필요한 판정과 구별이 사라진다.
+
+### 금액은 '있다'와 '확정이다'가 다르다
+
+`amount_estimated` 는 원래 `estimated_total_krw is None` 이었다. 그러면 A2 가
+월액 × 개월로 **계산한** 총액이 공고에 적힌 금액과 화면에서 똑같아 보인다. 지금은
+`benefit.amount_confidence != "CONFIRMED"` 도 추정으로 표시한다.
+
+`amount_confidence` 의 기본값이 `ESTIMATED` 라는 점에 주의 — 생산자가 명시하지
+않으면 추정으로 취급된다. 보수적인 쪽이 기본값이어야 맞다.
+
+### exclusions 는 '통과하려면 참이어야 하는 형태'로 뒤집어 쓴다
+
+엔진은 `eligibility` 와 `exclusions` 를 **똑같이** 평가한다 — 두 배열 모두 "모든 룰이
+충족되어야 적격"이고, `kind` 는 기록만 된다. 그래서 "최근 2년 내 유사사업 참여자
+제외"는 `similar_program_participation_2y == false` 로 적는다.
+
+`== true` 로 적으면 엔진은 '참여한 적이 있어야 통과'로 읽어 **판정이 정확히
+뒤집히는데**, 스키마도 DB 제약도 이걸 잡지 못한다. 예외도 경고도 없다. 그래서 이
+규칙은 `PolicySchema` 도크스트링에 있고 `docs/contracts/policy_schema.json` 에 실려
+나간다 — 프롬프트에만 적으면 그 프롬프트를 쓰는 생산자에게만 닿는다.
+
+엔진이 스스로 부정하게 만들면 안 된다. 이미 부정형으로 들어온 룰이 두 번 뒤집힌다.
+
 ---
 
 ## 4. 코드 지도
@@ -214,7 +333,7 @@ mypy   # files = ["app", "batch"], strict = true
 app/
 ├─ api/v1/
 │   ├─ judge.py       POST /v1/judge, /v1/questions, /v1/combinations, /v1/plan, /v1/plan.ics
-│   │                 GET  /v1/policies/{id}, /v1/meta/snapshot
+│   │                 GET  /v1/policies, /v1/policies/{id}, /v1/meta/snapshot
 │   └─ sessions.py    POST/GET/PUT/DELETE /v1/sessions   ← FE 의 GET/PUT /api/profile 대응
 ├─ engine/            🔵 B 레이어 (결정론, LLM·DB import 금지)
 │   ├─ snapshot.py    스냅샷 보관소 · 핫스왑 (실패 시 직전 것 유지)
@@ -231,11 +350,22 @@ app/
 ├─ db/                asyncpg 풀 + 세션 리포지토리  ← engine/solver/planner 는 import 금지
 ├─ llm/               🟡 C 레이어 — engine/solver/planner 는 import 금지
 │   ├─ client.py      Anthropic 구조화 출력 호출 (SDK 는 지연 import — 서버 이미지에 불필요)
-│   └─ prompts/       ← AI 역할 소유. a2_structure.md
+│   ├─ explain.py     C2 판정 설명문 (결정론 템플릿 + 선택적 LLM 다듬기)
+│   └─ prompts/       ← AI 역할 소유. a2_structure.md · c2_explain.md
 ├─ core/
 │   ├─ config.py      환경변수 설정
 │   └─ crypto.py      AES-256-GCM
 └─ schemas/           계약면 (코드가 원본, JSON Schema 는 자동 생성)
+    └─ catalog.py     목록 응답 — BE↔FE 표현면. C1 Freeze 와 분리해 두었다
+
+data/
+├─ demo/              🟢 고정 데모 5건 + 사용자 1명 (합성). 키 없이 전 경로가 돈다
+├─ manual/            실제 공고 손입력 + A2 응답 (`--responses` 로 키 없이 검증)
+└─ documents/         서류 마스터 36종 CSV
+
+tests/
+├─ unit/              계층별
+└─ e2e/               🟢 제출용 시나리오 6종 — 데모 대본이자 회귀 감시
 
 batch/
 ├─ collect/           온통청년 수집기 + G0 조사 하네스 + normalize(코드값 → 룰)
@@ -289,6 +419,20 @@ python -c "from app.core.crypto import generate_key; print(generate_key())"
    ```
 3. **asyncpg 는 홈 디렉터리에서 SSL 인증서를 찾는다** — 홈 경로에 한글이 있으면 `OSError: [Errno 42] Illegal byte sequence` 가 난다. 로컬 DSN 에 **`?sslmode=disable`** 를 붙일 것. (CI 는 해당 없음)
 
+### 계약 드리프트가 뜨는데 스키마는 안 건드렸다면 파이썬 버전이다
+
+`docs/contracts/*.json` 의 `description` 은 구조체 docstring 에서 나오는데,
+**Python 3.13 부터 컴파일러가 docstring 의 공통 들여쓰기를 제거한다.** 3.11 은 그대로
+둔다. 그래서 3.14 기계에서 내보낸 JSON 을 커밋하면 3.11 인 CI 가 매 푸시마다
+드리프트로 실패하고, 반대로 3.11 출력을 커밋하면 3.13+ 사용자가 실패한다.
+
+실제로 한 번 그렇게 됐다. `tools/export_contract.py` 가 모든 `description` 을
+`inspect.cleandoc` 으로 정규화해서 두 버전이 같은 바이트를 내게 막아뒀고,
+`tests/unit/test_contract_export.py` 가 3.11 출력을 합성해 넣어 회귀를 잡는다
+(3.14 에서 돌리면 진짜 docstring 은 이미 dedent 되어 있어 정규화가 빠져도 통과한다).
+
+**드리프트가 뜨면 먼저 `python -V` 를 볼 것.** 계약이 바뀐 게 아닐 수 있다.
+
 ### 파일 입출력에는 반드시 `encoding="utf-8"` 을 쓴다
 
 한국어 Windows 의 기본 인코딩은 **cp949** 다. `Path.read_text()` 처럼 인코딩을 생략하면
@@ -339,8 +483,12 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 
 ### 브랜치·푸시
 - 작업 브랜치는 `dev` 에서 분기, PR 대상도 `dev`
-- 푸시: `git push team <branch>` (team = `Claude-MCP-7team/BE`)
+- **푸시 전에 `git remote -v` 로 리모트 이름을 확인할 것.** 환경마다 다르다 —
+  어떤 기계는 `origin` 이 팀 저장소이고, 어떤 기계는 `team` 이 따로 있다.
+  이 문서가 예전에 `team` 으로 단정해둔 탓에 실제로 혼선이 있었다
 - `main` 직접 푸시 금지 — 팀 합의 후 PR
+- **머지된 브랜치에 계속 쌓지 말 것.** PR 이 머지되면 그 브랜치 커밋은 `dev` 에 있다.
+  이어서 작업하려면 `dev` 에서 새로 분기한다
 
 ### 성능 가드
 `bench/engine_bench.py` 가 CI 에서 돌며 **기준 초과 시 빌드를 실패시킨다**:
@@ -362,6 +510,8 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 룰 평가 (600 정책 / 2,442 룰) | 0.25 ms | — |
 | 룰 평가 (3,000 정책 / 12,208 룰) | 0.74 ms | — |
 | 판정 API 1건 (예산 합계) | ~57 ms | p95 ≤ 5,000 ms |
+| `/v1/judge` 기본 응답 (600 정책) | 9.4 ms · 231 KB | p95 ≤ 5,000 ms |
+| `/v1/judge` 기본 응답 (3,000 정책) | 42.9 ms · 1,188 KB | p95 ≤ 5,000 ms |
 | 신청 계획 (3,000 정책 / 715 적격) | 10.1 ms | p95 ≤ 50 ms |
 | 영업일 역산 1회 | 1.5 µs | — |
 | MWIS 정점 30개 | 3.5 ms | — |
@@ -369,27 +519,77 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 2026 공휴일 (대체공휴일 포함 21일) | 전수 일치 | G5: 100% |
 | MWIS 정확성 | 200/200 완전탐색 일치 | G4: 100% |
 
+기본 응답 수치는 **정책별 상세 조립 + 설명문 생성까지 포함**한 값이다. 부적격도
+상세를 만들어 봐야 충족 예상일이 있는지 알 수 있어서 전건을 조립한다(40.7ms), 설명문
+템플릿은 그 위에 2.2ms 를 더한다. 실스냅샷은 1,555건이라 대략 절반이다.
+
 **비동기 분석(`analysis_id` + polling)을 만들지 말자고 FE 에 제안한 근거가 이 표다.** 동기 응답이 수십 ms 라서, 작업 ID·상태·폴링·timeout·무효화 규칙은 전부 없는 대기시간을 관리하는 상태가 된다.
 
 ---
 
 ## 8. 미결 사항 정리
 
+### 아직 막혀 있는 것
+
 | # | 항목 | 막는 사람 | 비고 |
 | --- | --- | --- | --- |
-| 1 | 소득 입력 단위 (원 vs 비율) | FE | BE 코드 변경 필요 |
-| 2 | 경로 접두사 (`/v1` vs `/api/v1`) | FE | BE 가 맞출 수 있음 |
+| 1 | 소득 입력 단위 (원 vs 비율) | FE | 현재는 중위소득 비율(정수 %). 원 단위로 받으면 가구원수별 환산표가 필요하고 `household_size` 가 필수가 된다 |
+| 2 | 경로 접두사 (`/v1` vs `/api/v1`) | FE | BE 가 맞출 수 있음. `/api/v1` 통일 제안해둔 상태 |
 | 3 | `personal_income`·`employment_type` 필요 여부 | FE | 현재 룰이 참조 안 함 |
-| 4 | 정책 수준 `future_eligibility_date` 제공 여부 | FE | 현재는 조건별 날짜만 |
 | 5 | 인증 방식 (익명 세션 vs 로그인) | 팀 | 현재 익명 세션 |
 | 6 | 응답 envelope (`{data, request_id}` 래핑) | FE | 현재 페이로드 직접 반환 |
-| 7 | 온통청년 API 명세 | **외부** | ② 작업을 막고 있음 |
-| 8 | 서류 마스터 36종 검증 | 사람 | CSV 수정만 필요 |
-| 9 | 배포 Base URL · CORS | 팀 | Render Free 예정 |
-| 10 | `needs_review_fields` 의 `unrepresentable_conditions` 표식을 판정 confidence 에 반영할지 | BE | 엔진이 못 보는 조건이 있는 정책이 CONFIRMED·ELIGIBLE 로 나간다 |
-| 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정으로, 예산 얼마) | 팀 | published 1,555건 × Opus 5 ≈ 정책당 $0.03 안팎 추정, 캐시 적용 전 |
-| 12 | 충족 예상일이 다른 룰과 모순될 때 | BE | 24세 사용자의 청년기본소득: 거주 36개월은 "2029-05-15부터 가능"인데 그때는 27세라 나이 룰이 깨진다. 룰별 날짜만 내고 정책 수준 교차검증은 없음 (`tools/demo_scenario.py` A-1) |
-| 13 | `apply_end` 가 지난 정책이 `ELIGIBLE`·조합 후보로 나온다 | BE | `aplyPrdSeCd=0057001`(기간) 이면서 종료일이 과거인 정책은 `published` 로 남는다(normalize 는 `0057003` 만 expired). 국토부 청년월세(5/29 마감)가 9/19 판정에서 적격이고 조합에 480만원으로 들어간다. 판정은 두더라도 조합·계획에서는 빼거나 '마감' 표시가 필요 (`demo_scenario.py` D-2) |
+| 8 | 서류 마스터 36종 검증 | 사람 | CSV 의 `검증상태` 만 고치면 된다. 코드 변경 없음 |
+| 9 | 배포 Base URL · CORS | 팀 | Render Free 예정. **Dockerfile·CORS 설정이 아직 없다** |
+| 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
+| 13 | `apply_end` 가 지난 정책이 `ELIGIBLE`·조합 후보로 나온다 | **BE** | 아래 참고 — 데모에서 보이는 문제다 |
+| 14 | 에러 응답 규격 | 팀 | `ARCHITECTURE.md` 는 RFC 9457 `problem+json` 을 약속하는데 코드는 FastAPI 기본 `{"detail": ...}` 다. 문서와 코드가 다르다 |
+| 15 | FE Mock JSON | FE·BE | `docs/contracts/*.json` 은 스키마지 예시 인스턴스가 아니다. `data/demo/` 가 그 역할을 대신할 수 있다 |
+
+### #13 — 마감된 정책이 적격으로 나온다 (우선순위 높음)
+
+`normalize` 는 `aplyPrdSeCd=0057003` 만 `expired` 로 표시한다. 기간제(`0057001`)인데
+종료일이 과거인 정책은 `published` 로 남고, 엔진은 `status` 도 `apply_end` 도 보지 않는다.
+
+국토부 청년월세(5/29 마감)가 9/19 판정에서 적격으로 나오고 조합에 480만원으로
+들어간다. 데모에서 그대로 보인다.
+
+고칠 자리 후보 세 곳이고, 빌더가 맞다고 본다:
+- **빌더** — `published` 필터 옆에서 `apply_end` 도 본다. 이미 배치 출력과 판정 사이의
+  유일한 관문이고 리포트에 건수가 남는다
+- 엔진 — 판정 시점 비교. 스냅샷을 다시 만들지 않아도 되지만, `/readyz` 가 초록인
+  스냅샷이 날이 바뀌면 조용히 내용이 달라진다
+- API — 핸들러마다 기억해야 해서 빠뜨리기 쉽다
+
+"판정은 하되 조합·계획에서만 빼자"는 절충도 가능하다. 사용자가 "왜 이 정책이
+안 보이나"를 물을 때 "마감됐습니다"라고 답할 수 있는 편이 낫기 때문이다.
+
+### #11 — A2 비용 추정 (실데이터 기준)
+
+프롬프트 7.8KB · 정책당 원문 약 4KB · 응답 평균 3.7KB 로, Opus 5($5/$25 per MTok,
+시스템 프롬프트는 `cache_control` 로 10%) 기준:
+
+| 범위 | 대략 |
+| --- | --- |
+| 5건 (`--limit 5`) | $0.5 미만 |
+| published 1,555건 | $150 내외 |
+| 전체 2,819건 | $270 내외 |
+
+한글 토크나이저 비율을 보수적으로 잡은 추정이다. **P0 가 요구하는 3~5건은 커피값도
+안 된다** — 돈이 문제가 되는 건 전수 실행뿐이다.
+
+**키 없이 가는 길이 이미 있다.** `data/manual/` + `--responses` 가 손으로 쓴 A2 응답을
+모델 응답과 **똑같은 검증 파이프라인**(인용문 원문 대조 → 불일치 검사 →
+`validate_policy` → 병합 → 리포트)에 태운다. 파이프라인은 출처를 구분하지 않고,
+품질을 보증하는 건 출처가 아니라 원문 대조다.
+
+### 해결된 것 (기록)
+
+| # | 항목 | 어떻게 |
+| --- | --- | --- |
+| 4 | 정책 수준 `future_eligibility_date` | `future_eligible_from` + `summary.future_eligible` 로 제공 (§3) |
+| 7 | 온통청년 API 명세 | 실호출로 확정. `/go/ythip/getPlcy`, `zipCd` 5자리, 1,000건/페이지 |
+| 10 | `needs_review_fields` 를 confidence 에 반영 | 반영한다. 단순 부적격은 제외 (§3) |
+| 12 | 충족 예상일이 다른 룰과 모순 | 후보 날짜로 전 조건을 재평가해 막는다 (§3) |
 
 ---
 
