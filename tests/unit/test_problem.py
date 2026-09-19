@@ -58,19 +58,24 @@ def problem(response) -> dict:
 
 
 def test_같은_503_이라도_원인이_다르면_type_이_다르다(client, monkeypatch):
-    """'아직 아무것도 안 된다'와 '저장만 안 된다'는 화면이 달라야 한다."""
+    """'아직 아무것도 안 된다'와 '저장만 안 된다'는 화면이 달라야 한다.
+
+    스냅샷은 요청 시점에 모듈 속성으로 읽히므로, 두 번째 TestClient 를 열 필요가
+    없다 — 열면 각자 이벤트 루프를 만들어, 나중에 닫히는 쪽이 다른 루프에 붙은
+    asyncpg 풀을 닫으려다 터진다. DB 가 없는 기계에서는 풀이 없어 조용히 넘어가고
+    CI 에서만 드러난다.
+    """
     monkeypatch.setattr("app.engine.snapshot.holder", SnapshotHolder())
-    from app.main import app
 
-    with TestClient(app) as fresh:
-        스냅샷없음 = problem(fresh.post("/v1/judge", json=BODY))
-
+    스냅샷없음 = problem(client.post("/v1/judge", json=BODY))
     저장소없음 = problem(client.post("/v1/sessions", json={"profile": BODY}))
 
     assert 스냅샷없음["status"] == 저장소없음["status"] == 503
     assert 스냅샷없음["type"] == "/problems/snapshot-not-ready"
     assert 저장소없음["type"] == "/problems/session-store-unavailable"
-    # 저장이 막혀도 판정은 된다는 사실이 문장에 남아 있어야 한다
+    # 저장이 막혀도 판정은 된다는 사실이 문장에 남아 있어야 한다.
+    # 저장이 막히는 이유는 둘(DB 미연결 / 암호화 키 없음)이고, 사용자에게는
+    # 둘 다 같은 뜻이라 어느 쪽이든 이 문장이 붙어야 한다.
     assert "판정" in 저장소없음["detail"]
 
 

@@ -58,7 +58,8 @@ def _repo() -> SessionRepository:
     if cipher is None:
         raise Problem(
             SESSION_STORE_UNAVAILABLE,
-            "프로필 암호화 키가 설정되지 않아 세션을 저장하지 않습니다",
+            "프로필 암호화 키가 설정되지 않아 세션을 저장하지 않습니다"
+            " (판정 기능은 정상 동작합니다)",
         )
     return SessionRepository(db_pool.db, cipher)
 

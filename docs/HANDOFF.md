@@ -453,6 +453,31 @@ python tools/export_contract.py && git add docs/contracts/
 python -c "from app.core.crypto import generate_key; print(generate_key())"
 ```
 
+### DB 통합 테스트를 로컬에서 돌리는 법 (Linux·컨테이너)
+
+`DATABASE_URL` 이 없으면 28건이 **skip 되고 초록불이 뜬다.** 그 상태로 푸시했다가
+CI 에서만 깨진 적이 있다 — `TestClient` 를 중첩해 열면 나중에 닫히는 쪽이 다른
+이벤트 루프에 붙은 asyncpg 풀을 닫으려다 터지는데, 풀이 없는 기계에서는 아무 일도
+일어나지 않는다. **DB 경로를 건드렸으면 한 번은 실제 DB 로 돌릴 것.**
+
+```bash
+export PGDATA=/tmp/ypcpg PGBIN=/usr/lib/postgresql/16/bin PGPORT=55432
+mkdir -p $PGDATA && id -u postgres >/dev/null 2>&1 || useradd postgres
+chown postgres $PGDATA && chmod 700 $PGDATA
+su postgres -c "$PGBIN/initdb -D $PGDATA -U postgres -A trust"
+su postgres -c "$PGBIN/pg_ctl -D $PGDATA -o '-p $PGPORT -k /tmp' -l $PGDATA/server.log start"
+
+psql -h /tmp -p $PGPORT -U postgres -c "CREATE DATABASE ypc_test ENCODING 'UTF8' TEMPLATE template0;"
+psql -h /tmp -p $PGPORT -U postgres -d ypc_test -v ON_ERROR_STOP=1 -f db/migrations/0001_init.sql
+
+DATABASE_URL="postgresql://postgres@127.0.0.1:$PGPORT/ypc_test" pytest   # skip 0 이어야 한다
+```
+
+데이터 디렉터리는 **postgres 사용자가 통과할 수 있는 경로**여야 한다. 홈 아래나 권한이
+좁은 임시 디렉터리에 만들면 `initdb: could not access directory` 로 죽는다.
+
+끝나면 `su postgres -c "$PGBIN/pg_ctl -D $PGDATA stop" && rm -rf $PGDATA`.
+
 ### 로컬 PostgreSQL 주의사항 (Windows)
 
 이전 환경에서 겪은 것들이다. 같은 함정에 빠지지 말 것:
