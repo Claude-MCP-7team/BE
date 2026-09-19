@@ -161,6 +161,36 @@ def test_면책_고지가_항상_실린다(client):
     assert "법적 효력이 없습니다" in post(client).json()["disclaimer"]
 
 
+# --- 설명문 (C2) ---------------------------------------------------------------
+
+
+def test_기본으로_모든_결과에_템플릿_설명문이_붙는다(client):
+    results = {r["policy_id"]: r for r in post(client, include="all").json()["results"]}
+    yongin = results["YONGIN-RENT"]["explanation"]
+    assert "내 값 3개월, 공고 기준 6개월" in yongin
+    assert "2026-11-15부터 충족돼요" in yongin
+    assert '"6개월 이상 계속하여 거주"' in yongin
+    assert "1가지 정보가 더 필요해요" in results["ASK-ME"]["explanation"]
+    assert "모두 충족해요" in results["MOLIT-RENT"]["explanation"]
+
+
+def test_explain_none_이면_설명문을_생략한다(client):
+    for r in post(client, explain="none").json()["results"]:
+        assert r["explanation"] is None
+
+
+def test_explain_llm_은_키가_없으면_템플릿과_같다(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    a = post(client, include="all", explain="template").json()["results"]
+    b = post(client, include="all", explain="llm").json()["results"]
+    assert [r["explanation"] for r in a] == [r["explanation"] for r in b]
+
+
+def test_설명문_방식이_다르면_ETag_도_다르다(client):
+    assert post(client).headers["etag"] != post(client, explain="none").headers["etag"]
+
+
 def test_역질문에_답하면_분류가_바뀐다(client):
     body = {**BODY, "answers": {"household_income_ratio_median": 120}}
     before = post(client).json()["summary"]

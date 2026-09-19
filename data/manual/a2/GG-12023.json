@@ -1,0 +1,81 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [19, 39],
+      "unit": "세",
+      "source_quote": "19세 ~ 39세 무주택 청년",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "API 코드값(19~39)과 일치"
+    },
+    {
+      "kind": "eligibility",
+      "field": "household_income_ratio_median",
+      "op": "<=",
+      "value_number": 180,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "%",
+      "source_quote": "(소득기준) 가구원 합산 기준중위소득 180% 이하(건강보험료 기준)",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "가구원 합산 소득이 기준 중위소득의 몇 % 정도인가요? (건강보험료 기준, 피부양자면 부양자 보험료 기준)",
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": null
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "2026. 1. 1. ~ 6. 30. 사이에 용인시로 전입했거나 용인시 안에서 이사해 전입신고를 마친 사람만",
+      "source_quote": "2026. 1. 1. ~ 6. 30. 용인시로 전입하거나 용인시 내에서 이사 후 전입신고를 완료한 19세 ~ 39세 무주택 청년",
+      "reason": "전입 시점이 특정 기간 '안'이어야 하는 조건. residence_months_continuous 는 '이상'만 표현하고 상한·기간 창을 표현하지 못한다"
+    },
+    {
+      "summary": "무주택자만",
+      "source_quote": "19세 ~ 39세 무주택 청년",
+      "reason": "주택 소유 여부 필드가 없다"
+    },
+    {
+      "summary": "전·월세 보증금 2억원 이하 (월세는 전환율 반영)",
+      "source_quote": "(주택기준) 전･월세보증금 2억원 이하",
+      "reason": "보증금 금액 필드가 없다"
+    },
+    {
+      "summary": "신청인 본인이 세대주·임차인·전입자여야 함",
+      "source_quote": "신청인=세대주=임대차 계약자=주소지 전입자",
+      "reason": "세대주·계약 명의 필드가 없다"
+    }
+  ],
+  "benefit": {
+    "type": "cash_lump",
+    "amount_krw": 400000,
+    "duration_months": null,
+    "estimated_total_krw": 400000,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "중개보수 및 이사비 포함하여 최대 40만원 내 실비지원(생애1회)"
+  },
+  "period": {
+    "apply_start": "2026-09-16",
+    "apply_end": "2026-09-22",
+    "is_rolling": false,
+    "source_quote": "신청기간 : 2026. 9. 16.(수) 09:00 ~ 9. 22.(화) 18:00"
+  },
+  "documents": [],
+  "conflicts": [],
+  "dept": {
+    "name": "용인시 청년정책과",
+    "tel": "031-6193-2762",
+    "source_quote": "용인시 청년정책과 ☎ 031-6193-2762"
+  }
+}

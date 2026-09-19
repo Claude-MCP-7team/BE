@@ -1,0 +1,113 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [19, 34],
+      "unit": "세",
+      "source_quote": "19세~34세 독립거주 무주택 청년",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "API 코드값(19~34)과 일치"
+    },
+    {
+      "kind": "eligibility",
+      "field": "household_income_ratio_median",
+      "op": "<=",
+      "value_number": 60,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "%",
+      "source_quote": "청년가구 소득이 기준 중위소득 60% 이하이면서, 원가구 소득이 중위소득 100% 이하인 청년",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "본인(과 배우자·자녀 등 청년가구) 소득이 기준 중위소득의 몇 % 정도인가요? 부모님 가구 소득도 따로 알려주세요 (원가구 기준 100% 이하 조건이 있어요)",
+      "ambiguous": true,
+      "confidence": "ESTIMATED",
+      "note": "청년가구 60% 와 원가구 100% 두 단계 기준. 30세 이상·혼인 등은 원가구 미고려. 청년가구 기준만 규칙으로 옮기고 원가구 기준은 unrepresentable 로"
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "원가구(청년 + 부모) 소득이 기준 중위소득 100% 이하 (30세 이상·혼인·미혼부모 등은 미고려)",
+      "source_quote": "원가구 소득이 중위소득 100% 이하인 청년",
+      "reason": "원가구 소득은 별도 필드가 없고, 미고려 예외가 나이·혼인 상태에 따라 갈린다"
+    },
+    {
+      "summary": "부모와 별도 거주하는 무주택 청년",
+      "source_quote": "19세~34세 독립거주 무주택 청년",
+      "reason": "독립 거주·주택 소유 여부 필드가 없다"
+    },
+    {
+      "summary": "주택(분양권·입주권 포함) 소유자 제외",
+      "source_quote": "주택 소유자(분양권, 입주권 포함)",
+      "reason": "주택 소유 여부 필드가 없다"
+    },
+    {
+      "summary": "2촌 이내 혈족 명의 주택 임차 제외",
+      "source_quote": "직계존속·형제·자매 등 2촌 이내 혈족(배우자의 2촌 이내 혈족 포함) 주택 임차",
+      "reason": "임대인 관계 필드가 없다"
+    },
+    {
+      "summary": "공공임대주택 거주자 제외",
+      "source_quote": "공공주택특별법에 따른 공공임대주택(공무원임대주택 포함) 거주",
+      "reason": "주거 형태 필드가 없다"
+    },
+    {
+      "summary": "청년가구 총재산가액 1.22억원 이하",
+      "source_quote": "총재산가액이 1.22억원 이하",
+      "reason": "재산 필드가 없다"
+    },
+    {
+      "summary": "과거 청년월세 한시 특별지원으로 이미 24개월 수혜한 사람 제외",
+      "source_quote": "과거 ‘청년월세 한시 특별지원사업’에 선정되어 이미 24개월을 수혜받은 자",
+      "reason": "수혜 이력은 received_policy_ids 로 표현할 수 있지만 과거 사업의 정책 ID 를 모른다"
+    }
+  ],
+  "benefit": {
+    "type": "cash_monthly",
+    "amount_krw": 200000,
+    "duration_months": 24,
+    "estimated_total_krw": 4800000,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "월 최대 20만원씩 최장 24개월간 월세를 지원합니다(생애 1회)"
+  },
+  "period": {
+    "apply_start": "2026-03-30",
+    "apply_end": "2026-05-29",
+    "is_rolling": false,
+    "source_quote": "신청은 '26년 3월 30일 09:00부터 '26년 5월 29일 16:00까지 가능하며"
+  },
+  "documents": [
+    {"name": "월세지원 신청서", "issuer": null, "source_quote": "월세지원 신청서, 소득·재산 신고서"},
+    {"name": "소득·재산 신고서", "issuer": null, "source_quote": "월세지원 신청서, 소득·재산 신고서"},
+    {"name": "임대차계약서", "issuer": null, "source_quote": "임대차계약서 및 최근 3개월간 월세 이체 증빙서류"},
+    {"name": "월세 이체 증빙서류", "issuer": null, "source_quote": "최근 3개월간 월세 이체 증빙서류"},
+    {"name": "통장 사본", "issuer": null, "source_quote": "통장 사본, 가족관계증명서"},
+    {"name": "가족관계증명서", "issuer": null, "source_quote": "통장 사본, 가족관계증명서"}
+  ],
+  "conflicts": [
+    {
+      "type": "category_overlap",
+      "target_policy_name": null,
+      "target_category": "housing",
+      "target_benefit_type": "cash_monthly",
+      "target_authority": null,
+      "source_quote": "국토부 또는 지자체에서 시행하는 청년월세 지원사업 중복 수혜중인 자(수혜종료 후 신청 가능)",
+      "confidence": "ESTIMATED"
+    }
+  ],
+  "dept": {
+    "name": null,
+    "tel": null,
+    "source_quote": null
+  }
+}

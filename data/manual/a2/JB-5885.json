@@ -1,0 +1,66 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [24, 24],
+      "unit": "세",
+      "source_quote": "경기도에 사는 24세 청년",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "API 코드값(24~24)과 일치. 분기별 지급 대상 생년월일은 별도 확인"
+    },
+    {
+      "kind": "eligibility",
+      "field": "residence_months_continuous",
+      "op": ">=",
+      "value_number": 36,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "개월",
+      "source_quote": "경기도 3년 이상 계속 또는 합산 10년 이상 거주자",
+      "time_satisfiable": true,
+      "askable": true,
+      "question_template": "경기도에 언제부터 계속 살고 계신가요? (전입일. 중간에 다른 시도로 나갔다 온 적이 있으면 합산 10년 여부도 알려주세요)",
+      "ambiguous": true,
+      "confidence": "ESTIMATED",
+      "note": "'3년 계속' 경로만 규칙으로 옮겼다. '합산 10년' 경로는 아래 unrepresentable 에 남긴다 — 연속 거주가 3년 미만이어도 합산 10년이면 대상이므로 이 규칙만으로 부적격을 확정하면 안 된다"
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "경기도 거주 기간이 '합산 10년 이상'이면 연속 3년 미만이어도 대상 (OR 조건의 두 번째 경로)",
+      "source_quote": "경기도 3년 이상 계속 또는 합산 10년 이상 거주자",
+      "reason": "residence_months_continuous 는 연속 거주만 표현한다. 전출입을 합산한 총 거주기간 필드가 없다"
+    }
+  ],
+  "benefit": {
+    "type": "voucher",
+    "amount_krw": 250000,
+    "duration_months": null,
+    "estimated_total_krw": 250000,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "분기별 25만원"
+  },
+  "period": {
+    "apply_start": "2026-09-01",
+    "apply_end": "2026-10-02",
+    "is_rolling": false,
+    "source_quote": "3분기 신청기간: 2026. 9.1.(화) 09:00 ~ 10.2.(금) 18:00"
+  },
+  "documents": [],
+  "conflicts": [],
+  "dept": {
+    "name": "경기도 청년기본소득 콜센터",
+    "tel": "1877-0566",
+    "source_quote": "경기도 청년기본소득 콜센터 1877-0566"
+  }
+}
