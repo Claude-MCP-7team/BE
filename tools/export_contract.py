@@ -23,7 +23,7 @@ from app.core.problem import ALL_TYPES  # noqa: E402
 from app.schemas.enums import KNOWN_FIELDS, TIME_SATISFIABLE_FIELDS  # noqa: E402
 from app.schemas.judgement import JudgementResult  # noqa: E402
 from app.schemas.policy import PolicySchema  # noqa: E402
-from app.schemas.user import UserProfile  # noqa: E402
+from app.schemas.user import FIELD_BOUNDS, FIELD_UNITS, UserProfile  # noqa: E402
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "docs" / "contracts"
 
@@ -78,9 +78,17 @@ def main() -> None:
     fields = {
         "known_fields": sorted(KNOWN_FIELDS),
         "time_satisfiable_fields": sorted(TIME_SATISFIABLE_FIELDS),
+        # 단위는 계약의 일부다. 타입만 맞고 단위가 다른 값은 거부되지 않고
+        # 조용히 틀린 판정이 되므로, 경계를 문서가 아니라 코드에서 뽑아 낸다.
+        "numeric_bounds": {
+            field: {"min": lo, "max": hi, "unit": FIELD_UNITS[field]}
+            for field, (lo, hi) in sorted(FIELD_BOUNDS.items())
+        },
         "note": (
             "룰의 field 는 known_fields 안에 있어야 한다. "
-            "time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다."
+            "time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다. "
+            "numeric_bounds 의 필드는 정수만 받으며, 범위 밖이면 "
+            "422 invalid-profile 로 거부된다."
         ),
     }
     # 에러 유형도 계약이다. FE 는 상태 코드가 아니라 이 code 로 분기한다.

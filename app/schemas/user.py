@@ -19,6 +19,65 @@ from app.schemas.enums import (
     MaritalStatus,
 )
 
+# 숫자 입력의 허용 범위. 단위가 어긋난 값을 '계산 가능한 값'으로 받아주지 않는다.
+#
+# 왜 필요한가: 룰은 `household_income_ratio_median <= 150` 처럼 비교만 한다.
+# FE 가 실수로 원 단위(3000000)를 보내면 비교는 정상적으로 수행되고, 소득 조건이
+# 붙은 정책이 전부 '부적격'으로 나간다. 400 도 NEEDS_INFO 도 아니라 그럴듯한
+# 부적격 목록이라 아무도 이상하다고 신고하지 않는다. 타입 검사로는 못 잡는다 —
+# 3000000 도 int 이기 때문이다.
+#
+# 상한은 실제 공고문의 최댓값(중위소득 150~200%)보다 한참 위로 잡았다. 정상 입력을
+# 막는 것보다 단위 실수를 놓치는 쪽이 훨씬 나쁘지만, 상한을 200 같이 빡빡하게 잡으면
+# 언젠가 300% 짜리 공고가 나왔을 때 멀쩡한 사용자가 막힌다.
+FIELD_BOUNDS: dict[str, tuple[int, int]] = {
+    # 기준 중위소득 대비 퍼센트 정수. 150% → 150 (1.5 아님, 원 단위 아님)
+    "household_income_ratio_median": (0, 1000),
+    # 본인 포함 가구원 수. 0명인 가구는 없다.
+    "household_size": (1, 20),
+    # 개월 수. 100년을 넘기면 연/월 단위를 혼동한 것이다.
+    "residence_months_continuous": (0, 1200),
+    "employment_months": (0, 1200),
+}
+
+# 단위를 사람이 읽을 수 있는 말로. 계약(docs/contracts/rule_fields.json)으로 나가서
+# FE 가 "정수 비율"을 퍼센트로 읽을지 배수로 읽을지 헷갈리지 않게 한다.
+FIELD_UNITS: dict[str, str] = {
+    "household_income_ratio_median": "기준 중위소득 대비 퍼센트 정수 (150% → 150)",
+    "household_size": "명 (본인 포함)",
+    "residence_months_continuous": "개월",
+    "employment_months": "개월",
+}
+
+
+def check_bounds(field: str, value: object) -> None:
+    """범위표에 있는 필드면 정수인지와 범위를 검사한다. 어기면 ValueError.
+
+    msgspec 이 `__post_init__` 의 ValueError 를 ValidationError 로 바꾸면서 필드
+    경로를 붙이고, API 는 그걸 이미 invalid-profile 로 잡는다.
+
+    '모르는 형태는 건너뛴다'로 만들면 안 된다. 건너뛰기는 곧 통과이고, 여기서
+    통과한 값은 룰 비교에 그대로 들어간다. 특히:
+
+      - `bool`: 파이썬에서 `isinstance(True, int)` 가 참이라 True 가 1 로 샌다.
+      - `float`: `answers` 는 float 을 허용하는데, 소득을 비율로 착각해 1.5 를
+        보내면 0~1000 범위 안이라 통과하고 `1.5 <= 150` 이 참이 되어 **부적격이
+        적격으로** 뒤집힌다. 범위 검사만으로는 절대 못 잡는 종류의 실수다.
+
+    범위표에 있는 필드는 전부 정수(퍼센트·명·개월)라 정수만 받는다.
+    """
+    lo_hi = FIELD_BOUNDS.get(field)
+    if lo_hi is None or value is None:
+        return
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{field} 는 정수여야 합니다 (받은 값: {value!r})")
+    lo, hi = lo_hi
+    if not lo <= value <= hi:
+        raise ValueError(
+            f"{field} 는 {lo}~{hi} 범위여야 합니다 (받은 값: {value}). "
+            f"단위를 확인하세요"
+        )
+
 
 def region_chain(region_code: str) -> list[str]:
     """법정동 코드를 접두 체인으로 확장한다.
@@ -59,6 +118,15 @@ class Core(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     income_basis: IncomeBasis | None = None
     household_income_ratio_median: int | None = None
 
+    def __post_init__(self) -> None:
+        # msgspec 은 디코드 직후 이걸 부르고, ValueError 를 ValidationError 로
+        # 바꾸면서 필드 경로를 붙여 준다. API 는 그걸 이미 invalid-profile 로
+        # 잡고 있어서 별도 핸들러가 필요 없다.
+        check_bounds("household_size", self.household_size)
+        check_bounds(
+            "household_income_ratio_median", self.household_income_ratio_median
+        )
+
 
 class History(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     """기수혜 이력. None 은 '미확인'이며 역질문 대상이 된다 (False 와 구분)."""
@@ -81,6 +149,12 @@ class UserProfile(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
         default_factory=dict
     )
     consent: Consent = msgspec.field(default_factory=Consent)
+
+    def __post_init__(self) -> None:
+        # 역질문 답변도 같은 값으로 룰에 들어간다. core 만 검사하면 온보딩으로
+        # 들어온 값은 막히고 역질문으로 들어온 같은 값은 통과하는 구멍이 생긴다.
+        for field, value in self.answers.items():
+            check_bounds(field, value)
 
     # ---- 파생값 (룰 엔진이 평가 직전에 계산) -------------------------------
 
