@@ -12,11 +12,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# --- 의존성 --------------------------------------------------------------
-# 소스보다 먼저 넣어 레이어 캐시를 살린다. 코드만 바뀌면 설치를 다시 하지 않는다.
+# --- 의존성 + 서버 코드 ---------------------------------------------------
+# pyproject 가 의존성 목록이자 패키지 정의라 `pip install .` 에 app/ 이 필요하다.
+# 그래서 app/ 이 바뀌면 이 레이어가 다시 돈다 — 설치가 1분 남짓이라 두 단계로
+# 쪼개는 복잡함보다 낫다고 봤다. 자주 바뀌지 않는 batch/ · data/ 는 뒤에 온다.
 #
 # `.[batch]` 를 넣지 않는다. 수집기·A2 는 배치에서만 돌고, anthropic SDK 와
 # pdfplumber 를 서버 이미지에 넣으면 API 가 쓰지도 않는 의존성이 배포 표면에 남는다.
+# packages.find 가 있는 것만 잡으므로 batch/ 가 없어도 설치는 성공한다.
 COPY pyproject.toml README.md ./
 COPY app ./app
 RUN pip install --no-cache-dir .

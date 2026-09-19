@@ -3,6 +3,10 @@
 배포의 산출물은 **`Dockerfile` 하나**다. `render.yaml` 은 Render 용 편의 파일이고,
 플랫폼을 바꾸면 그것만 버리면 된다.
 
+CI 가 매 푸시마다 이 이미지를 실제로 빌드하고 띄워서 확인한다 (`docker` 잡) —
+`/readyz` 준비, 판정 1건, CORS 의 ETag 노출, 비루트 실행, 배치 의존성 부재.
+Dockerfile 을 고쳤는데 CI 가 초록이면 그 이미지는 뜬다.
+
 ```bash
 docker build -t ypc-backend .
 docker run --rm -p 8000:8000 \

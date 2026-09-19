@@ -109,3 +109,84 @@ jobs:
         env:
           PYTHONUTF8: "0"
         run: python bench/engine_bench.py
+
+  # Dockerfile 은 로컬에서 검증하기 어렵다 — 개발 기계에 도커 데몬이 없을 수 있고,
+  # "빌드는 되겠지"로 남겨두면 배포 당일에야 깨진 걸 안다. 러너에는 도커가 있으므로
+  # 매 푸시마다 실제로 말아서 띄우고, docs/DEPLOY.md 가 주장하는 것들을 확인한다.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 이미지 빌드
+        run: docker build -t ypc-backend:ci .
+
+      - name: 컨테이너 기동
+        run: |
+          docker run -d --name ypc -p 8000:8000 \
+            -e SNAPSHOT_PATH=/app/data/demo/snapshot.json \
+            -e CORS_ORIGINS=https://ypc-fe.example \
+            -e YPC_FIXED_TODAY=2026-10-01 \
+            ypc-backend:ci
+
+      - name: 스냅샷을 적재하고 준비 상태가 될 때까지 기다린다
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/readyz | grep -q '"ready":true'; then
+              curl -sS http://127.0.0.1:8000/readyz; echo; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::60초 안에 준비 상태가 되지 않았습니다"
+          exit 1
+
+      - name: 판정이 실제로 돈다
+        run: |
+          curl -fsS -X POST http://127.0.0.1:8000/v1/judge \
+            -H "Content-Type: application/json" \
+            -d @data/demo/profile.demo.json -o judge.json
+          python3 - <<'PY'
+          import json
+
+          body = json.load(open("judge.json", encoding="utf-8"))
+          summary = body["summary"]
+          print("summary:", summary)
+          assert summary["eligible"] >= 1, summary
+          assert summary["future_eligible"] == 1, summary
+          assert body["results"], "결과가 비어 있습니다"
+          missing = [r["policy_id"] for r in body["results"] if not r["origin_url"]]
+          assert not missing, f"근거 링크 없는 결과: {missing}"
+          PY
+
+      - name: ETag 가 브라우저에 노출된다
+        # 노출하지 않으면 FE 가 ETag 를 읽지 못해 304 캐시가 조용히 무력화된다.
+        # 에러가 나지 않는 고장이라, 여기서 안 잡으면 아무도 모른다.
+        run: |
+          headers=$(curl -fsS -D- -o /dev/null \
+            -H "Origin: https://ypc-fe.example" \
+            http://127.0.0.1:8000/v1/policies | tr 'A-Z' 'a-z')
+          echo "$headers"
+          echo "$headers" | grep -q 'access-control-allow-origin: https://ypc-fe.example' \
+            || { echo "::error::허용 출처에 CORS 가 열리지 않았습니다"; exit 1; }
+          echo "$headers" | grep -q 'access-control-expose-headers:.*etag' \
+            || { echo "::error::ETag 가 노출되지 않습니다 — FE 의 304 캐시가 죽습니다"; exit 1; }
+
+      - name: 루트로 돌지 않는다
+        run: |
+          uid=$(docker exec ypc id -u)
+          [ "$uid" != "0" ] || { echo "::error::컨테이너가 root 로 실행 중입니다"; exit 1; }
+          echo "uid=$uid"
+
+      - name: 배치 의존성이 이미지에 없다
+        # API 는 수집기도 Anthropic SDK 도 import 하지 않는다. 들어가 있으면
+        # 쓰지도 않는 의존성이 배포 표면에 남는다.
+        run: |
+          if docker exec ypc python -c "import anthropic" 2>/dev/null; then
+            echo "::error::anthropic SDK 가 서버 이미지에 들어 있습니다"
+            exit 1
+          fi
+          echo "배치 의존성 없음 — 의도대로"
+
+      - name: 컨테이너 로그
+        if: always()
+        run: docker logs ypc
