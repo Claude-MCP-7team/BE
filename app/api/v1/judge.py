@@ -27,9 +27,12 @@ from app.engine.questions import build_queue
 from app.engine.snapshot import SnapshotNotReady
 from app.planner.backplan import build_plan
 from app.planner.ics import to_ics
+from app.schemas.catalog import PolicyListResponse, PolicySummary
+from app.schemas.enums import AuthorityLevel, Category
 from app.schemas.judgement import DISCLAIMER, JudgementResponse
 from app.schemas.plan import PlanResponse
-from app.schemas.user import UserProfile
+from app.schemas.policy import PolicySchema
+from app.schemas.user import UserProfile, region_chain
 from app.solver.combine import recommend
 
 router = APIRouter(prefix="/v1", tags=["judge"])
@@ -116,6 +119,133 @@ async def judge(
             "Cache-Control": "private, no-store",
             "X-Snapshot-Version": snapshot.version,
         },
+    )
+
+
+@router.get("/policies")
+async def policy_list(
+    region: Annotated[
+        str | None, Query(description="법정동 코드. 상위 지역과 전국 정책도 함께 나온다")
+    ] = None,
+    category: Annotated[Category | None, Query(description="정책 분야")] = None,
+    authority_level: Annotated[AuthorityLevel | None, Query(description="주관 수준")] = None,
+    q: Annotated[str | None, Query(description="제목 부분일치 (대소문자 무시)")] = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="한 페이지 건수")] = 20,
+    offset: Annotated[int, Query(ge=0, description="건너뛸 건수")] = 0,
+    if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
+) -> Response:
+    """정책 목록 (S2 진입점). 판정 없이 카탈로그만 본다.
+
+    **판정과 섞지 않는다.** 판정은 프로필이 있어야 하고 사용자마다 다르지만,
+    목록은 누가 보든 같다. 섞으면 공용 캐시를 못 쓰고, 프로필 없이 정책을
+    둘러보는 화면이 불가능해진다. 판정 결과가 필요하면 `/v1/judge` 를 쓴다.
+
+    **지역은 접두 체인으로 넓힌다.** `region=41190` 은 부천시 정책만이 아니라
+    경기도(41)와 전국(00) 정책도 포함한다. 좁게 매칭하면 사용자는 자기가 받을
+    수 있는 전국 정책을 목록에서 보지 못하는데, 이 누락은 화면상 '없음'과
+    구별되지 않는다.
+
+    **정렬은 결정론이다.** 마감 임박순(마감 없는 것은 뒤로), 같으면 policy_id.
+    스냅샷 순서를 그대로 쓰면 수집 순서가 바뀔 때 페이지 경계에서 정책이
+    조용히 건너뛰어진다 — 같은 조건에 같은 결과라는 약속이 깨진다.
+    """
+    try:
+        snapshot = snapshot_store.holder.get()
+    except SnapshotNotReady as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    # 목록은 프로필이 섞이지 않으므로 질의만으로 캐시 키가 성립한다.
+    key = f"{region}|{category}|{authority_level}|{q}|{limit}|{offset}"
+    etag = f'W/"{snapshot.version}:{hashlib.sha256(key.encode()).hexdigest()[:16]}"'
+    if if_none_match == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+
+    wanted_regions = set(region_chain(region)) if region else None
+    needle = q.casefold().strip() if q else None
+
+    matched = [
+        (policy, index)
+        for index, policy in enumerate(snapshot.policies)
+        if _matches(policy, wanted_regions, category, authority_level, needle)
+    ]
+    matched.sort(key=lambda pair: (_deadline_key(pair[0]), pair[0].policy_id))
+
+    payload = PolicyListResponse(
+        snapshot_version=snapshot.version,
+        total=len(matched),
+        limit=limit,
+        offset=offset,
+        items=[
+            _summarize(policy, len(snapshot.rules_by_policy[index]))
+            for policy, index in matched[offset : offset + limit]
+        ],
+    )
+
+    return Response(
+        content=msgspec.json.encode(payload),
+        media_type="application/json",
+        headers={
+            "ETag": etag,
+            # 프로필이 섞이지 않는 응답이라 공용 캐시에 남겨도 된다.
+            "Cache-Control": "public, max-age=300",
+            "X-Snapshot-Version": snapshot.version,
+        },
+    )
+
+
+def _matches(
+    policy: PolicySchema,
+    wanted_regions: set[str] | None,
+    category: str | None,
+    authority_level: str | None,
+    needle: str | None,
+) -> bool:
+    if category and policy.meta.category != category:
+        return False
+    if authority_level and policy.meta.authority_level != authority_level:
+        return False
+    if needle and needle not in policy.meta.title.casefold():
+        return False
+    # 지역 표기가 없는 정책은 범위를 알 수 없다. 전국으로 단정하면 남의 지역
+    # 정책을 권하게 되고, 빼면 조용히 사라진다 — 후자가 더 나쁘므로 남긴다.
+    return not (
+        wanted_regions is not None
+        and policy.meta.region_code
+        and not wanted_regions.intersection(policy.meta.region_code)
+    )
+
+
+# 마감 없는 정책(상시모집 등)을 앞에 두면 마감 임박 정책이 뒤로 밀린다.
+_NO_DEADLINE = "9999-12-31"
+
+
+def _deadline_key(policy: PolicySchema) -> str:
+    return policy.period.apply_end or _NO_DEADLINE
+
+
+def _summarize(policy: PolicySchema, rule_count: int) -> PolicySummary:
+    return PolicySummary(
+        policy_id=policy.policy_id,
+        title=policy.meta.title,
+        category=policy.meta.category,
+        authority_level=policy.meta.authority_level,
+        status=policy.status,
+        region_code=list(policy.meta.region_code),
+        dept_name=policy.meta.dept.name,
+        dept_tel=policy.meta.dept.tel,
+        origin_url=policy.source.origin_url or policy.source.announcement_url,
+        benefit_type=policy.benefit.type,
+        amount_krw=policy.benefit.amount_krw,
+        duration_months=policy.benefit.duration_months,
+        estimated_total_krw=policy.benefit.estimated_total_krw,
+        amount_confidence=policy.benefit.amount_confidence,
+        apply_start=policy.period.apply_start,
+        apply_end=policy.period.apply_end,
+        is_rolling=policy.period.is_rolling,
+        rule_count=rule_count,
+        document_count=len(policy.documents),
+        conflict_count=len(policy.conflicts),
+        needs_review_fields=list(policy.quality.needs_review_fields),
     )
 
 
