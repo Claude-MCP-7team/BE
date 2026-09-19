@@ -37,7 +37,7 @@
 | 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 |
 | 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
 | 테스트 | **470건 통과** (DB 통합 28건 포함) |
-| CI | 통과 (lint · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
+| CI | 통과 (lint · **타입** · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
 
 > ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
 
@@ -174,12 +174,19 @@ normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn
 `data/documents/master_v2.csv` 36종이 **전부 `검증상태=확인필요`** 다.
 실제로 확인된 항목만 `확인완료` 로 바꾸면 `master_unverified` 가 false 가 되고 화면의 추정치 표시가 사라진다. 코드 변경은 필요 없다 — CSV 만 고치면 된다.
 
-### ④ mypy strict 에러 11건
-CI 가 mypy 를 돌리지 않아서 통과는 하지만, `app/engine/evaluate.py` · `app/engine/questions.py` 중심으로 타입 어노테이션 누락 11건이 남아 있다. 블로커는 아니다.
+### ④ 타입 검사 — 이제 CI 가 돌린다
+`mypy strict` 가 CI 의 `test` 잡에 들어갔다. 0 을 유지한다.
 
 ```bash
 mypy   # files = ["app", "batch"], strict = true
 ```
+
+**`pip install -e ".[dev,batch]"` 로 설치할 것.** `app/llm/client.py` 의 `TYPE_CHECKING`
+블록이 `anthropic.types` 를 참조해서, `[dev]` 만 깔면 그 두 줄이 `import-not-found` 로
+뜬다 — 코드 문제가 아니라 설치 범위 문제다.
+
+`asyncpg` 는 타입 정보를 배포하지 않아 `pyproject.toml` 에 **그 모듈만** 예외를 뒀다.
+전역으로 풀면 오타 난 import 까지 조용히 통과한다.
 
 ### ⑤ 제출물 (M5)
 - **배포** — `Dockerfile`·`render.yaml`·CORS 준비됨. `docs/DEPLOY.md` 참고.
@@ -548,7 +555,7 @@ python -m batch.build_snapshot data/policies.json -o snapshot.json
 ### 커밋 전 반드시
 
 ```bash
-pytest && ruff check . && python tools/export_contract.py && git diff --exit-code docs/contracts/
+pytest && ruff check . && mypy && python tools/export_contract.py && git diff --exit-code docs/contracts/
 ```
 
 ### 브랜치·푸시

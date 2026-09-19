@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 import msgspec
 
@@ -104,8 +105,13 @@ class UserProfile(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     def region_chain(self) -> list[str]:
         return region_chain(self.core.region_code)
 
-    def resolve(self, field: str, on: date):
-        """룰의 field 명으로 사용자 값을 꺼낸다. None 이면 '미확인' → NEEDS_INFO."""
+    def resolve(self, field: str, on: date) -> Any:
+        """룰의 field 명으로 사용자 값을 꺼낸다. None 이면 '미확인' → NEEDS_INFO.
+
+        반환형이 Any 인 이유: 필드마다 타입이 다르다 (나이 int, 지역 list[str],
+        중복수혜 bool, 학력 str). 좁히려면 필드별 오버로드가 필요한데, 룰
+        평가기(`evaluate_rule`)는 어차피 런타임에 타입을 보고 분기한다.
+        """
         if field == "age":
             return self.age(on)
         if field == "residence_months_continuous":

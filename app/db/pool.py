@@ -137,7 +137,7 @@ class Database:
             return False
         try:
             async with self.acquire() as conn:
-                return await conn.fetchval("SELECT 1") == 1
+                return bool(await conn.fetchval("SELECT 1") == 1)
         except (OSError, asyncpg.PostgresError, DatabaseUnavailable):
             return False
 

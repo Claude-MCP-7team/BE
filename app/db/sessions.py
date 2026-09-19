@@ -121,7 +121,7 @@ class SessionRepository:
             result = await conn.execute(
                 "DELETE FROM user_session WHERE session_id = $1", session_id
             )
-        return result != "DELETE 0"
+        return bool(result != "DELETE 0")
 
     # --- 읽기 -----------------------------------------------------------
 

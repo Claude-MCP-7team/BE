@@ -28,12 +28,14 @@ from app.engine.rules import Outcome, evaluate_rule
 from app.engine.timeline import satisfiable_from
 from app.schemas.enums import TIME_SATISFIABLE_FIELDS
 from app.schemas.judgement import (
+    JsonValue,
     JudgementResult,
     JudgementSummary,
     MatchedRule,
     UnknownRule,
     UnmatchedRule,
 )
+from app.schemas.policy import Rule
 from app.schemas.user import UserProfile
 
 
@@ -275,12 +277,12 @@ def future_eligible_date(
         return None
 
     dates: list[str] = []
-    for rule in unmatched:
-        if rule.permanently_unsatisfiable or not rule.time_satisfiable:
+    for unmet in unmatched:
+        if unmet.permanently_unsatisfiable or not unmet.time_satisfiable:
             return None
-        if not rule.satisfiable_from:
+        if not unmet.satisfiable_from:
             return None
-        dates.append(rule.satisfiable_from)
+        dates.append(unmet.satisfiable_from)
 
     # ISO 날짜는 사전순 비교가 시간순과 일치한다
     candidate = max(dates)
@@ -294,7 +296,13 @@ def future_eligible_date(
     return candidate
 
 
-def _unmatched(rule, user_value, profile: UserProfile, today: date, origin: str | None):
+def _unmatched(
+    rule: Rule,
+    user_value: object,
+    profile: UserProfile,
+    today: date,
+    origin: str | None,
+) -> UnmatchedRule:
     # 충족 예상일 여부는 rule.time_satisfiable 플래그가 아니라 '필드' 로 판단한다.
     # 플래그는 AI 에이전트가 채우는 값이라, 빠뜨리면 차별점인 "언제부터 가능한가"가
     # 조용히 사라진다. 시간으로 충족되는 필드인지는 결정론적으로 알 수 있다.
@@ -319,7 +327,7 @@ def _unmatched(rule, user_value, profile: UserProfile, today: date, origin: str 
     )
 
 
-def _bounds(rule) -> tuple[int | None, int | None]:
+def _bounds(rule: Rule) -> tuple[int | None, int | None]:
     """룰을 [하한, 상한] 으로 환원한다. 충족 예상일 계산의 입력이 된다."""
     op, value = rule.op, rule.value
     if op == "between" and isinstance(value, list) and len(value) == 2:
@@ -347,7 +355,7 @@ def _worse(a: str, b: str) -> str:
     return a if _CONFIDENCE_ORDER[a] >= _CONFIDENCE_ORDER[b] else b
 
 
-def _as_json(value: object):
+def _as_json(value: object) -> JsonValue:
     """JudgementResult 가 담을 수 있는 형태로 좁힌다."""
     if isinstance(value, (list, tuple, set)):
         return [v for v in value if isinstance(v, (bool, int, float, str))]

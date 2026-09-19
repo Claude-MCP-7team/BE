@@ -41,7 +41,7 @@ class FieldStat:
     path: str
     present: int = 0  # 키가 존재한 레코드 수
     non_empty: int = 0  # 값이 비어있지 않은 레코드 수
-    types: Counter = field(default_factory=Counter)
+    types: Counter[str] = field(default_factory=Counter)
     samples: list[str] = field(default_factory=list)
 
     # 값의 생김새별 적중 수 — 어떤 필드가 무엇인지 추정하는 근거

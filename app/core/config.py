@@ -7,6 +7,10 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # 암호화 모듈은 실행 시점에 지연 import 한다 (아래 참고)
+    from app.core.crypto import ProfileCipher
 
 log = logging.getLogger("ypc.config")
 
@@ -36,7 +40,7 @@ class Settings:
             cors_origins=_origins(os.environ.get("CORS_ORIGINS")),
         )
 
-    def profile_cipher(self):
+    def profile_cipher(self) -> ProfileCipher | None:
         """프로필 암호기. 키가 없으면 None — 저장 기능만 꺼지고 판정은 돈다.
 
         키가 없는데 평문으로 저장하는 경로는 만들지 않는다. 그런 경로가 있으면
@@ -56,7 +60,7 @@ def _origins(raw: str | None) -> tuple[str, ...]:
 
 
 @lru_cache(maxsize=4)
-def _cipher_from(raw: str | None):
+def _cipher_from(raw: str | None) -> ProfileCipher | None:
     """키 문자열 → 암호기. 같은 키로 반복 호출해도 한 번만 만든다."""
     if not raw:
         return None

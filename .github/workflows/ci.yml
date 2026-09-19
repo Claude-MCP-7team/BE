@@ -26,11 +26,19 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      # batch 추가분까지 설치한다. mypy 가 app/llm/client.py 의 TYPE_CHECKING
+      # 블록에서 anthropic 타입을 해석해야 하는데, 없으면 여기서만 실패한다.
       - name: 의존성 설치
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,batch]"
 
       - name: 린트 (역할 경계 포함)
         run: ruff check .
+
+      # CI 가 돌리지 않는 동안 타입 에러가 11건에서 21건으로 늘었다. 그중 하나는
+      # 한 변수에 두 타입을 담아 실제로 읽기 어려워진 코드였다. 쌓이면 아무도
+      # 손대지 않으므로 여기서 0 을 유지한다.
+      - name: 타입 검사 (mypy strict)
+        run: mypy
 
       - name: 마이그레이션 적용
         env:

@@ -82,3 +82,10 @@ select = ["E", "F", "I", "UP", "B", "SIM", "TID", "PLW1514"]
 python_version = "3.11"
 strict = true
 files = ["app", "batch"]
+
+# asyncpg 는 타입 정보를 배포하지 않는다 (py.typed 도, 별도 스텁 패키지도 없다).
+# strict 모드는 그걸 에러로 보는데, 우리가 고칠 수 있는 문제가 아니다.
+# **이 모듈에만** 한정한다 — 전역으로 풀면 오타 난 import 까지 조용히 통과한다.
+[[tool.mypy.overrides]]
+module = "asyncpg.*"
+ignore_missing_imports = true

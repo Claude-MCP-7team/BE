@@ -16,8 +16,9 @@ AI 역할은 공고문에서 '관계를 추출'하는 데까지만 한다 (마�
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from app.schemas.policy import PolicySchema
+from app.schemas.policy import Conflict, PolicySchema
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +34,7 @@ class Edge:
     source_url: str | None = None
 
     @staticmethod
-    def make(left: str, right: str, **kw) -> Edge:
+    def make(left: str, right: str, **kw: Any) -> Edge:
         lo, hi = (left, right) if left < right else (right, left)
         return Edge(a=lo, b=hi, **kw)
 
@@ -63,7 +64,9 @@ def _rank(edge: Edge) -> int:
     return 1 if edge.confidence == "CONFIRMED" else 0
 
 
-def _edges_from(policy: PolicySchema, conflict, by_id: dict[str, PolicySchema]) -> list[Edge]:
+def _edges_from(
+    policy: PolicySchema, conflict: Conflict, by_id: dict[str, PolicySchema]
+) -> list[Edge]:
     kind = conflict.type
     common = {
         "conflict_type": kind,

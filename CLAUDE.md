@@ -34,7 +34,7 @@
 ## 커밋 전 체크
 
 ```bash
-pytest && ruff check . && python tools/export_contract.py && git diff --exit-code docs/contracts/
+pytest && ruff check . && mypy && python tools/export_contract.py && git diff --exit-code docs/contracts/
 ```
 
 성능 회귀는 `python bench/engine_bench.py` 가 잡는다 (기준 초과 시 CI 실패).

@@ -57,8 +57,8 @@ class _FieldTally:
     field: str
     resolves: int = 0  # 이 필드가 마지막 남은 미확인인 정책 수
     affects: int = 0  # 이 필드를 참조하는 미확인 정책 수
-    templates: Counter = dc_field(default_factory=Counter)
-    quotes: Counter = dc_field(default_factory=Counter)
+    templates: Counter[str] = dc_field(default_factory=Counter)
+    quotes: Counter[str] = dc_field(default_factory=Counter)
     policy_ids: list[str] = dc_field(default_factory=list)
 
 
@@ -140,7 +140,8 @@ def _merge_text(tally: _FieldTally) -> str:
     """
     if tally.templates:
         top = max(tally.templates.values())
-        return min((t for t, c in tally.templates.items() if c == top), key=len)
+        candidates: list[str] = [t for t, c in tally.templates.items() if c == top]
+        return min(candidates, key=len)
     return _fallback_text(tally.field)
 
 
