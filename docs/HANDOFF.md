@@ -558,6 +558,7 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 5 | 인증 방식 (익명 세션 vs 로그인) | 팀 | 현재 익명 세션 |
 | 6 | 응답 envelope (`{data, request_id}` 래핑) | FE | 현재 페이로드 직접 반환 |
 | 8 | 서류 마스터 36종 검증 | 사람 | CSV 의 `검증상태` 만 고치면 된다. 코드 변경 없음 |
+| 16 | 실공고로 중복수혜 조합(시나리오 5)을 보여줄 데이터 | 데이터 | 상충 쌍이던 국토부 청년월세가 2026-05-29 에 마감됐다. 신청기간이 열려 있는 전국·경기 단위 주거 정책 1건이 더 필요하다 (`data/manual/README.md`). 합성 데이터로는 `data/demo/` 에서 돌고 `tests/e2e` 가 단언한다 |
 | 9 | 배포 Base URL | 팀 | `Dockerfile`·`render.yaml`·CORS 는 준비됨 (`docs/DEPLOY.md`). 실제로 띄우고 URL 을 FE 에 주는 것만 남았다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
 | 14 | 에러 응답 규격 | 팀 | `ARCHITECTURE.md` 는 RFC 9457 `problem+json` 을 약속하는데 코드는 FastAPI 기본 `{"detail": ...}` 다. 문서와 코드가 다르다 |

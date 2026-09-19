@@ -106,14 +106,34 @@ def main() -> int:
             names = ", ".join(m["policy_id"] for m in combo["members"])
             print(f"  {scenario['label']} #{combo['rank']}: {combo['total_krw']:,}원 = {names}")
 
-    judge("D-1  같은 가평 사용자, 소득 55% → 월세 정책 2개 동시 적격", GAPYEONG_LOW_INCOME)
+    judge("D-1  같은 가평 사용자, 소득 55% → 월세 정책", GAPYEONG_LOW_INCOME)
     print("\n=== D-2  조합 추천 — 중복수혜 상충이 있으면 보수/최대 2안이 갈린다")
-    for scenario in post("/v1/combinations", GAPYEONG_LOW_INCOME)["scenarios"]:
+    scenarios = post("/v1/combinations", GAPYEONG_LOW_INCOME)["scenarios"]
+    top: dict[str, Any] = {}
+    for scenario in scenarios:
         for combo in scenario["combinations"]:
             names = ", ".join(m["policy_id"] for m in combo["members"])
             print(f"  {scenario['label']} #{combo['rank']}: {combo['total_krw']:,}원 = {names}")
             for ex in combo.get("excluded", []):
-                print(f"      제외 {ex.get('policy_id')}: {str(ex.get('reason') or ex)[:90]}")
+                print(
+                    f"      제외 {ex['policy_id']} ({ex['confidence']}/{ex['conflict_type']})"
+                    f" ← 대신 {ex['conflicts_with']}"
+                )
+                print(f'         근거: "{ex["source_quote"][:60]}"  문의 {ex.get("dept_tel")}')
+        if scenario["combinations"]:
+            top[scenario["kind"]] = scenario["combinations"][0]
+
+    # 두 안이 같으면 이 시나리오는 아무것도 보여주지 못한 것이다. 출력만 놓고 보면
+    # 정상처럼 보이므로 (상충 없는 조합도 같은 모양이다) 명시적으로 말한다.
+    보수, 최대 = top.get("conservative"), top.get("maximal")
+    if 보수 and 최대 and 보수["total_krw"] == 최대["total_krw"]:
+        print(
+            "  ⚠️  두 안이 같습니다 — 이 스냅샷에는 '동시에 적격인 상충 정책 쌍'이 없습니다.\n"
+            "      상대였던 (국토부) 26년 청년월세 지원사업은 신청기간이 2026-05-29 에 끝나\n"
+            "      마감 정책으로 제외됩니다. 이 시나리오를 실데이터로 보려면 신청기간이\n"
+            "      열려 있는 전국·경기 단위 주거 정책이 하나 더 필요합니다.\n"
+            "      (합성 데이터로는 data/demo/ 에서 돌아갑니다 — tests/e2e 가 단언합니다)"
+        )
 
     print("\n=== B-3  신청 계획")
     for plan in post("/v1/plan", GAPYEONG)["plans"]:
