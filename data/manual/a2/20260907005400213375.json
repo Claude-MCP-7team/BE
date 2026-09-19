@@ -1,0 +1,28 @@
+{
+  "conditions": [
+    {"kind": "eligibility", "field": "marital_status", "op": "==", "value_number": null, "value_text": "married", "value_bool": null, "value_list": null, "unit": null,
+     "source_quote": "혼인 신고일로 부터 7년 이내 부부",
+     "time_satisfiable": false, "askable": true, "question_template": "현재 혼인 상태를 알려주세요.", "ambiguous": false, "confidence": "CONFIRMED", "note": "API 코드값(0055001 기혼)과 일치"},
+    {"kind": "eligibility", "field": "age", "op": "between", "value_number": null, "value_text": null, "value_bool": null, "value_list": [18, 39], "unit": "세",
+     "source_quote": "부부 중 1명 이상이 18세~39세 해당",
+     "time_satisfiable": true, "askable": false, "question_template": null, "ambiguous": true, "confidence": "ESTIMATED",
+     "note": "API 코드값(18~39)과 일치하나 '부부 중 1명 이상' — 신청인 본인이 범위 밖이어도 배우자가 해당하면 대상. 본인 나이만 보는 규칙은 좁게 판정한다"}
+  ],
+  "unrepresentable_conditions": [
+    {"summary": "혼인신고일로부터 7년 이내", "source_quote": "혼인신고일로부터 7년 이내인 부부", "reason": "혼인신고일 필드가 없다"},
+    {"summary": "부부 중 한 명이라도 18~39세면 대상 (OR)", "source_quote": "부부 중 1명 이상이 18세~39세 해당", "reason": "배우자 나이 필드가 없다"},
+    {"summary": "전용 85㎡ 이하·매매가 4억2천만 이하 또는 전월세 보증금 3억 이하 양평군 소재 주택", "source_quote": "전용 면적 85㎡ 이하 주택매매가 4억2천만 이하, 전월세 보증금 3억원 이하의 양평군 소재 주택", "reason": "주택 면적·가격·보증금 필드가 없다"},
+    {"summary": "부부 합산 연소득 8천만원 이하", "source_quote": "부부 합산 연소득 8천만원 이하", "reason": "원 단위 소득. 기준 중위소득 비율이 아니므로 변환하지 않는다"},
+    {"summary": "기초생활수급자·공공임대주택 거주자 제외", "source_quote": "기초생활수급자 및 공공임대주택 거주자", "reason": "수급·주거형태 필드가 없다"},
+    {"summary": "다른 기관·지자체 유사사업 수혜 이력(기간 제한 없음)이 있으면 제외", "source_quote": "다른기관 및 지자체의 유사사업으로 지원을 받고 있거나 받은 이력이 있는 경우", "reason": "similar_program_participation_2y 는 '최근 2년'인데 공고는 기간 제한 없이 '이력'을 본다. 2년 규칙으로 옮기면 3년 전 수혜자를 통과시킨다"}
+  ],
+  "benefit": {"type": "cash_lump", "amount_krw": 2000000, "duration_months": null, "estimated_total_krw": 2000000, "amount_confidence": "ESTIMATED",
+              "source_quote": "1가구당 최대 200만원, 연 1회, 생애 최대 2회 까지 지원"},
+  "period": {"apply_start": "2026-03-09", "apply_end": "2026-03-25", "is_rolling": false, "source_quote": "20260309 ~ 20260325"},
+  "documents": [],
+  "conflicts": [
+    {"type": "category_overlap", "target_policy_name": null, "target_category": "housing", "target_benefit_type": null, "target_authority": null,
+     "source_quote": "다른기관 및 지자체의 유사사업으로 지원을 받고 있거나 받은 이력이 있는 경우", "confidence": "ESTIMATED"}
+  ],
+  "dept": {"name": "경기도 양평군 문화복지국", "tel": null, "source_quote": "경기도 양평군 문화복지국"}
+}

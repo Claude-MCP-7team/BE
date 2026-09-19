@@ -38,7 +38,7 @@
     "GG-12023": {
       "title": "용인청년 중개보수 및 이사비 지원 (추가 모집)",
       "rules": [
-        {"field": "region_code", "op": "in", "value": ["41460"]},
+        {"field": "region_code", "op": "in", "value": ["41461", "41463", "41465"]},
         {"field": "age", "op": "between", "value": [19, 39], "confidence": "CONFIRMED"},
         {"field": "household_income_ratio_median", "op": "<=", "value": 180, "confidence": "CONFIRMED"}
       ],
@@ -65,6 +65,69 @@
       "forbidden_fields": ["residence_months_continuous", "marital_status", "household_size", "employment_status"],
       "doc_codes": {"임대차계약서": "D035", "통장 사본": "D036", "가족관계증명서": "D003"},
       "min_conflicts": 1,
+      "unrepresentable": true
+    },
+    "20260326005400212287": {
+      "title": "2026년 평택시 청년 월세 지원",
+      "rules": [
+        {"field": "age", "op": "between", "value": [19, 39], "confidence": "CONFIRMED"},
+        {"field": "household_income_ratio_median", "op": "<=", "value": 120, "confidence": "CONFIRMED"},
+        {"field": "household_size", "op": "==", "value": 1, "confidence": "CONFIRMED"}
+      ],
+      "forbidden_fields": ["residence_months_continuous", "marital_status", "employment_status", "similar_program_participation_2y"],
+      "doc_codes": {"등본": "D001", "가족관계증명서": "D003", "확정일자가 날인된 임대차계약서 사본": "D035", "본인신용정보조회서": null},
+      "min_conflicts": 2,
+      "unrepresentable": true
+    },
+    "20250515005400210826": {
+      "title": "경기도 청년기본소득 (API 원본)",
+      "rules": [
+        {"field": "age", "op": "between", "value": [24, 24], "confidence": "CONFIRMED"},
+        {"field": "residence_months_continuous", "op": ">=", "value": 36, "confidence": "ESTIMATED"}
+      ],
+      "forbidden_fields": ["household_income_ratio_median", "marital_status", "employment_status", "household_size"],
+      "doc_codes": {"주민등록초본": "D002", "기초생활수급자 증명서": "D028"},
+      "unrepresentable": true
+    },
+    "20260907005400213375": {
+      "title": "양평군 청년 신혼부부 주거자금 대출이자 지원",
+      "rules": [
+        {"field": "marital_status", "op": "==", "value": "married"},
+        {"field": "age", "op": "between", "value": [18, 39]}
+      ],
+      "forbidden_fields": ["household_income_ratio_median", "similar_program_participation_2y", "residence_months_continuous"],
+      "min_conflicts": 1,
+      "unrepresentable": true
+    },
+    "20260318005400212197": {
+      "title": "군포시 신혼부부 및 청년 전월세 보증금 대출이자 지원",
+      "rules": [
+        {"field": "age", "op": "between", "value": [19, 39], "confidence": "CONFIRMED"},
+        {"field": "household_income_ratio_median", "op": "<=", "value": 180, "confidence": "ESTIMATED"}
+      ],
+      "forbidden_fields": ["marital_status", "residence_months_continuous"],
+      "unrepresentable": true
+    },
+    "20250618005400111001": {
+      "title": "청년도약계좌",
+      "rules": [
+        {"field": "region_code", "op": "in", "value": ["00"]},
+        {"field": "age", "op": "between", "value": [19, 34], "confidence": "CONFIRMED"},
+        {"field": "household_income_ratio_median", "op": "<=", "value": 250, "confidence": "CONFIRMED"}
+      ],
+      "forbidden_fields": ["marital_status", "residence_months_continuous", "employment_status"],
+      "min_conflicts": 1,
+      "unrepresentable": true
+    },
+    "20250514005400110812": {
+      "title": "청년내일저축계좌",
+      "rules": [
+        {"field": "age", "op": "between", "value": [15, 39], "confidence": "CONFIRMED"},
+        {"field": "household_income_ratio_median", "op": "<=", "value": 100, "confidence": "CONFIRMED"},
+        {"field": "employment_status", "op": "in", "value": ["employed", "founder"], "confidence": "ESTIMATED"}
+      ],
+      "forbidden_fields": ["marital_status", "residence_months_continuous"],
+      "doc_codes": {"재직증명서": "D032", "소득금액증명원": "D008", "임대차계약서": "D035", "장애인증명서": "D026", "사업자등록증": null},
       "unrepresentable": true
     }
   }

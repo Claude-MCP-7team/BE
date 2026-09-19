@@ -1,0 +1,32 @@
+{
+  "conditions": [
+    {"kind": "eligibility", "field": "household_income_ratio_median", "op": "<=", "value_number": 100, "value_text": null, "value_bool": null, "value_list": null, "unit": "%",
+     "source_quote": "가구소득 : 기준 중위소득 50% ~ 100% 이하",
+     "time_satisfiable": false, "askable": true, "question_template": "가구 소득이 기준 중위소득의 몇 % 정도인가요? (50% 이하면 지원금이 더 큽니다)",
+     "ambiguous": false, "confidence": "CONFIRMED",
+     "note": "두 유형(차상위 초과 50~100% / 차상위 이하 50% 이하)의 합집합 상한. 100% 초과는 어느 유형에도 해당하지 않는다"},
+    {"kind": "eligibility", "field": "employment_status", "op": "in", "value_number": null, "value_text": null, "value_bool": null, "value_list": ["employed", "founder"], "unit": null,
+     "source_quote": "일하는 저소득층 청년들이 안정적으로 자산을 형성해 나갈 수 있도록 지원하는 청년자산형성 지원사업",
+     "time_satisfiable": false, "askable": true, "question_template": "현재 일하고 계신가요? (재직·일용근로·사업소득 모두 해당)",
+     "ambiguous": true, "confidence": "ESTIMATED",
+     "note": "근로·사업소득이 있어야 한다. API jobCd 0013005 는 의미 미확인이라 normalize 가 룰을 못 만들었다. 일용근로자도 포함되므로 employed/founder 로 좁히면 경계가 애매하다"}
+  ],
+  "unrepresentable_conditions": [
+    {"summary": "차상위 초과 유형: 소득 50~100%, 19~34세, 근로소득 월 50만원 초과 250만원 이하", "source_quote": "근로소득 : 월 50만원 초과 ~ 250만원 이하", "reason": "원 단위 근로소득 구간. 유형별 조건이 묶여 있어 단일 규칙으로 표현 불가"},
+    {"summary": "차상위 이하 유형: 소득 50% 이하, 15~39세, 근로소득 월 10만원 이상", "source_quote": "근로소득 : 월 10만원 이상", "reason": "원 단위 근로소득. 차상위 여부 필드가 없다"}
+  ],
+  "benefit": {"type": "cash_monthly", "amount_krw": 100000, "duration_months": 36, "estimated_total_krw": 3600000, "amount_confidence": "ESTIMATED",
+              "source_quote": "차상위 초과 : 월 10만원(정액지원)"},
+  "period": {"apply_start": null, "apply_end": null, "is_rolling": false, "source_quote": null},
+  "documents": [
+    {"name": "가족관계증명서", "issuer": null, "canonical_name": "가족관계증명서(상세)", "source_quote": "- 가족관계증명서"},
+    {"name": "재직증명서", "issuer": null, "canonical_name": "재직증명서", "source_quote": "- 재직증명서"},
+    {"name": "소득금액증명원", "issuer": null, "canonical_name": "소득금액증명", "source_quote": "소득금액증명원 또는 사업소득원천징수영수증"},
+    {"name": "사업자등록증", "issuer": null, "canonical_name": null, "source_quote": "사업자등록증 또는 위수탁계약서(계약서 명칭 불문)"},
+    {"name": "임대차계약서", "issuer": null, "canonical_name": "임대차계약서 사본", "source_quote": "전·월세 또는 사업자 운영 : 임대차계약서"},
+    {"name": "장애인증명서", "issuer": null, "canonical_name": "장애인증명서", "source_quote": "장애인/장애인부양 : 장애인증명서"},
+    {"name": "경력증명서", "issuer": null, "canonical_name": null, "source_quote": "- 경력증명서"}
+  ],
+  "conflicts": [],
+  "dept": {"name": "자산형성지원 콜센터", "tel": "1522-3690", "source_quote": "자산형성지원 콜센터 ☎1522-3690"}
+}

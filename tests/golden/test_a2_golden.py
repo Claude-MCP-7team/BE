@@ -34,9 +34,9 @@ def build_manual_policies():
     return policies
 
 
-def test_데모_5건이_골든_정답표를_전부_재현한다():
+def test_데모_11건이_골든_정답표를_전부_재현한다():
     scores = score_all(build_manual_policies(), GOLDEN)
-    assert len(scores) == 5
+    assert len(scores) == 11
     assert all(s.passed for s in scores), "\n" + render(scores)
 
 

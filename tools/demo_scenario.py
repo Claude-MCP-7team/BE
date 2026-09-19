@@ -25,7 +25,7 @@ Profile = dict[str, Any]
 YONGIN: Profile = {
     "core": {
         "birth_date": "2002-03-01",
-        "region_code": "41460",
+        "region_code": "41465",  # 용인시 수지구 — API 는 구 단위 코드를 준다 (HANDOFF §8 #15)
         "residence_start_date": "2026-05-15",
         "education": "university_enrolled",
         "employment_status": "student",
@@ -49,7 +49,7 @@ GAPYEONG_LOW_INCOME: Profile = {"core": {**GAPYEONG["core"], "household_income_r
 SUWON_23: Profile = {
     "core": {
         "birth_date": "2002-10-15",
-        "region_code": "41110",
+        "region_code": "41117",  # 수원시 영통구 (구 코드, #15)
         "residence_start_date": "2020-03-01",
         "employment_status": "job_seeking",
     }
