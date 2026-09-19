@@ -134,6 +134,10 @@ def compile_snapshot(policies: list[PolicySchema], version: str = "dev") -> Snap
     # (필드, 연산자) → [(룰참조 인덱스, 룰)]
     buckets: dict[tuple[str, str], list[int]] = {}
 
+    # kind 는 기록만 하고 평가에는 쓰지 않는다. 두 배열의 룰은 모두 '충족되어야
+    # 적격'이며, 제외조항은 생산자가 부정형으로 뒤집어 넣는다 (PolicySchema 도크스트링).
+    # 여기서 exclusion 을 자동으로 부정하면, 이미 부정형으로 들어온 룰이 두 번
+    # 뒤집혀 조용히 반대로 판정된다.
     for pi, policy in enumerate(policies):
         for kind, rules in (("eligibility", policy.eligibility), ("exclusion", policy.exclusions)):
             for rule in rules:

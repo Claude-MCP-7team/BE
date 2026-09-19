@@ -71,6 +71,12 @@ class JudgementResult(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     unmatched: list[UnmatchedRule] = msgspec.field(default_factory=list)
     unknown: list[UnknownRule] = msgspec.field(default_factory=list)
 
+    # 룰로 옮기지 못해 엔진이 평가하지 않은 조건의 필드명.
+    # 비어 있지 않으면 이 판정은 공고문 전체가 아니라 '옮길 수 있었던 부분'에
+    # 대한 것이다. 화면은 무엇을 확인 못 했는지 사용자에게 알려야 한다 —
+    # confidence 만 낮추면 '왜 확인이 필요한지'를 답할 수 없다.
+    needs_review_fields: list[str] = msgspec.field(default_factory=list)
+
     # C2 에이전트가 생성한 자연어 설명. 배치 경로가 아니라 요청 시 생성된다.
     explanation: str | None = None
 

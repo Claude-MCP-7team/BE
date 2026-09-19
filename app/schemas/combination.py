@@ -9,7 +9,8 @@ class CombinationMember(msgspec.Struct, kw_only=True, forbid_unknown_fields=True
     policy_id: str
     title: str
     estimated_total_krw: int
-    # 수혜액이 공고에 없어 추정치를 쓴 경우. 화면에서 구분 표시해야 한다.
+    # 금액이 확정이 아닌 경우 — 공고에 없어 대체값을 썼거나, 있더라도
+    # benefit.amount_confidence 가 CONFIRMED 가 아닌 경우. 화면에서 구분 표시해야 한다.
     amount_estimated: bool = False
 
 

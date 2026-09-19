@@ -140,7 +140,18 @@ class Quality(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
 
 
 class PolicySchema(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
-    """정책 1건의 표준 스키마. 배치 출력이자 룰 엔진 입력."""
+    """정책 1건의 표준 스키마. 배치 출력이자 룰 엔진 입력.
+
+    **exclusions 는 '통과하려면 참이어야 하는 형태'로 뒤집어 쓴다.**
+    엔진은 eligibility 와 exclusions 를 똑같이 평가한다 — 두 배열 모두 "모든
+    룰이 충족되어야 적격"이고, kind 는 화면 표시용으로만 남는다.
+
+    그래서 "최근 2년 내 유사사업 참여자는 제외"는
+    `similar_program_participation_2y == false` 로 적는다.
+    `== true` 로 적으면 엔진은 '참여한 적이 있어야 통과'로 읽어 판정이 정확히
+    뒤집히는데, 스키마도 DB 제약도 이것을 잡지 못한다. 예외도 경고도 없이
+    부적격자가 적격으로 나가므로, 이 규칙은 계약의 일부다.
+    """
 
     policy_id: str
     meta: Meta

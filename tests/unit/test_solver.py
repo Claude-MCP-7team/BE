@@ -285,6 +285,25 @@ def test_금액_미명시_정책은_추정치로_표시된다():
     assert combo.total_is_estimated is True
 
 
+def test_금액이_있어도_확정이_아니면_추정으로_표시된다():
+    """공고에 적힌 금액과 AI 가 계산한 금액이 화면에서 같아 보이면 안 된다.
+
+    월액 × 개월로 곱해 만든 총액은 값이 있지만 확정이 아니다. '값이 없을 때만'
+    추정 표시를 하면, 사용자는 추정 총액을 공고에 적힌 금액으로 읽는다.
+    """
+    확정 = P("CONFIRMED-AMT", total=1_000_000)
+    확정.benefit.amount_confidence = "CONFIRMED"
+    추정 = P("ESTIMATED-AMT", total=2_000_000)
+    추정.benefit.amount_confidence = "ESTIMATED"
+
+    combo = recommend_for([확정, 추정]).scenarios[0].combinations[0]
+    flags = {m.policy_id: m.amount_estimated for m in combo.members}
+
+    assert flags["CONFIRMED-AMT"] is False
+    assert flags["ESTIMATED-AMT"] is True
+    assert combo.total_is_estimated is True
+
+
 def test_금액을_모르는_정책도_상충이_없으면_포함된다():
     """모른다는 이유로 받을 수 있는 정책을 떨어뜨리면 안 된다."""
     policies = [P("KNOWN", total=5_000_000), P("UNKNOWN", total=None)]

@@ -101,7 +101,10 @@ def _weights(policies: list[PolicySchema]) -> tuple[list[int], list[bool]]:
     for policy in policies:
         amount = policy.benefit.estimated_total_krw
         weights.append(amount if amount is not None else fallback)
-        flags.append(amount is None)
+        # 금액이 없어서 대체값을 쓴 경우와, 금액은 있지만 확정이 아닌 경우
+        # 둘 다 '확정 아님'이다. 후자를 빼면 A2 가 월액×개월로 계산한 총액이나
+        # 본문에서 추정한 금액이 화면에서 공고에 적힌 확정 금액과 똑같이 보인다.
+        flags.append(amount is None or policy.benefit.amount_confidence != "CONFIRMED")
     return weights, flags
 
 

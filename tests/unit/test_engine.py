@@ -15,7 +15,7 @@ from app.engine.compile import CompileError, compile_snapshot
 from app.engine.evaluate import explain, judge_all
 from app.engine.rules import Outcome, RuleEvaluationError, all_rules, evaluate_rule
 from app.engine.timeline import satisfiable_from
-from app.schemas.policy import Dept, Meta, PolicySchema, Rule, Source
+from app.schemas.policy import Dept, Meta, PolicySchema, Quality, Rule, Source
 from app.schemas.user import Core, UserProfile
 
 TODAY = date(2026, 9, 13)
@@ -392,3 +392,59 @@ def test_충족예상일은_판정과_같은_날짜에_바뀐다():
         assert s.date is not None
         assert u.residence_months(s.date) >= need
         assert u.residence_months(s.date - timedelta(days=1)) < need
+
+
+# --- 옮기지 못한 조건 (A2 unrepresentable_conditions) -----------------------
+
+
+def _with_review(policy: PolicySchema, *fields: str) -> PolicySchema:
+    policy.quality = Quality(needs_review_fields=list(fields))
+    return policy
+
+
+def test_옮기지_못한_조건이_있으면_적격을_확정으로_내보내지_않는다():
+    """무주택·보증금처럼 룰로 못 옮긴 조건이 남아 있으면 '적격'은 반쪽짜리다."""
+    policy = _with_review(P("A", [R("AGE", "age", "between", [19, 34])]), "무주택 여부")
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(), TODAY, 0, "ELIGIBLE")
+
+    assert r.verdict == "ELIGIBLE"  # 아는 조건은 실제로 충족했다
+    assert r.confidence == "NEEDS_REVIEW"
+    assert r.needs_review_fields == ["무주택 여부"]
+    # 확인이 필요하다고만 하고 확인할 방법을 안 주면 사용자는 아무것도 못 한다
+    assert r.dept_tel and r.origin_url
+
+
+def test_확인필요_판정도_같은_이유로_신뢰도가_내려간다():
+    policy = _with_review(
+        P("A", [R("INC", "household_income_ratio_median", "<=", 150)]), "임차보증금"
+    )
+    snap = compile_snapshot([policy])
+
+    assert explain(snap, profile(), TODAY, 0, "NEEDS_INFO").confidence == "NEEDS_REVIEW"
+
+
+def test_부적격에는_적용하지_않는다():
+    """조건은 전부 충족해야 하므로, 못 본 조건이 더 있어도 탈락은 뒤집히지 않는다.
+
+    명확한 탈락에 '확인 필요'를 붙이면 진짜 확인이 필요한 판정과 섞인다.
+    """
+    policy = _with_review(P("A", [R("AGE", "age", "between", [40, 50])]), "무주택 여부")
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(), TODAY, 0, "INELIGIBLE")
+
+    assert r.confidence == "CONFIRMED"
+    # 낮추지 않더라도 무엇을 못 봤는지는 알려준다
+    assert r.needs_review_fields == ["무주택 여부"]
+
+
+def test_옮기지_못한_조건이_없으면_그대로_확정이다():
+    policy = P("A", [R("AGE", "age", "between", [19, 34])])
+    snap = compile_snapshot([policy])
+
+    r = explain(snap, profile(), TODAY, 0, "ELIGIBLE")
+
+    assert r.confidence == "CONFIRMED"
+    assert r.needs_review_fields == []

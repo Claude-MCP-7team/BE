@@ -43,6 +43,13 @@
           },
           "default": []
         },
+        "needs_review_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
         "explanation": {
           "anyOf": [
             {

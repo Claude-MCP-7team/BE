@@ -171,6 +171,10 @@ def explain(
     policy = snapshot.policies[policy_index]
     origin = policy.source.origin_url or policy.source.announcement_url
 
+    # 엔진이 룰로 옮기지 못한 조건 (무주택·세대주·보증금 등). A2 단계가
+    # unrepresentable_conditions 로 받아 여기에 남긴다.
+    review_fields = list(policy.quality.needs_review_fields)
+
     matched: list[MatchedRule] = []
     unmatched: list[UnmatchedRule] = []
     unknown: list[UnknownRule] = []
@@ -209,10 +213,21 @@ def explain(
 
         unmatched.append(_unmatched(rule, user_value, profile, today, origin))
 
+    # 평가하지 못한 조건이 남아 있는데 '적격'이라고 확정하면, 사용자는 그 조건
+    # 때문에 반려될 수 있다는 걸 모른 채 서류를 준비한다. 근거 없는 조건은 자동
+    # 확정하지 않는다는 규칙(마일스톤 §11)이 여기에 걸린다.
+    #
+    # 부적격에는 적용하지 않는다. 조건은 전부 충족해야 하는 관계라, 확인 못 한
+    # 조건이 더 있다고 해서 이미 확인된 미충족이 뒤집히지 않는다. 명확한 탈락에
+    # '확인 필요'를 붙이면 진짜 확인이 필요한 판정과 구별이 사라진다.
+    if review_fields and verdict != "INELIGIBLE":
+        worst_confidence = _worse(worst_confidence, "NEEDS_REVIEW")
+
     return JudgementResult(
         policy_id=policy.policy_id,
         verdict=verdict,  # type: ignore[arg-type]
         confidence=worst_confidence,  # type: ignore[arg-type]
+        needs_review_fields=review_fields,
         matched=matched,
         unmatched=unmatched,
         unknown=unknown,
