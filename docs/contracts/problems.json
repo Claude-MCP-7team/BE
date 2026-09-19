@@ -15,6 +15,18 @@
       "title": "그런 정책이 없습니다"
     },
     {
+      "code": "route-not-found",
+      "type": "/problems/route-not-found",
+      "status": 404,
+      "title": "그런 경로가 없습니다"
+    },
+    {
+      "code": "method-not-allowed",
+      "type": "/problems/method-not-allowed",
+      "status": 405,
+      "title": "이 경로에서 허용되지 않는 메서드입니다"
+    },
+    {
       "code": "session-not-found",
       "type": "/problems/session-not-found",
       "status": 404,

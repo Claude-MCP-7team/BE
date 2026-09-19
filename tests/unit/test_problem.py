@@ -125,6 +125,38 @@ def test_프로필_검증_오류는_다른_유형이다(client):
     assert body["type"] == "/problems/invalid-profile"
 
 
+# --- 라우터가 내는 에러도 같은 모양이어야 한다 -------------------------------
+
+
+def test_없는_경로도_problem_json_이다(client):
+    """배포하고 루트를 열어보니 FastAPI 기본형이 그대로 나왔다.
+
+    라우터는 starlette 의 HTTPException 을 올리는데 핸들러가 그 하위 클래스인
+    FastAPI 쪽에만 걸려 있어서, 경로 없음·메서드 불일치만 다른 모양으로 나갔다.
+    에러 모양이 두 가지면 FE 는 두 가지를 다뤄야 한다.
+    """
+    body = problem(client.get("/"))
+    assert body["type"] == "/problems/route-not-found"
+    # 유형 없이 올라온 404 를 '그런 정책이 없습니다' 로 되돌리면 안 된다 —
+    # 경로 오타에 정책을 찾는 화면을 띄우게 된다.
+    assert "정책" not in body["title"]
+
+
+def test_허용되지_않는_메서드도_problem_json_이다(client):
+    body = problem(client.delete("/v1/policies"))
+    assert body["status"] == 405
+    assert body["type"] == "/problems/method-not-allowed"
+
+
+def test_프레임워크_기본_문구는_우리_문장으로_바꾼다(client):
+    """detail 없이 올라온 예외는 Starlette 이 'Not Found' 를 채운다.
+
+    다른 에러는 전부 한국어인데 경로 오타만 영어면, 화면이 그대로 보여줄 때
+    사용자에게는 고장처럼 보인다.
+    """
+    assert problem(client.get("/없는경로"))["detail"] == "그런 경로가 없습니다"
+
+
 # --- 처리되지 않은 예외 ------------------------------------------------------
 
 

@@ -20,13 +20,19 @@ FE 를 깨뜨리지 않는 드문 경우다.
 
 from __future__ import annotations
 
+import http
 import logging
 from typing import Any, NamedTuple
 
 import msgspec
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
+
+# 라우터가 올리는 404·405 는 starlette 쪽 예외다. FastAPI 의 HTTPException 은
+# 그것의 하위 클래스라, 하위 클래스에만 핸들러를 걸면 경로 없음·메서드 불일치가
+# 핸들러를 타지 않고 FastAPI 기본형으로 나간다 — 에러 모양이 두 가지가 된다.
+from starlette.exceptions import HTTPException
 
 log = logging.getLogger("ypc.problem")
 
@@ -50,6 +56,10 @@ SNAPSHOT_NOT_READY = ProblemType(
     "snapshot-not-ready", 503, "정책 스냅샷이 아직 적재되지 않았습니다"
 )
 POLICY_NOT_FOUND = ProblemType("policy-not-found", 404, "그런 정책이 없습니다")
+ROUTE_NOT_FOUND = ProblemType("route-not-found", 404, "그런 경로가 없습니다")
+METHOD_NOT_ALLOWED = ProblemType(
+    "method-not-allowed", 405, "이 경로에서 허용되지 않는 메서드입니다"
+)
 SESSION_NOT_FOUND = ProblemType("session-not-found", 404, "세션이 없거나 만료되었습니다")
 SESSION_STORE_UNAVAILABLE = ProblemType(
     "session-store-unavailable", 503, "세션 저장소를 사용할 수 없습니다"
@@ -64,6 +74,8 @@ INTERNAL_ERROR = ProblemType("internal-error", 500, "서버에서 처리하지 �
 ALL_TYPES: tuple[ProblemType, ...] = (
     SNAPSHOT_NOT_READY,
     POLICY_NOT_FOUND,
+    ROUTE_NOT_FOUND,
+    METHOD_NOT_ALLOWED,
     SESSION_NOT_FOUND,
     SESSION_STORE_UNAVAILABLE,
     SESSION_NOT_READABLE,
@@ -74,7 +86,14 @@ ALL_TYPES: tuple[ProblemType, ...] = (
 
 # 유형을 지정하지 않고 올라온 HTTPException 을 상태 코드로 되돌린다.
 # 새 엔드포인트가 유형을 깜빡해도 응답 모양은 유지된다 — 구분만 거칠어진다.
-_BY_STATUS = {t.status: t for t in (POLICY_NOT_FOUND, INVALID_REQUEST, INTERNAL_ERROR)}
+#
+# 404 는 POLICY_NOT_FOUND 가 아니라 ROUTE_NOT_FOUND 다. 유형 없이 올라온 404 는
+# 대부분 라우터가 낸 '그런 경로 없음'이고, 거기에 '그런 정책이 없습니다'를 붙이면
+# FE 는 있지도 않은 정책을 찾는 화면을 띄운다.
+_BY_STATUS = {
+    t.status: t
+    for t in (ROUTE_NOT_FOUND, METHOD_NOT_ALLOWED, INVALID_REQUEST, INTERNAL_ERROR)
+}
 
 
 class Problem(HTTPException):
@@ -110,6 +129,21 @@ def render(
     )
 
 
+def _detail_of(exc: HTTPException, kind: ProblemType) -> str:
+    """사람이 읽을 문장. 프레임워크 기본 문구면 우리 문장으로 바꾼다.
+
+    detail 을 주지 않고 올라온 예외는 Starlette 이 상태 코드의 영문 관용구
+    ("Not Found")를 채운다. 그대로 내보내면 다른 에러는 한국어인데 경로 오타만
+    영어가 되어, 화면이 그걸 그대로 보여주면 사용자에게는 고장처럼 보인다.
+    """
+    detail = str(exc.detail or "")
+    try:
+        default_phrase = http.HTTPStatus(exc.status_code).phrase
+    except ValueError:
+        default_phrase = ""
+    return kind.title if detail == default_phrase else detail
+
+
 def install(app: FastAPI) -> None:
     """에러 응답을 전부 problem+json 으로 바꾼다."""
 
@@ -122,7 +156,7 @@ def install(app: FastAPI) -> None:
         kind = _BY_STATUS.get(exc.status_code)
         if kind is None:
             kind = ProblemType(f"http-{exc.status_code}", exc.status_code, str(exc.detail))
-        return render(kind, str(exc.detail), request.url.path)
+        return render(kind, _detail_of(exc, kind), request.url.path)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError) -> Response:
