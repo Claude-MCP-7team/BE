@@ -181,7 +181,8 @@ mypy   # files = ["app", "batch"], strict = true
 ```
 
 ### ⑤ 제출물 (M5)
-- **배포** — `Dockerfile`·CORS 설정이 아직 없다. Render Free 예정 (§8 #9)
+- **배포** — `Dockerfile`·`render.yaml`·CORS 준비됨. `docs/DEPLOY.md` 참고.
+  남은 것은 실제로 띄우고 URL 을 FE 에 주는 것 (§8 #9)
 - **E2E 는 있다** — `pytest tests/e2e` 가 시나리오 6종을 돌린다. 발표 대본이기도 하다
 - **데모 데이터도 고정돼 있다** — `data/demo/`. 기준일은 `YPC_FIXED_TODAY=2026-10-01`
 
@@ -419,6 +420,7 @@ python tools/export_contract.py && git add docs/contracts/
 | `DATABASE_URL` | asyncpg DSN | 세션 API 만 503, 판정은 정상 |
 | `PROFILE_ENC_KEYS` | `1:<base64 32바이트>` | 세션 API 만 503 (평문 폴백 없음) |
 | `YPC_FIXED_TODAY` | 판정 기준일 고정 (테스트용) | 실제 KST 오늘 |
+| `CORS_ORIGINS` | 브라우저에서 부를 수 있는 출처 (쉼표 구분) | 브라우저에서 호출 불가 |
 
 ```bash
 # 암호화 키 생성
@@ -556,7 +558,7 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 5 | 인증 방식 (익명 세션 vs 로그인) | 팀 | 현재 익명 세션 |
 | 6 | 응답 envelope (`{data, request_id}` 래핑) | FE | 현재 페이로드 직접 반환 |
 | 8 | 서류 마스터 36종 검증 | 사람 | CSV 의 `검증상태` 만 고치면 된다. 코드 변경 없음 |
-| 9 | 배포 Base URL · CORS | 팀 | Render Free 예정. **Dockerfile·CORS 설정이 아직 없다** |
+| 9 | 배포 Base URL | 팀 | `Dockerfile`·`render.yaml`·CORS 는 준비됨 (`docs/DEPLOY.md`). 실제로 띄우고 URL 을 FE 에 주는 것만 남았다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
 | 14 | 에러 응답 규격 | 팀 | `ARCHITECTURE.md` 는 RFC 9457 `problem+json` 을 약속하는데 코드는 FastAPI 기본 `{"detail": ...}` 다. 문서와 코드가 다르다 |
 | 15 | FE Mock JSON | FE·BE | `docs/contracts/*.json` 은 스키마지 예시 인스턴스가 아니다. `data/demo/` 가 그 역할을 대신할 수 있다 |
@@ -599,6 +601,7 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | `README.md` | 진행 상태 · 실측 성능 · 시작하기 |
 | `docs/ARCHITECTURE.md` | 전체 아키텍처 · ADR 6건 · 무료 티어 실사 · 성능 예산 |
 | `docs/DB_SCHEMA.md` | 테이블 14종 설계 · 인덱스 전략 · 스토리지 예산 |
+| `docs/DEPLOY.md` | 배포 — 환경변수 · 헬스체크 두 종류 · CORS 의 ETag 함정 |
 | [FE 이슈 #2](https://github.com/Claude-MCP-7team/FE/issues/2) | 계약 확정 논의 — **BE 답변 이미 등록됨** |
 
 커밋 메시지는 **무엇을 했는지가 아니라 왜 그렇게 했는지**를 적는 형식을 유지하고 있다. `git log` 를 읽으면 설계 판단의 근거가 나온다.

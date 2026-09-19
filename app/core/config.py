@@ -21,6 +21,9 @@ class Settings:
     fixed_today: str | None
     # 프로필 암호화 키 (`1:<base64>,2:<base64>`). 없으면 세션 저장을 하지 않는다.
     profile_enc_keys: str | None
+    # 브라우저에서 이 API 를 부를 수 있는 출처. 기본값은 비어 있다 —
+    # 설정하지 않은 배포가 조용히 전부 열린 상태가 되지 않도록.
+    cors_origins: tuple[str, ...] = ()
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -30,6 +33,7 @@ class Settings:
             admin_token=os.environ.get("ADMIN_TOKEN") or None,
             fixed_today=os.environ.get("YPC_FIXED_TODAY") or None,
             profile_enc_keys=os.environ.get("PROFILE_ENC_KEYS") or None,
+            cors_origins=_origins(os.environ.get("CORS_ORIGINS")),
         )
 
     def profile_cipher(self):
@@ -39,6 +43,16 @@ class Settings:
         설정 실수 한 번으로 개인정보가 평문으로 쌓이고, 아무도 눈치채지 못한다.
         """
         return _cipher_from(self.profile_enc_keys)
+
+
+def _origins(raw: str | None) -> tuple[str, ...]:
+    """`CORS_ORIGINS` 파싱. 쉼표로 구분한 출처 목록.
+
+    기본값은 비어 있다 — 아무 출처도 열지 않는다. 브라우저에서 못 부르는 것은
+    눈에 보이는 실패(콘솔의 CORS 에러)라 배포 때 바로 드러나지만, 전부 열어두는
+    것은 아무 증상이 없어서 그대로 남는다.
+    """
+    return tuple(o.strip().rstrip("/") for o in (raw or "").split(",") if o.strip())
 
 
 @lru_cache(maxsize=4)

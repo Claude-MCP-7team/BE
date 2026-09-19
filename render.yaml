@@ -1,0 +1,37 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# 이 파일은 편의를 위한 것이고, 배포의 진짜 산출물은 Dockerfile 이다.
+# 플랫폼을 바꾸면 이 파일만 버리면 된다.
+
+services:
+  - type: web
+    name: ypc-backend
+    runtime: docker
+    plan: free
+    region: singapore          # 무료 리전 중 한국에서 가장 가깝다
+    dockerfilePath: ./Dockerfile
+
+    # 배포 판정은 /readyz 다 — 스냅샷을 못 읽은 인스턴스에 트래픽을 보내면
+    # 모든 요청이 503 이 된다. /healthz 는 프로세스 생존만 보므로 이 자리에
+    # 쓰면 판정 불가능한 인스턴스가 '정상'으로 올라간다.
+    healthCheckPath: /readyz
+
+    envVars:
+      # 이미지 안에 들어 있는 데모 스냅샷(정책 5건). **실데이터가 아니다.**
+      # 실제 스냅샷을 쓰려면 디스크나 오브젝트 스토리지에 올리고 이 경로를 바꾼다.
+      - key: SNAPSHOT_PATH
+        value: /app/data/demo/snapshot.json
+
+      # FE 출처. 비워두면 브라우저에서 못 부른다 (서버 간 호출은 계속 된다).
+      # 예: https://ypc-fe.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+
+      # 없으면 세션 저장만 꺼지고 판정은 계속 된다.
+      # python -c "from app.core.crypto import generate_key; print(generate_key())"
+      - key: PROFILE_ENC_KEYS
+        sync: false
+
+      # 없으면 /v1/sessions 만 503. 판정 경로는 DB 를 쓰지 않는다 (ADR-001).
+      - key: DATABASE_URL
+        sync: false

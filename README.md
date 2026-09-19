@@ -151,6 +151,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `batch/collect/normalize` — API 구조화 필드 → PolicySchema (LLM 없이 실데이터 스냅샷)
 - [x] `data/demo/` — 고정 데모 정책 5건 · 사용자 1명 (합성 데이터, BE-M1-8)
 - [x] `tests/e2e/` — 제출용 시나리오 6종 (목록 → 판정 → 역질문 → 재판정 → 조합 → 일정)
+- [x] `Dockerfile` · `render.yaml` · CORS — 배포 (`docs/DEPLOY.md`)
 - [x] `batch/agents/` — A2 공고문 구조화 · 인용문 원문 대조 · 병합 · 리포트 (AI-M1~M3, `app/llm/prompts/a2_structure.md`)
 - [x] `app/llm/explain.py` — C2 판정 설명문: 결정론 템플릿(기본) + LLM 다듬기(숫자 근거 검사, 실패 시 템플릿). `POST /v1/judge?explain=template|llm|none`
 - [ ] `batch/crawl` — 원문 공고문 크롤러 (BE-M1-4). 지금은 API 자유 텍스트 필드만 구조화한다

@@ -16,6 +16,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import judge as judge_api
 from app.api.v1 import sessions as sessions_api
@@ -55,6 +56,33 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+# 브라우저에서 부를 수 있게 하는 헤더들. 무엇을 여는지 한 곳에 모아둔다.
+#
+# **ETag 를 expose 하지 않으면 캐시 설계가 조용히 무력화된다.** 판정·목록 응답은
+# ETag 와 If-None-Match 로 304 를 내도록 만들어져 있는데, 브라우저는 노출 목록에
+# 없는 응답 헤더를 자바스크립트에 넘기지 않는다. FE 는 ETag 를 읽지 못하고, 서버는
+# 매번 전체 응답을 다시 만든다 — 에러가 아니라서 아무도 눈치채지 못한다.
+#
+# 쿠키를 쓰지 않으므로 allow_credentials 는 False 다. 세션은 URL 의 UUID 와
+# X-Session-Id 헤더로만 식별되며, 그래서 그 헤더가 허용 목록에 있어야 한다.
+_CORS_EXPOSE = ["ETag", "X-Snapshot-Version"]
+_CORS_ALLOW_HEADERS = ["Content-Type", "If-None-Match", "X-Session-Id"]
+
+if settings.cors_origins:
+    if "*" in settings.cors_origins:
+        log.warning("CORS 가 모든 출처에 열려 있습니다 — 운영에서는 출처를 지정하세요")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_origins),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=_CORS_ALLOW_HEADERS,
+        expose_headers=_CORS_EXPOSE,
+        max_age=600,
+    )
+else:
+    log.warning("CORS_ORIGINS 가 없습니다 — 브라우저에서는 이 API 를 부를 수 없습니다")
+
 app.include_router(judge_api.router)
 app.include_router(sessions_api.router)
 
