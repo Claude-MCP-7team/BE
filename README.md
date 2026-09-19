@@ -149,6 +149,9 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
 - [x] `batch/collect/normalize` — API 구조화 필드 → PolicySchema (LLM 없이 실데이터 스냅샷)
 - [x] `batch/agents/` — A2 공고문 구조화 · 인용문 원문 대조 · 병합 · 리포트 (AI-M1~M3, `app/llm/prompts/a2_structure.md`)
+- [x] `batch/agents/documents.py` — 서류명 정규화 보조: 표기 꼬리 제거 + 모델의 정식 명칭(마스터 목록 글자 그대로일 때만) → `doc_code` (AI-M4)
+- [x] `batch/agents/crosscheck.py` — 교차검증: 두 모델의 A2 결과를 맞춰 한쪽만·값 불일치를 NEEDS_REVIEW 로 (`--cross-check`, AI-M4)
+- [x] `batch/agents/golden.py` + `tests/golden/` — 데모 5건 골든 정답표와 채점기 (AI-M2-3)
 - [x] `app/llm/explain.py` — C2 판정 설명문: 결정론 템플릿(기본) + LLM 다듬기(숫자 근거 검사, 실패 시 템플릿). `POST /v1/judge?explain=template|llm|none`
 - [ ] `batch/crawl` — 원문 공고문 크롤러 (BE-M1-4). 지금은 API 자유 텍스트 필드만 구조화한다
 - [ ] A2 실제 공고문 3~5건 정확도 검증 (AI-M2-3) — API 키 확보 후 `--limit 5` 로 실행

@@ -130,6 +130,18 @@ normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn
   거주 N개월 17 · 재직 N개월 16. 즉 A2 가 새로 만들 룰의 대부분은 **소득 비율**이고, 무주택·재산은 규칙화 불가로 남는다 — 이 둘을
   판정 confidence 에 어떻게 반영할지가 §8 #10 의 무게다.
 
+**A2 부속 세 가지** (전부 키 없이 테스트됨):
+
+- `batch/agents/documents.py` — 서류 표기 꼬리("1부", "(필수)", "등")를 걷어내고 플래너의 `resolve()` 로 doc_code 를 찾는다.
+  모델이 준 `canonical_name` 은 마스터 정식 명칭과 **글자 그대로** 같을 때만 쓴다 (별칭·유사 이름 불인정). 마스터 목록은
+  사용자 메시지 끝에 붙어 프롬프트 캐시를 깨지 않는다. 마스터에 없는 서류는 §8 #14.
+- `batch/agents/crosscheck.py` — `--cross-check` (기본 두 번째 모델 `claude-sonnet-5`, `--model-b`). 같은 (field, op, value) 면 유지(confidence 는 낮은 쪽),
+  한쪽에만 있으면 유지+NEEDS_REVIEW, 값이 다르면 A 유지+NEEDS_REVIEW+ambiguous, 서류·상충은 합집합. **룰을 지우는 경우는 없다.**
+  `quality.cross_check` 가 AGREE/DISAGREE 로 채워진다. `--responses` 모드에서는 `<plcyNo>.b.json` 이 있는 정책만 교차검증한다.
+- `batch/agents/golden.py` + `tests/golden/a2_expected.json` — 데모 5건의 정답 룰·금지 필드·doc_code·상충 하한·표식.
+  `python -m batch.agents.golden <policies.json> tests/golden/a2_expected.json` 이 정책별 재현율을 낸다. 실제 모델을 처음 돌릴 때
+  이 숫자를 기준으로 프롬프트를 고친다.
+
 **C2 설명문도 생겼다** (`app/llm/explain.py`, 프롬프트 `app/llm/prompts/c2_explain.md`):
 
 - `POST /v1/judge` 가 기본으로 결과마다 `explanation` 을 채운다 — **결정론 템플릿**이라 LLM 없이 항상 동작하고 비용이 없다.

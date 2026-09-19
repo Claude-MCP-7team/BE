@@ -7,7 +7,10 @@
   # 특정 정책만
   python -m batch.agents.cli structure data/raw/<timestamp> --ids R2026001,R2026002
 
-  # API 없이 — 미리 만든 응답(<plcyNo>.json)을 같은 검증·병합 경로로 (데모 정책, 비용 0)
+  # 교차검증 — 두 번째 모델로 한 번 더 읽어 불일치를 NEEDS_REVIEW 로 (비용 2배)
+  python -m batch.agents.cli structure data/raw/<timestamp> --limit 5 --cross-check
+
+  # API 없이 — 미리 만든 응답(<plcyNo>.json, 교차검증은 <plcyNo>.b.json)을 같은 경로로 (비용 0)
   python -m batch.agents.cli structure data/manual/raw --responses data/manual/a2 \
       -o data/manual/policies.json
 
@@ -34,6 +37,7 @@ import msgspec
 from app.core.console import force_utf8_console
 from app.llm.client import LLM, LLMError, load_prompt
 from app.schemas.policy import PolicySchema
+from batch.agents.crosscheck import CrossCheckReport, cross_check
 from batch.agents.structure import A2Report, resolve_conflict_targets, structure_policy
 from batch.agents.text import Record, assemble_text
 from batch.collect.client import load_raw
@@ -120,23 +124,29 @@ def cmd_structure(args: argparse.Namespace) -> int:
         return 0
 
     cache_hits = 0
+    cached_b: CachedLLM | None = None
     if responses is None:
         from app.llm.client import AnthropicLLM  # SDK 는 실제 호출할 때만 필요하다
 
         cached = CachedLLM(AnthropicLLM(model=args.model), CACHE_DIR)
+        if args.cross_check:
+            # 두 번째 읽기는 다른 모델로. 같은 모델을 두 번 부르면 같은 실수를 두 번 한다.
+            cached_b = CachedLLM(AnthropicLLM(model=args.model_b), CACHE_DIR)
     system = load_prompt("a2_structure")
     announcements = Path(args.announcements) if args.announcements else None
 
     reports: list[A2Report] = []
+    cross_reports: list[CrossCheckReport] = []
     for n, i in enumerate(targets, 1):
         pid = policies[i].policy_id
+        base = policies[i]
         announcement = None
         if announcements and (f := announcements / f"{pid}.txt").exists():
             announcement = f.read_text(encoding="utf-8")
         llm: LLM = FileLLM(responses / f"{pid}.json") if responses else cached
         try:
             policies[i], report = structure_policy(
-                policies[i], records[i], llm, announcement=announcement, system_prompt=system
+                base, records[i], llm, announcement=announcement, system_prompt=system
             )
         except LLMError as e:
             report = A2Report(policy_id=pid, error=str(e))
@@ -146,10 +156,31 @@ def cmd_structure(args: argparse.Namespace) -> int:
             if report.error
             else f"+{report.accepted_conditions}/{report.proposed_conditions}"
         )
+
+        # 교차검증 — 응답 파일 모드는 <pid>.b.json 이 있을 때, 모델 모드는 --cross-check 일 때
+        llm_b: LLM | None = None
+        if responses is not None:
+            if (pb := responses / f"{pid}.b.json").exists():
+                llm_b = FileLLM(pb)
+        else:
+            llm_b = cached_b
+        if llm_b is not None and not report.error:
+            try:
+                second, _ = structure_policy(
+                    base, records[i], llm_b, announcement=announcement, system_prompt=system
+                )
+                policies[i], cross = cross_check(policies[i], second)
+                cross_reports.append(cross)
+                tag += "  ✓교차 일치" if cross.agree else f"  ✗교차 불일치 {_cross_summary(cross)}"
+            except LLMError as e:
+                tag += f"  (교차검증 실패: {e})"
         print(f"  [{n}/{len(targets)}] {pid} {tag}  {policies[i].meta.title[:40]}")
 
     if responses is None:
-        cache_hits = cached.hits
+        cache_hits = cached.hits + (cached_b.hits if cached_b else 0)
+    if cross_reports:
+        agree = sum(1 for c in cross_reports if c.agree)
+        print(f"  교차검증 {len(cross_reports)}건 중 일치 {agree}건")
 
     unresolved = resolve_conflict_targets(policies)
     for pid, names in unresolved.items():
@@ -160,6 +191,17 @@ def cmd_structure(args: argparse.Namespace) -> int:
     out.write_bytes(msgspec.json.format(msgspec.json.encode(policies), indent=2))
     _write_report(reports, policies, out, cache_hits=cache_hits)
     return 0 if not any(r.error for r in reports) else 1
+
+
+def _cross_summary(c: CrossCheckReport) -> str:
+    parts = []
+    if c.value_disagreements:
+        parts.append(f"값 {len(c.value_disagreements)}")
+    if c.only_a or c.only_b:
+        parts.append(f"한쪽만 {len(c.only_a) + len(c.only_b)}")
+    if c.benefit_disagreement:
+        parts.append("금액")
+    return "·".join(parts)
 
 
 def _write_report(
@@ -201,6 +243,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--limit", type=int, help="앞에서 N건만 LLM 을 거친다 (비용 제한)")
     p.add_argument("--ids", help="쉼표로 구분한 plcyNo 목록")
     p.add_argument("--model", help="기본 claude-opus-5 (또는 YPC_LLM_MODEL)")
+    p.add_argument(
+        "--cross-check",
+        action="store_true",
+        help="다른 모델로 한 번 더 구조화해 불일치를 NEEDS_REVIEW 로 내린다 (비용 2배)",
+    )
+    p.add_argument("--model-b", default="claude-sonnet-5", help="교차검증용 두 번째 모델")
     p.add_argument("--announcements", help="<plcyNo>.txt 형태의 원문 공고문 디렉터리")
     p.add_argument(
         "--responses",
