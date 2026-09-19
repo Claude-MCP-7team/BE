@@ -7,7 +7,10 @@
       "value_number": null,
       "value_text": null,
       "value_bool": null,
-      "value_list": [19, 39],
+      "value_list": [
+        19,
+        39
+      ],
       "unit": "세",
       "source_quote": "19세 ~ 39세 무주택 청년",
       "time_satisfiable": true,

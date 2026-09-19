@@ -389,6 +389,7 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 10 | `needs_review_fields` 의 `unrepresentable_conditions` 표식을 판정 confidence 에 반영할지 | BE | 엔진이 못 보는 조건이 있는 정책이 CONFIRMED·ELIGIBLE 로 나간다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정으로, 예산 얼마) | 팀 | published 1,555건 × Opus 5 ≈ 정책당 $0.03 안팎 추정, 캐시 적용 전 |
 | 12 | 충족 예상일이 다른 룰과 모순될 때 | BE | 24세 사용자의 청년기본소득: 거주 36개월은 "2029-05-15부터 가능"인데 그때는 27세라 나이 룰이 깨진다. 룰별 날짜만 내고 정책 수준 교차검증은 없음 (`tools/demo_scenario.py` A-1) |
+| 14 | 서류 마스터에 없는 서류 (실제 공고에서 자주 나옴) | 사람 | `지방세(재산세) 미과세증명서`(위택스, 가평 월세), `본인신용정보조회서`(크레딧포유), `소득·재산 신고서`(서식). 마스터에 행을 추가해야 계획 소요일이 잡힌다. A2 는 목록에 없는 서류를 추측으로 잇지 않는다 (`batch/agents/documents.py`) |
 | 13 | `apply_end` 가 지난 정책이 `ELIGIBLE`·조합 후보로 나온다 | BE | `aplyPrdSeCd=0057001`(기간) 이면서 종료일이 과거인 정책은 `published` 로 남는다(normalize 는 `0057003` 만 expired). 국토부 청년월세(5/29 마감)가 9/19 판정에서 적격이고 조합에 480만원으로 들어간다. 판정은 두더라도 조합·계획에서는 빼거나 '마감' 표시가 필요 (`demo_scenario.py` D-2) |
 
 ---
