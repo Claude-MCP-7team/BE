@@ -77,8 +77,9 @@ SNAPSHOT_PATH=snapshot.json \
   DATABASE_URL=postgresql://... \
   PROFILE_ENC_KEYS="1:<base64-32bytes>" \
   uvicorn app.main:app --reload
-#   POST /v1/judge               조건 → 전 정책 일괄 판정 (요약 + 적격/확인필요)
+#   POST /v1/judge               조건 → 전 정책 일괄 판정 (요약 + 적격/확인필요) + 설명문(템플릿)
 #   POST /v1/judge?include=all   부적격 근거까지
+#   POST /v1/judge?explain=llm   설명문을 LLM 으로 다듬기 (ANTHROPIC_API_KEY 없으면 템플릿과 같다)
 #   POST /v1/questions           역질문 큐 (필드당 1질문 · 상한 10)
 #   POST /v1/combinations        조합 추천 (보수/최대 2안 × 상위 3개)
 #   POST /v1/plan                신청 계획 (권장 착수일 · 서류 기준 할 일)
@@ -148,6 +149,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
 - [x] `batch/collect/normalize` — API 구조화 필드 → PolicySchema (LLM 없이 실데이터 스냅샷)
 - [x] `batch/agents/` — A2 공고문 구조화 · 인용문 원문 대조 · 병합 · 리포트 (AI-M1~M3, `app/llm/prompts/a2_structure.md`)
+- [x] `app/llm/explain.py` — C2 판정 설명문: 결정론 템플릿(기본) + LLM 다듬기(숫자 근거 검사, 실패 시 템플릿). `POST /v1/judge?explain=template|llm|none`
 - [ ] `batch/crawl` — 원문 공고문 크롤러 (BE-M1-4). 지금은 API 자유 텍스트 필드만 구조화한다
 - [ ] A2 실제 공고문 3~5건 정확도 검증 (AI-M2-3) — API 키 확보 후 `--limit 5` 로 실행
 

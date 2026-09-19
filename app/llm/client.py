@@ -44,6 +44,27 @@ def load_prompt(name: str) -> str:
     return (_PROMPT_DIR / f"{name}.md").read_text(encoding="utf-8")
 
 
+_shared: AnthropicLLM | None = None
+
+
+def get_llm() -> LLM | None:
+    """요청 경로용 공용 클라이언트. 키가 없거나 SDK 가 없으면 None — 호출자는 템플릿으로 간다.
+
+    API 서버가 LLM 없이도 완전히 동작해야 한다는 뜻이다. 키 유무는 배포 설정이지
+    판정 기능의 전제가 아니다.
+    """
+    global _shared
+    if _shared is not None:
+        return _shared
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+        return None
+    try:
+        _shared = AnthropicLLM(effort="low")  # 설명문은 요약이지 추론이 아니다
+    except ImportError:
+        return None
+    return _shared
+
+
 class AnthropicLLM:
     """Claude API 구조화 출력 호출.
 

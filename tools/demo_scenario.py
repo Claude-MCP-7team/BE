@@ -71,6 +71,8 @@ def main() -> int:
         print("  summary:", j["summary"])
         for res in j["results"]:
             print(f"  - {res['policy_id']}: {res['verdict']} ({res['confidence']})")
+            if res.get("explanation"):
+                print(f"      💬 {res['explanation']}")
             for u in res["unmatched"]:
                 quote = u["source_quote"][:50]
                 need = f"내 값={u['user_value']} 필요={u['required']}"

@@ -122,7 +122,15 @@ normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn
 - `askable` 룰의 `question_template` 은 모델 문구 → 없으면 `batch/agents/questions.py` 표준 문구. 필드별 병합(G3) 때문에
   같은 필드는 같은 문구가 낫다.
 - 응답은 `data/a2-cache/` 에 (프롬프트+텍스트) 해시로 캐시된다. 프롬프트를 고치면 자동으로 다시 호출된다.
-- 아직 **실제 API 키로 돌려보지 못했다.** 테스트 21건은 가짜 LLM 으로 검증·병합 로직만 본다. 첫 실행은 `--limit 5` 로
+- 아직 **실제 API 키로 돌려보지 못했다.** 테스트 21건은 가짜 LLM 으로 검증·병합 로직만 본다.
+
+**C2 설명문도 생겼다** (`app/llm/explain.py`, 프롬프트 `app/llm/prompts/c2_explain.md`):
+
+- `POST /v1/judge` 가 기본으로 결과마다 `explanation` 을 채운다 — **결정론 템플릿**이라 LLM 없이 항상 동작하고 비용이 없다.
+  미충족은 "내 값 / 공고 기준 / 인용문 / 언제부터 되는지(또는 영구 불가)"를, 확인 필요는 질문을 그대로, 추정 판정은 담당부서 전화를 붙인다.
+- `?explain=llm` 이면 결과 전체를 **한 번의 호출**로 다듬는다. 설명 속 숫자가 결과·초안에 없으면 그 항목은 템플릿으로 되돌린다
+  (금액·기간·조건을 지어내는 것이 C2 의 유일한 실패 모드다, PRD §23). 키가 없으면 `template` 과 같다. `?explain=none` 은 생략.
+- ETag 에 explain 모드가 들어간다. `app/api/v1/judge.py` 를 손댄 유일한 이유다. 첫 실행은 `--limit 5` 로
   하고 리포트의 `rejected`/`disagreements` 를 읽어 프롬프트를 손보는 것이 AI-M2-3(수동 정답표 대조)이다.
 
 ### ③ 서류 마스터 검증 (BE-M5-1 잔여)

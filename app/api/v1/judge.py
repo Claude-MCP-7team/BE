@@ -25,6 +25,8 @@ from app.engine.compile import Snapshot
 from app.engine.evaluate import explain, judge_all
 from app.engine.questions import build_queue
 from app.engine.snapshot import SnapshotNotReady
+from app.llm.client import get_llm
+from app.llm.explain import explain_all
 from app.planner.backplan import build_plan
 from app.planner.ics import to_ics
 from app.schemas.judgement import DISCLAIMER, JudgementResponse
@@ -35,6 +37,9 @@ from app.solver.combine import recommend
 router = APIRouter(prefix="/v1", tags=["judge"])
 
 Include = Literal["default", "all"]
+# 설명문 경로. template 은 결정론·무비용이라 기본값이고, llm 은 키가 없으면 template 으로 떨어진다.
+# none 은 FE 가 자체 문구를 쓰거나 응답 크기를 줄일 때.
+Explain = Literal["template", "llm", "none"]
 
 
 def today_kst() -> date:
@@ -65,6 +70,10 @@ async def judge(
     include: Annotated[
         Include, Query(description="default=요약+적격/확인필요만, all=부적격 포함 전체")
     ] = "default",
+    explain_mode: Annotated[
+        Explain,
+        Query(alias="explain", description="template=결정론 설명문(기본), llm=LLM, none=생략"),
+    ] = "template",
     if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
 ) -> Response:
     try:
@@ -78,7 +87,7 @@ async def judge(
     except msgspec.ValidationError as e:
         raise HTTPException(status_code=422, detail=f"조건 입력이 올바르지 않습니다: {e}") from e
 
-    etag = f'W/"{snapshot.version}:{profile_hash(profile)}:{include}"'
+    etag = f'W/"{snapshot.version}:{profile_hash(profile)}:{include}:{explain_mode}"'
     if if_none_match == etag:
         return Response(status_code=304, headers={"ETag": etag})
 
@@ -97,6 +106,12 @@ async def judge(
         if include == "default" and verdict == "INELIGIBLE":
             continue
         results.append(explain(snapshot, profile, today, i, verdict))
+
+    if explain_mode != "none":
+        titles = {p.policy_id: p.meta.title for p in snapshot.policies}
+        texts = explain_all(results, titles, get_llm() if explain_mode == "llm" else None)
+        for r in results:
+            r.explanation = texts.get(r.policy_id)
 
     payload = JudgementResponse(
         session_id=request.headers.get("X-Session-Id", "anonymous"),
