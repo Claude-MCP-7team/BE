@@ -64,6 +64,7 @@ class A2Report:
     text_chars: int = 0
     proposed_conditions: int = 0
     accepted_conditions: int = 0
+    agreed_conditions: int = 0  # API 코드 룰과 같아서 새로 만들지 않은 것 — 오류가 아니라 확인이다
     rejected: list[Rejected] = field(default_factory=list)
     disagreements: list[str] = field(default_factory=list)
     unrepresentable: list[dict[str, str]] = field(default_factory=list)
@@ -158,6 +159,7 @@ def merge(
 
         if (prev := existing.get(fld)) is not None:
             if prev.op == c.get("op") and prev.value == value:
+                report.agreed_conditions += 1
                 continue  # API 코드와 일치 — 이미 있는 룰을 그대로 둔다
             report.disagreements.append(
                 f"{fld}: API {prev.op} {prev.value!r} vs 텍스트 {c.get('op')} {value!r}"
@@ -254,7 +256,7 @@ def merge(
     quality = msgspec.structs.replace(
         base.quality,
         parse_confidence=(
-            report.accepted_conditions / report.proposed_conditions
+            (report.accepted_conditions + report.agreed_conditions) / report.proposed_conditions
             if report.proposed_conditions
             else 0.0
         ),

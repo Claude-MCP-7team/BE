@@ -21,3 +21,5 @@ data/a2-cache/
 docs/m0/
 docs/a2/
 .venv/
+data/manual/policies.json
+data/manual/snapshot.json*

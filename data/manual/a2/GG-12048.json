@@ -1,0 +1,65 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [19, 49],
+      "unit": "세",
+      "source_quote": "19~49세 청년",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "API 코드값(19~49)과 일치"
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "포천시에 거주하거나, 포천시 소재 대학(원)에 재학하거나, 포천시 소재 직장에 재직 중이면 신청 가능 (셋 중 하나)",
+      "source_quote": "포천시 거주, 재학, 재직 중인 19~49세 청년",
+      "reason": "거주지 외에 재학·재직 소재지로도 충족되는 OR 조건. region_code 만으로 표현하면 포천시 밖에 살면서 포천시에서 일하거나 학교를 다니는 청년이 부적격으로 나온다."
+    }
+  ],
+  "benefit": {
+    "type": "service",
+    "amount_krw": null,
+    "duration_months": null,
+    "estimated_total_krw": null,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "취업/창업, 심리상담, 운동, 교육, 문화/취미, 청년활동 등 19개 클래스"
+  },
+  "period": {
+    "apply_start": "2026-09-15",
+    "apply_end": "2026-09-29",
+    "is_rolling": false,
+    "source_quote": "신청기간 : 2026. 9. 15.~ 9. 29."
+  },
+  "documents": [
+    {
+      "name": "주민등록초본",
+      "issuer": null,
+      "source_quote": "포천시 주민등록 청년: 주민등록초본 1부"
+    },
+    {
+      "name": "재직증명서",
+      "issuer": null,
+      "source_quote": "포천시 소재 직장 재직자: 재직증명서 1부"
+    },
+    {
+      "name": "재학증명서",
+      "issuer": null,
+      "source_quote": "포천시 소재 대학(원) 재학생: 재학증명서 1부"
+    }
+  ],
+  "conflicts": [],
+  "dept": {
+    "name": "포천시 청년비전센터",
+    "tel": "031-538-2564",
+    "source_quote": "포천시 청년비전센터 ☎ 031-538-2564"
+  }
+}

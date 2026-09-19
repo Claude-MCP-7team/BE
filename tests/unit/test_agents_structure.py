@@ -187,6 +187,7 @@ def test_텍스트가_API_코드와_같으면_중복_룰을_만들지_않는다(
     )
     assert [r.field for r in merged.eligibility].count("age") == 1
     assert report.disagreements == [] and report.rejected == []
+    assert report.agreed_conditions == 1 and merged.quality.parse_confidence == 1.0
 
 
 def test_텍스트로_확정된_소득_조건은_needs_review_에서_빠진다():

@@ -1,0 +1,27 @@
+{
+  "_comment": "온통청년 API 응답과 같은 모양으로 손으로 옮긴 실제 공고. 출처는 각 레코드의 refUrlAddr1. plcyNo 는 GG-<경기청년포털 arcNo>.",
+  "youthPolicyList": [
+    {
+      "plcyNo": "GG-12048",
+      "plcyNm": "포천청년비전센터와 함께하는 10월 프로그램",
+      "lclsfNm": "교육",
+      "pvsnInstGroupCd": "0054002",
+      "rgtrInstCd": "4090000",
+      "rgtrUpInstCd": "6410000",
+      "sprvsnInstCdNm": "포천시 청년비전센터",
+      "zipCd": "41650",
+      "sprtTrgtMinAge": "19",
+      "sprtTrgtMaxAge": "49",
+      "sprtTrgtAgeLmtYn": "Y",
+      "mrgSttsCd": "0055003",
+      "jobCd": "0013010",
+      "schoolCd": "0049010",
+      "earnCndSeCd": "0043001",
+      "aplyPrdSeCd": "0057001",
+      "aplyYmd": "20260915 ~ 20260929",
+      "refUrlAddr1": "https://youth.gg.go.kr/gg/info/education-and-self-development.do?mode=view&arcNo=12048&pager.offset=0&pagerLimit=8",
+      "lastMdfcnDt": "2026-09-19",
+      "plcyExplnCn": "포천청년비전센터와 함께하는 10월 프로그램\n\n개요\n신청기간 : 2026. 9. 15.~ 9. 29.\n\n모집대상 : 포천시 거주, 재학, 재직 중인 19~49세 청년\n\n주요내용 : 취업/창업, 심리상담, 운동, 교육, 문화/취미, 청년활동 등 19개 클래스\n\n[제출서류] 해당하는 자격서류 1부\n- 포천시 주민등록 청년: 주민등록초본 1부\n- 포천시 소재 직장 재직자: 재직증명서 1부\n- 포천시 소재 대학(원) 재학생: 재학증명서 1부\n\n신청방법 : 온라인 신청 바로가기\n문의\n포천시 청년비전센터 ☎ 031-538-2564"
+    }
+  ]
+}
