@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from app.schemas.validate import validate_policy
 from batch.collect.normalize import NATIONWIDE_MIN_CODES, record_to_policy
 
@@ -95,3 +97,34 @@ def test_나이가_0이면_나이_룰을_만들지_않는다():
     assert "age" not in rules_of(p)
     p = record_to_policy(rec(sprtTrgtMinAge="19", sprtTrgtMaxAge="0"))
     assert rules_of(p)["age"].op == ">=" and rules_of(p)["age"].value == 19
+
+
+# --- 신청 기간이 끝난 정책 -------------------------------------------------
+
+
+def test_종료일이_지나면_코드와_무관하게_마감이다():
+    """API 는 마감 코드(0057003)를 늦게 붙인다. 날짜가 먼저 말해준다.
+
+    국토부 청년월세가 5/29 에 끝났는데 9월까지 기간 코드(0057001)로 남아 있었고,
+    그래서 published 로 판정에 들어가 조합 추천에 480만원으로 잡혔다.
+    """
+    p = record_to_policy(
+        rec(aplyPrdSeCd="0057001", aplyYmd="20260201 ~ 20260529"),
+        today=date(2026, 9, 19),
+    )
+    assert p.period.apply_end == "2026-05-29"
+    assert p.status == "expired"
+
+
+def test_마감일_당일은_아직_열려_있다():
+    p = record_to_policy(
+        rec(aplyPrdSeCd="0057001", aplyYmd="20260201 ~ 20260929"),
+        today=date(2026, 9, 29),
+    )
+    assert p.status == "published"
+
+
+def test_상시모집은_종료일이_없어_영향받지_않는다():
+    p = record_to_policy(rec(aplyPrdSeCd="0057002"), today=date(2099, 1, 1))
+    assert p.period.is_rolling is True
+    assert p.status == "published"

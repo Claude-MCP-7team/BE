@@ -24,6 +24,14 @@
   정책이 '적격'으로 나가면 사용자는 없는 창구에 서류를 준비한다. 거르는 곳은
   여기 한 군데다. 리포트에 상태별 건수를 남겨서 조용히 사라지지는 않게 한다.
 
+**신청 기간이 지난 정책도 마찬가지다 — status 가 뭐라고 적혀 있든.**
+  status 는 생산자가 채우는 값이라 틀릴 수 있고, 실제로 틀렸다: 수집기는
+  `aplyPrdSeCd=0057003`(마감 코드) 만 expired 로 적어서, 기간제 정책의 종료일이
+  지나도 published 로 남았다. 국토부 청년월세(5/29 마감)가 9/19 판정에서 적격으로
+  나오고 조합 추천에 480만원으로 들어갔다.
+  `period.apply_end` 는 공고문에서 온 날짜다. 그 날짜가 지났는지는 여기서 직접
+  보는 편이, 모든 생산자가 status 를 정확히 채우기를 바라는 것보다 확실하다.
+
 **버전은 내용 해시다.**
   같은 데이터면 같은 버전이어야 API 의 ETag 가 의미를 가진다. 타임스탬프만
   쓰면 내용이 같아도 매일 캐시가 통째로 무효화된다.
@@ -37,11 +45,12 @@ import hashlib
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import msgspec
 
+from app.core.clock import today_kst
 from app.core.console import force_utf8_console
 from app.schemas.policy import PolicySchema
 from app.schemas.validate import SchemaViolation, validate_policy
@@ -74,6 +83,7 @@ class BuildReport:
     accepted: int = 0
     rejected: list[RejectedPolicy] = field(default_factory=list)
     skipped_by_status: Counter[str] = field(default_factory=Counter)  # 게시 상태가 아닌 것
+    skipped_closed: int = 0  # 신청 기간이 지난 것
     warnings: list[str] = field(default_factory=list)
     previous_count: int | None = None
     output_path: str | None = None
@@ -95,6 +105,8 @@ class BuildReport:
             detail = ", ".join(f"{k} {v}" for k, v in sorted(self.skipped_by_status.items()))
             total = sum(self.skipped_by_status.values())
             lines.append(f"  미게시    {total}건 ({detail}) — 판정에서 제외")
+        if self.skipped_closed:
+            lines.append(f"  마감      {self.skipped_closed}건 (신청 기간 종료) — 판정에서 제외")
         if self.previous_count is not None:
             delta = self.accepted - self.previous_count
             lines.append(f"  직전 대비 {self.previous_count} → {self.accepted} ({delta:+d})")
@@ -122,6 +134,7 @@ def build(
     *,
     previous_count: int | None = None,
     allow_partial: bool = False,
+    today: date | None = None,
 ) -> tuple[list[PolicySchema], BuildReport]:
     """검증을 통과한 정책 목록과 리포트를 돌려준다.
 
@@ -129,6 +142,7 @@ def build(
     전체 경로를 확인할 수 있고, 운영에서 '검사만' 돌려볼 수 있다.
     """
     report = BuildReport(total_input=len(policies), previous_count=previous_count)
+    today = today or today_kst()
 
     accepted: list[PolicySchema] = []
     seen: dict[str, int] = {}
@@ -155,6 +169,10 @@ def build(
 
         if policy.status != "published":
             report.skipped_by_status[policy.status] += 1
+            continue
+
+        if _is_closed(policy, today, report):
+            report.skipped_closed += 1
             continue
 
         violations = validate_policy(policy)
@@ -185,6 +203,23 @@ def build(
 
     _guard(report)
     return accepted, report
+
+
+def _is_closed(policy: PolicySchema, today: date, report: BuildReport) -> bool:
+    """신청 기간이 끝났는가. 마감일 당일은 아직 열려 있다."""
+    raw = policy.period.apply_end
+    if not raw or policy.period.is_rolling:
+        return False
+    try:
+        return date.fromisoformat(raw) < today
+    except ValueError:
+        # 날짜를 못 읽었다고 정책을 빼면, 형식 오류 하나가 정책 하나의 실종이 된다.
+        # 남기고 경고한다 — 사람이 보고 고칠 수 있는 형태로.
+        report.warnings.append(
+            f"{policy.policy_id}: apply_end 를 날짜로 읽을 수 없습니다 ({raw!r}) "
+            "— 마감 검사를 건너뜁니다"
+        )
+        return False
 
 
 def _guard(report: BuildReport) -> None:

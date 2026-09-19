@@ -23,8 +23,10 @@ API 가 코드로 준 것(나이·결혼·취업·학력·지역·신청기간·
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Any
 
+from app.core.clock import today_kst
 from app.schemas.enums import Category
 from app.schemas.policy import Dept, Meta, Period, PolicySchema, Quality, Rule, Source
 
@@ -68,12 +70,25 @@ def _codes(rec: Record, key: str) -> list[str]:
     return [c.strip() for c in _s(rec, key).split(",") if c.strip()]
 
 
+def _window_closed(period: Period, today: date) -> bool:
+    """신청 기간이 끝났는가. 마감일 당일은 아직 열려 있다."""
+    if period.is_rolling or not period.apply_end:
+        return False
+    try:
+        return date.fromisoformat(period.apply_end) < today
+    except ValueError:
+        return False  # 못 읽는 날짜로 상태를 바꾸지 않는다. 빌더가 경고를 남긴다
+
+
 def _iso(yyyymmdd: str) -> str:
     return f"{yyyymmdd[:4]}-{yyyymmdd[4:6]}-{yyyymmdd[6:]}"
 
 
-def record_to_policy(rec: Record, *, crawled_at: str | None = None) -> PolicySchema:
+def record_to_policy(
+    rec: Record, *, crawled_at: str | None = None, today: date | None = None
+) -> PolicySchema:
     plcy_no = _s(rec, "plcyNo")
+    today = today or today_kst()
     review: list[str] = []
     rules: list[Rule] = []
 
@@ -169,7 +184,11 @@ def record_to_policy(rec: Record, *, crawled_at: str | None = None) -> PolicySch
         else "local"
     )
 
-    if se == "0057003":
+    # 마감 코드(0057003)뿐 아니라 종료일이 지난 기간제 정책도 expired 다.
+    # 코드만 보면 국토부 청년월세처럼 5/29 에 끝난 공고가 계속 published 로 남는다 —
+    # 빌더가 한 번 더 거르지만, status 자체가 틀린 채로 리포트와 관리자 큐에
+    # 흘러가면 "왜 빠졌는지"를 읽는 사람이 status 를 믿고 엉뚱한 곳을 본다.
+    if se == "0057003" or _window_closed(period, today):
         status = "expired"
     elif origin and rules:
         status = "published"

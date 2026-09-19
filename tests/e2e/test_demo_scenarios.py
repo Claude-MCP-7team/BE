@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from datetime import date
 
 import msgspec
 import pytest
@@ -61,7 +62,9 @@ def client(monkeypatch):
     monkeypatch.setenv("YPC_FIXED_TODAY", DEMO_TODAY)
 
     policies = load_policies(DEMO / "policies.demo.json")
-    accepted, report = build(policies)
+    # 빌더 기준일도 고정한다. 실제 오늘로 빌드하면 데모 정책의 마감일이 지나는
+    # 순간 전부 걸러져, 시나리오가 "정책 0건"으로 깨진다.
+    accepted, report = build(policies, today=date.fromisoformat(DEMO_TODAY))
     assert not report.rejected, f"데모 seed 가 빌더 검증에 걸렸습니다: {report.rejected}"
     assert len(accepted) == len(policies)
 

@@ -15,7 +15,7 @@ import msgspec
 import pytest
 
 from app.planner.businessday import calendar_from_rows
-from app.schemas.policy import Dept, Meta, PolicySchema, Rule, Source
+from app.schemas.policy import Dept, Meta, Period, PolicySchema, Rule, Source
 from batch.build_snapshot import (
     MIN_RETENTION_RATIO,
     BuildReport,
@@ -471,3 +471,55 @@ def test_upsert_는_이름_갱신을_포함한다() -> None:
     """대체공휴일 지정이 나중에 바뀌면 이름도 따라가야 한다."""
     sql = upsert_sql()
     assert "ON CONFLICT" in sql and "DO UPDATE" in sql and "synced_at" in sql
+
+
+# --- 신청 기간이 끝난 정책은 내보내지 않는다 -------------------------------
+
+BUILD_DAY = date(2026, 9, 19)
+
+
+def _with_period(pid: str, **kw) -> PolicySchema:
+    policy = _policy(pid)
+    policy.period = Period(**kw)
+    return policy
+
+
+def test_기간이_지난_정책은_published_여도_빠진다():
+    """status 는 생산자가 채우는 값이라 틀릴 수 있다. 날짜는 공고문에서 온다."""
+    policies = [
+        _with_period("OPEN", apply_start="2026-02-01", apply_end="2026-12-31"),
+        _with_period("CLOSED", apply_start="2026-02-01", apply_end="2026-05-29"),
+    ]
+    assert all(p.status == "published" for p in policies)
+
+    accepted, report = build(policies, today=BUILD_DAY)
+
+    assert [p.policy_id for p in accepted] == ["OPEN"]
+    assert report.skipped_closed == 1
+    # 조용히 사라지면 안 된다 — 리포트에 건수가 남는다
+    assert "마감" in report.render()
+
+
+def test_마감일_당일은_아직_열려_있다():
+    accepted, _ = build([_with_period("TODAY", apply_end="2026-09-19")], today=BUILD_DAY)
+    assert [p.policy_id for p in accepted] == ["TODAY"]
+
+
+def test_상시모집과_마감일_없는_정책은_영향받지_않는다():
+    policies = [
+        _with_period("ROLLING", is_rolling=True),
+        _with_period("NO_DEADLINE"),
+    ]
+    accepted, report = build(policies, today=BUILD_DAY)
+
+    assert {p.policy_id for p in accepted} == {"ROLLING", "NO_DEADLINE"}
+    assert report.skipped_closed == 0
+
+
+def test_날짜를_못_읽으면_빼지_않고_경고한다():
+    """형식 오류 하나가 정책 하나의 실종이 되면 안 된다."""
+    accepted, report = build([_with_period("BAD", apply_end="2026-13-99")], today=BUILD_DAY)
+
+    assert [p.policy_id for p in accepted] == ["BAD"]
+    assert report.skipped_closed == 0
+    assert any("apply_end" in w for w in report.warnings)

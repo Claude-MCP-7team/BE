@@ -12,14 +12,13 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import time
-from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Literal
 
 import msgspec
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 
+from app.core.clock import today_kst
 from app.engine import snapshot as snapshot_store
 from app.engine.compile import Snapshot
 from app.engine.evaluate import explain, judge_all
@@ -43,23 +42,6 @@ Include = Literal["default", "all"]
 # 설명문 경로. template 은 결정론·무비용이라 기본값이고, llm 은 키가 없으면 template 으로 떨어진다.
 # none 은 FE 가 자체 문구를 쓰거나 응답 크기를 줄일 때.
 Explain = Literal["template", "llm", "none"]
-
-
-def today_kst() -> date:
-    """판정 기준일. 연령과 마감일은 한국 시간으로 세야 한다.
-
-    UTC 로 세면 매일 09시간 동안 날짜가 하루 어긋나, 생일 당일인 사용자가
-    하루 늦게 자격을 얻거나 마감 당일 정책이 하루 일찍 사라진다.
-    한국은 서머타임이 없어 고정 +9 로 충분하다.
-    """
-    from app.core.config import settings
-
-    # 오버라이드는 호출 시점에 읽는다. import 시점에만 읽으면 테스트나 데모에서
-    # 기준일을 바꿔도 이미 굳어진 설정이 이겨버린다.
-    override = os.environ.get("YPC_FIXED_TODAY") or settings.fixed_today
-    if override:
-        return date.fromisoformat(override)
-    return (datetime.now(UTC) + timedelta(hours=9)).date()
 
 
 def profile_hash(profile: UserProfile) -> str:
