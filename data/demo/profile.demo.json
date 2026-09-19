@@ -1,0 +1,25 @@
+{
+  "core": {
+    "birth_date": "2001-03-15",
+    "region_code": "41190",
+    "residence_start_date": "2024-04-01",
+    "residence_continuous": true,
+    "education": "university_graduated",
+    "employment_status": "job_seeking",
+    "employment_start_date": null,
+    "marital_status": "single",
+    "household_size": 1,
+    "income_basis": "self_only",
+    "household_income_ratio_median": 85
+  },
+  "history": {
+    "received_policy_ids": [],
+    "similar_program_participation_2y": null
+  },
+  "answers": {},
+  "consent": {
+    "terms_version": "1.0",
+    "privacy_agreed_at": "2026-09-19T00:00:00Z",
+    "retention_days": 90
+  }
+}

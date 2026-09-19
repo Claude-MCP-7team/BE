@@ -129,6 +129,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `batch/collect/` — 수집기 + G0 게이트 조사 하네스 (BE-M0-1~4)
 - [x] `app/engine/` — 룰 엔진 코어 · 충족 예상일 · 근거 조립 (BE-M2-3~5)
 - [x] `app/api/` — 판정 API · 스냅샷 로더 · 헬스체크 (BE-M2-7)
+- [x] `GET /v1/policies` — 정책 목록 (지역 접두 체인 · 분야 · 제목 검색 · 페이지네이션, BE-M1-3)
 - [x] `app/engine/questions.py` — 역질문 큐 병합·정렬·상한 (BE-M3-1~5)
 - [x] `app/solver/` — 상충 그래프 · MWIS 정확해 · 보수/최대 2안 (BE-M4-1~7)
 - [x] `app/planner/` — 영업일 달력 · 권장 착수일 역산 · ICS 내보내기 (BE-M5-2~4)
@@ -138,6 +139,8 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `batch/build_snapshot.py` — 스냅샷 빌더 · 검증 관문 (BE-M1-6~7)
 - [x] `batch/holidays.py` — 한국천문연구원 특일 API 동기화 (BE-M5-2 데이터원)
 - [x] `batch/collect/normalize` — API 구조화 필드 → PolicySchema (LLM 없이 실데이터 스냅샷)
+- [x] `data/demo/` — 고정 데모 정책 5건 · 사용자 1명 (합성 데이터, BE-M1-8)
+- [x] `tests/e2e/` — 제출용 시나리오 6종 (목록 → 판정 → 역질문 → 재판정 → 조합 → 일정)
 - [ ] `batch/crawl` · `batch/agents` — 원문 크롤러 · A1/A2 오케스트레이션 (BE-M1-4~5)
 
 ## 계약면
@@ -148,6 +151,7 @@ tests/      unit / golden(정확도 하네스) / e2e
 | C2 `JudgementResult` | BE ↔ FE | 10/07 | `app/schemas/judgement.py` · `docs/contracts/judgement_result.json` |
 | — 역질문 큐 | BE ↔ FE | 10/07 | `app/schemas/question.py` |
 | — 조합 추천 | BE ↔ FE | 10/07 | `app/schemas/combination.py` |
+| — 정책 목록 | BE ↔ FE | 10/07 | `app/schemas/catalog.py` |
 | — 신청 계획 | BE ↔ FE | 10/07 | `app/schemas/plan.py` |
 
 서류 발급 소요일·수수료·유효기간의 권위는 `data/documents/master_v2.csv` 다 (36종).
