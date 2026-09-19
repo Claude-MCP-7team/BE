@@ -213,7 +213,7 @@ def explain(
 
         unmatched.append(_unmatched(rule, user_value, profile, today, origin))
 
-    future_from = future_eligible_date(unmatched, unknown)
+    future_from = future_eligible_date(snapshot, profile, policy_index, unmatched, unknown)
 
     # 평가하지 못한 조건이 남아 있는데 '적격'이라고 확정하면, 사용자는 그 조건
     # 때문에 반려될 수 있다는 걸 모른 채 서류를 준비한다. 근거 없는 조건은 자동
@@ -244,9 +244,13 @@ def explain(
 
 
 def future_eligible_date(
-    unmatched: list[UnmatchedRule], unknown: list[UnknownRule]
+    snapshot: Snapshot,
+    profile: UserProfile,
+    policy_index: int,
+    unmatched: list[UnmatchedRule],
+    unknown: list[UnknownRule],
 ) -> str | None:
-    """미충족이 전부 시간으로 해결될 때, 그 전부가 충족되는 날 (YYYY-MM-DD).
+    """미충족이 전부 시간으로 해결될 때, 정책 전체가 충족되는 날 (YYYY-MM-DD).
 
     가장 늦은 조건이 전체를 결정한다. 19세 하한과 거주 36개월을 함께 요구하면
     둘 다 만족하는 날부터 신청할 수 있고, 이른 쪽 날짜를 주면 그날 신청했다가
@@ -257,6 +261,15 @@ def future_eligible_date(
       - 시간과 무관한 조건 (소득·가구원수 등)
       - 영구 불가 (연령 상한 초과)
       - 미확인 조건이 남아 있음 — 그날 적격이 될지 알 수 없다
+
+    **그날 다른 조건이 깨지는 경우도 None 이다.** 기다리면 충족되는 조건과
+    기다리면 깨지는 조건이 한 정책에 함께 있을 수 있다 — 24세 사용자에게
+    거주 36개월을 요구하면서 연령 상한이 25세인 정책은, 거주 요건을 채우는
+    날 이미 나이가 넘는다. 미충족 조건만 보면 그 날짜가 나오고, 사용자는
+    3년을 기다렸다가 반려된다.
+
+    확인은 날짜 산술을 다시 짜지 않고 **그 날짜로 전 조건을 다시 평가**해서
+    한다. 계산식을 복제하면 한쪽만 고쳐질 때 조용히 어긋난다.
     """
     if unknown or not unmatched:
         return None
@@ -268,8 +281,17 @@ def future_eligible_date(
         if not rule.satisfiable_from:
             return None
         dates.append(rule.satisfiable_from)
+
     # ISO 날짜는 사전순 비교가 시간순과 일치한다
-    return max(dates)
+    candidate = max(dates)
+    when = date.fromisoformat(candidate)
+
+    for ref_index in snapshot.rules_by_policy[policy_index]:
+        rule = snapshot.rule_refs[ref_index].rule
+        if evaluate_rule(rule, profile.resolve(rule.field, when)) is not Outcome.PASS:
+            return None
+
+    return candidate
 
 
 def _unmatched(rule, user_value, profile: UserProfile, today: date, origin: str | None):

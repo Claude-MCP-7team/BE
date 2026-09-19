@@ -536,3 +536,41 @@ def test_충족예상일을_줄_때는_못_본_조건이_신뢰도를_낮춘다(
 
     assert r.future_eligible_from == "2026-11-15"
     assert r.confidence == "NEEDS_REVIEW"
+
+
+def test_그날_다른_조건이_깨지면_날짜를_주지_않는다():
+    """기다리면 충족되는 조건과 기다리면 깨지는 조건이 한 정책에 같이 있을 수 있다.
+
+    미충족 조건만 보면 날짜가 나오지만, 그날엔 이미 나이가 넘는다.
+    3년을 기다렸다가 반려되는 안내를 하면 안 된다.
+    """
+    policy = P(
+        "A",
+        [
+            R("AGE", "age", "between", [19, 26]),  # 지금 25세 — 충족
+            R("RES", "residence_months_continuous", ">=", 36),  # 2029-05-15 에 충족
+        ],
+    )
+    snap = compile_snapshot([policy])
+    me = profile(birth_date=date(2001, 3, 14), residence_start_date=date(2026, 5, 15))
+
+    r = explain(snap, me, TODAY, 0, "INELIGIBLE")
+
+    거주 = next(u for u in r.unmatched if u.field == "residence_months_continuous")
+    assert 거주.satisfiable_from == "2029-05-15"  # 조건 하나만 보면 이 날
+    assert r.future_eligible_from is None  # 그날 28세라 연령 상한(26)을 넘는다
+
+
+def test_그날에도_다른_조건이_유지되면_날짜를_준다():
+    """대조군 — 상한이 넉넉하면 같은 구성에서 날짜가 나온다."""
+    policy = P(
+        "A",
+        [
+            R("AGE", "age", "between", [19, 39]),
+            R("RES", "residence_months_continuous", ">=", 36),
+        ],
+    )
+    snap = compile_snapshot([policy])
+    me = profile(birth_date=date(2001, 3, 14), residence_start_date=date(2026, 5, 15))
+
+    assert explain(snap, me, TODAY, 0, "INELIGIBLE").future_eligible_from == "2029-05-15"
