@@ -21,3 +21,7 @@ SNAPSHOT_PATH=data/manual/snapshot.json uvicorn app.main:app
 | plcyNo | 정책 | 왜 골랐나 |
 | --- | --- | --- |
 | GG-12048 | 포천청년비전센터 10월 프로그램 | "거주 **또는** 재학·재직" OR 조건 — 룰로 못 옮기는 조건이 `unrepresentable_conditions` 로 남는 예. 서류 3종이 마스터(D002/D022/D032)에 매칭된다 |
+| GG-12010 | 가평군 청년 1인가구 월세 지원 (3분기) | 소득 150%·1인 가구·미혼 → 역질문 3개. 청년월세 한시 특별지원과 `explicit_policy` 상충 + 타 지자체 주거지원 `category_overlap`. 서류 10종. 취업 상태에 따라 소득 산정 기준이 달라 소득 룰은 `ambiguous/ESTIMATED` |
+| GG-12023 | 용인청년 중개보수·이사비 지원 (추가 모집) | 소득 180% 역질문 → 답변 후 재판정(시나리오 4). "2026.1.1~6.30 사이 전입" 처럼 **기간 창** 조건은 `residence_months_continuous(>=)` 로 표현 불가 → `unrepresentable` |
+
+데모 흐름은 `python tools/demo_scenario.py` 로 재현한다 (판정 → 역질문 → 재판정 → 조합 → 계획).

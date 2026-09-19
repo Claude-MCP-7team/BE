@@ -1,0 +1,156 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [19, 39],
+      "unit": "세",
+      "source_quote": "신청일 기준 가평군에 주민등록을 두고 있는 19 ~ 39세 1인 청년(미혼) 독립가구",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "API 코드값(19~39)과 일치"
+    },
+    {
+      "kind": "eligibility",
+      "field": "marital_status",
+      "op": "==",
+      "value_number": null,
+      "value_text": "single",
+      "value_bool": null,
+      "value_list": null,
+      "unit": null,
+      "source_quote": "19 ~ 39세 1인 청년(미혼) 독립가구",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "현재 혼인 상태를 알려주세요.",
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "API 코드값(mrgSttsCd=0055002 미혼)과 일치"
+    },
+    {
+      "kind": "eligibility",
+      "field": "household_size",
+      "op": "==",
+      "value_number": 1,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "명",
+      "source_quote": "19 ~ 39세 1인 청년(미혼) 독립가구",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "주민등록상 혼자 사는 1인 가구인가요? (함께 등록된 가구원이 있으면 몇 명인지)",
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": null
+    },
+    {
+      "kind": "eligibility",
+      "field": "household_income_ratio_median",
+      "op": "<=",
+      "value_number": 150,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "%",
+      "source_quote": "소득기준 : 1인 가구 기준 중위소득 150% 이하",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
+      "ambiguous": true,
+      "confidence": "ESTIMATED",
+      "note": "취·창업자는 원가구 소득 미반영, 무직자는 원가구 소득 반영 — 누구 소득으로 150%를 보는지가 취업 상태에 따라 달라 단일 비율로 확정하기 어렵다"
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "가평군 내 임차보증금 1억 원 이하·월세 60만 원 이하 주택에 본인 명의 임대차계약",
+      "source_quote": "주택기준 : 가평군 내 임차보증금 1억 원 이하 및 월세 60만 원 이하 건물",
+      "reason": "보증금·월세 금액과 임대차계약 명의는 사용자 필드에 없다"
+    },
+    {
+      "summary": "국민기초생활수급자(생계·의료·주거급여)는 제외",
+      "source_quote": "국민기초생활수급 대상자 (생계‧의료‧주거급여 수급자)",
+      "reason": "수급 여부 필드가 없다"
+    },
+    {
+      "summary": "주택(또는 주택으로 쓸 수 있는 건물) 소유자는 제외",
+      "source_quote": "주택 소유자(주택으로 활용할 수 있는 건물(근린생활시설 등) 소유 포함)",
+      "reason": "주택 소유 여부 필드가 없다"
+    },
+    {
+      "summary": "신청인 본인이 세대주이고 임대차 계약 당사자여야 함",
+      "source_quote": "신청인 본인이 세대주가 아니거나 임대차 계약 당사자가 신청인이 아닌 경우",
+      "reason": "세대주·계약 당사자 여부 필드가 없다"
+    },
+    {
+      "summary": "직계혈족(및 그 배우자)과 주택 거래 계약을 맺은 경우 제외",
+      "source_quote": "직계혈족 및 그 배우자와 주택 거래 계약을 체결한 경우",
+      "reason": "임대인 관계 필드가 없다"
+    }
+  ],
+  "benefit": {
+    "type": "cash_monthly",
+    "amount_krw": 200000,
+    "duration_months": 3,
+    "estimated_total_krw": 600000,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "월 20만원 월세 지원(1가구당 최대 2년, 생애 1회)"
+  },
+  "period": {
+    "apply_start": "2026-09-14",
+    "apply_end": "2026-09-30",
+    "is_rolling": false,
+    "source_quote": "신청기간 : 2026. 9. 14.(월) ~ 9. 30.(수) 18:00까지"
+  },
+  "documents": [
+    {"name": "가족관계증명서(상세)", "issuer": "행정복지센터, 대법원전자가족관계등록시스템", "source_quote": "가족관계증명서(상세)(필수) — 행정복지센터, 대법원전자가족관계등록시스템"},
+    {"name": "주택 임대차계약서 사본", "issuer": null, "source_quote": "주택 임대차계약서 사본(필수)"},
+    {"name": "통장 사본", "issuer": null, "source_quote": "통장 사본(필수)"},
+    {"name": "지방세(재산세)미과세증명서", "issuer": "행정복지센터 또는 위택스", "source_quote": "지방세(재산세)미과세증명서(필수)"},
+    {"name": "본인신용정보조회서", "issuer": "신용정보원(크레딧포유)", "source_quote": "본인신용정보조회서(필수) — 신용정보원(크레딧포유)"},
+    {"name": "월세 납부 증명자료", "issuer": null, "source_quote": "2026. 6. ~ 8. 월세 납부 증명자료(필수)"},
+    {"name": "주민등록표 등본", "issuer": null, "source_quote": "주민등록표 등본 — 사전 동의 필요 (미 동의시 신청자 제출)"},
+    {"name": "건강보험자격득실확인서", "issuer": null, "source_quote": "건강보험자격득실확인서"},
+    {"name": "건강보험료 납부확인서", "issuer": null, "source_quote": "건강보험료 납부확인서"},
+    {"name": "건축물대장", "issuer": null, "source_quote": "건축물대장"}
+  ],
+  "conflicts": [
+    {
+      "type": "explicit_policy",
+      "target_policy_name": "청년월세 한시 특별지원(국토교통부)",
+      "target_category": null,
+      "target_authority": null,
+      "source_quote": "청년월세 한시 특별지원(국토교통부) 또는 타 지자체 월세지원사업 참여자",
+      "confidence": "CONFIRMED"
+    },
+    {
+      "type": "category_overlap",
+      "target_policy_name": null,
+      "target_category": "타 지자체 월세지원사업",
+      "target_authority": null,
+      "source_quote": "청년월세 한시 특별지원(국토교통부) 또는 타 지자체 월세지원사업 참여자",
+      "confidence": "ESTIMATED"
+    },
+    {
+      "type": "category_overlap",
+      "target_policy_name": null,
+      "target_category": "정부 또는 타 지방자치단체 주거(자금) 지원 사업",
+      "target_authority": null,
+      "source_quote": "정부 또는 타 지방자치단체 주거(자금) 지원 사업 참여자",
+      "confidence": "ESTIMATED"
+    }
+  ],
+  "dept": {
+    "name": "가평군청 기획예산담당관 인구정책팀",
+    "tel": "031-580-2388",
+    "source_quote": "가평군청 기획예산담당관 인구정책팀(☎031-580-2388)"
+  }
+}
