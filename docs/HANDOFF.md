@@ -96,6 +96,35 @@ SNAPSHOT_PATH=data/snapshot.json uvicorn app.main:app
 스냅샷은 1,555건 · 룰 3,253개. 같은 사용자 → 적격 134 · 확인필요 74 · 부적격 1,347.
 처음 이 필터를 적용할 때는 직전 스냅샷 대비 44% 급감이라 `--force` 가 필요하다 (가드가 맞게 동작한 것).
 
+**A2(LLM 구조화)가 생겼다** (`batch/agents/`, 프롬프트는 `app/llm/prompts/a2_structure.md` — AI 역할 소유):
+
+```bash
+pip install -e ".[batch]"                                                 # anthropic SDK
+python -m batch.agents.cli structure data/raw/<타임스탬프> --dry-run          # 대상·글자수만
+ANTHROPIC_API_KEY=... python -m batch.agents.cli structure data/raw/<타임스탬프> -o data/policies.json --limit 5
+python -m batch.build_snapshot data/policies.json -o data/snapshot.json    # 이후는 동일
+```
+
+normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn` 필드 전부 + `--announcements` 원문)에서
+소득 비율·연속 거주 개월·재직 개월·가구원 수·유사사업 참여 제외·서류·중복수혜·금액·담당부서를 얹는다.
+`--limit`/`--ids` 밖의 정책은 base 그대로 출력되므로 빌더 입력은 항상 전체 집합이다.
+
+무엇을 믿고 무엇을 버리는지 (`batch/agents/structure.py` 도크스트링이 원본):
+
+- **인용문이 원문의 연속 구간이 아니면 그 항목은 통째로 버린다** (공백 차이만 허용). 모델이 문장을 다듬은 경우다.
+  버린 항목은 `docs/a2/a2-report-*.json` 에 `QUOTE_NOT_VERBATIM` 으로 남고 그 필드는 `needs_review_fields` 로 간다.
+- **API 코드 룰과 텍스트가 다르게 말하면 어느 쪽도 확정하지 않는다** — API 룰 유지 + `needs_review_fields` + 리포트 `disagreements`.
+  (실제로 `sprtTrgtMaxAge=39` 인데 본문이 "34세 이하"인 정책이 있다. 이 불일치가 검토 큐의 1순위다.)
+- 모델은 `region_code`·`received_policy_ids` 룰을 만들 수 없다 (스키마 enum 에서 제외). 지역은 API 가 권위, 정책 ID 는 모델이 모른다.
+- 표로 못 옮기는 조건(무주택·세대주·자산·원 단위 소득 등)은 `unrepresentable_conditions` 로 받아 리포트에 남기고
+  `needs_review_fields` 에 `"unrepresentable_conditions"` 표식을 넣는다. **엔진은 아직 이 표식을 읽지 않는다** —
+  그런 정책이 ELIGIBLE 로 나올 때 confidence 를 낮출지는 BE 결정 사항 (§8 미결 #10).
+- `askable` 룰의 `question_template` 은 모델 문구 → 없으면 `batch/agents/questions.py` 표준 문구. 필드별 병합(G3) 때문에
+  같은 필드는 같은 문구가 낫다.
+- 응답은 `data/a2-cache/` 에 (프롬프트+텍스트) 해시로 캐시된다. 프롬프트를 고치면 자동으로 다시 호출된다.
+- 아직 **실제 API 키로 돌려보지 못했다.** 테스트 21건은 가짜 LLM 으로 검증·병합 로직만 본다. 첫 실행은 `--limit 5` 로
+  하고 리포트의 `rejected`/`disagreements` 를 읽어 프롬프트를 손보는 것이 AI-M2-3(수동 정답표 대조)이다.
+
 ### ③ 서류 마스터 검증 (BE-M5-1 잔여)
 `data/documents/master_v2.csv` 36종이 **전부 `검증상태=확인필요`** 다.
 실제로 확인된 항목만 `확인완료` 로 바꾸면 `master_unverified` 가 false 가 되고 화면의 추정치 표시가 사라진다. 코드 변경은 필요 없다 — CSV 만 고치면 된다.
@@ -186,13 +215,22 @@ app/
 │   ├─ backplan.py    착수일 역산 · 유효기간 구간 · 서류 기준 뷰
 │   └─ ics.py         RFC 5545 직접 생성 (75옥텟 줄 접기)
 ├─ db/                asyncpg 풀 + 세션 리포지토리  ← engine/solver/planner 는 import 금지
+├─ llm/               🟡 C 레이어 — engine/solver/planner 는 import 금지
+│   ├─ client.py      Anthropic 구조화 출력 호출 (SDK 는 지연 import — 서버 이미지에 불필요)
+│   └─ prompts/       ← AI 역할 소유. a2_structure.md
 ├─ core/
 │   ├─ config.py      환경변수 설정
 │   └─ crypto.py      AES-256-GCM
 └─ schemas/           계약면 (코드가 원본, JSON Schema 는 자동 생성)
 
 batch/
-├─ collect/           온통청년 수집기 + G0 조사 하네스
+├─ collect/           온통청년 수집기 + G0 조사 하네스 + normalize(코드값 → 룰)
+├─ agents/            A2 구조화 (AI 역할)
+│   ├─ contract.py    모델 출력 JSON 스키마 (enum 은 app.schemas.enums 와 테스트로 묶임)
+│   ├─ text.py        텍스트 조립 · 인용문 원문 대조
+│   ├─ questions.py   필드별 역질문 표준 문구
+│   ├─ structure.py   검증 · 병합 · 리포트 (순수 함수 merge)
+│   └─ cli.py         structure 명령 + 응답 캐시
 ├─ build_snapshot.py  🔴 스냅샷 빌더 (검증 관문)
 └─ holidays.py        한국천문연구원 특일 API 동기화
 ```
@@ -334,6 +372,8 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 7 | 온통청년 API 명세 | **외부** | ② 작업을 막고 있음 |
 | 8 | 서류 마스터 36종 검증 | 사람 | CSV 수정만 필요 |
 | 9 | 배포 Base URL · CORS | 팀 | Render Free 예정 |
+| 10 | `needs_review_fields` 의 `unrepresentable_conditions` 표식을 판정 confidence 에 반영할지 | BE | 엔진이 못 보는 조건이 있는 정책이 CONFIRMED·ELIGIBLE 로 나간다 |
+| 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정으로, 예산 얼마) | 팀 | published 1,555건 × Opus 5 ≈ 정책당 $0.03 안팎 추정, 캐시 적용 전 |
 
 ---
 

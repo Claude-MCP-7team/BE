@@ -24,6 +24,7 @@ batch = [
     "beautifulsoup4>=4.12",
     "pdfplumber>=0.11",
     "lxml>=5.3",
+    "anthropic>=1.0",            # A2 구조화 (batch/agents). API 서버는 import 하지 않는다
 ]
 dev = [
     "pytest>=8.3",
@@ -73,6 +74,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "TID", "PLW1514"]
 # app/db 자기 자신은 당연히 app.db 를 import 한다. 이 금지는 '핫 경로가 DB 를
 # 부르지 않는다'는 규칙이지, DB 계층이 스스로를 못 쓴다는 뜻이 아니다.
 "app/db/**" = ["TID251"]
+# app/llm 도 마찬가지 — LLM 계층이 자기 자신을 import 하는 것은 금지 대상이 아니다
+"app/llm/**" = ["TID251"]
 "tests/**" = ["TID251", "E501"]
 
 [tool.mypy]
