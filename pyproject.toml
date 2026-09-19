@@ -31,6 +31,7 @@ dev = [
     "pytest-asyncio>=0.25",
     "ruff>=0.8",
     "mypy>=1.14",
+    "mcp>=2.0",                  # tools/mcp_server.py 테스트가 CI 에서 skip 되지 않게
 ]
 # Claude Code / Desktop 에 판정 API 를 도구로 노출하는 MCP 서버 (tools/mcp_server.py)
 mcp = ["mcp>=2.0"]
