@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any
@@ -236,6 +237,7 @@ def merge(
             source_quote=c["source_quote"],
             target_policy_name=c.get("target_policy_name") or None,
             target_category=c.get("target_category") or None,
+            target_benefit_type=c.get("target_benefit_type") or None,
             target_authority=c.get("target_authority") or None,
             confidence=c.get("confidence") or "ESTIMATED",
         )
@@ -275,6 +277,46 @@ def merge(
         quality=quality,
     )
     return merged, report
+
+
+def resolve_conflict_targets(policies: list[PolicySchema]) -> dict[str, list[str]]:
+    """explicit_policy 상충의 정책명을 같은 묶음 안의 policy_id 로 잇는다.
+
+    솔버(app/solver/graph.py)는 target_policy_ids 만 보고 간선을 만든다. 모델은 정책명밖에
+    모르므로 여기서 제목과 대조한다. 정책명이 제목에 그대로 들어 있는 정책이 **정확히 하나**일
+    때만 잇는다 — 둘 이상이면 어느 쪽인지 모르는 것이고, 틀린 간선은 받을 수 있는 조합을
+    사용자 몰래 지운다. 잇지 못한 이름은 돌려줘서 리포트에 남긴다 (정책 ID → 이름 목록).
+    """
+    titles = [(p.policy_id, _squash(p.meta.title)) for p in policies]
+    unresolved: dict[str, list[str]] = {}
+
+    for i, policy in enumerate(policies):
+        changed = False
+        new_conflicts: list[Conflict] = []
+        for c in policy.conflicts:
+            if c.type != "explicit_policy" or c.target_policy_ids or not c.target_policy_name:
+                new_conflicts.append(c)
+                continue
+            wanted = _squash(c.target_policy_name)
+            hits = [pid for pid, title in titles if pid != policy.policy_id and wanted in title]
+            if len(hits) == 1:
+                new_conflicts.append(msgspec.structs.replace(c, target_policy_ids=hits))
+                changed = True
+            else:
+                new_conflicts.append(c)
+                unresolved.setdefault(policy.policy_id, []).append(c.target_policy_name)
+        if changed:
+            policies[i] = msgspec.structs.replace(policy, conflicts=new_conflicts)
+
+    return unresolved
+
+
+def _squash(s: str) -> str:
+    """제목 대조용 — 공백과 괄호 안 부연을 걷어낸다.
+
+    '청년월세 한시 특별지원(국토교통부)' → '청년월세한시특별지원'
+    """
+    return re.sub(r"\([^)]*\)|\s+", "", s)
 
 
 # --- 부속 ---------------------------------------------------------------------

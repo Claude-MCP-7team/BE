@@ -11,12 +11,24 @@ import typing
 from pathlib import Path
 from typing import Any
 
-from app.schemas.enums import KNOWN_FIELDS, Confidence, ConflictType, Operator
+from app.schemas.enums import (
+    KNOWN_FIELDS,
+    BenefitType,
+    Category,
+    Confidence,
+    ConflictType,
+    Operator,
+)
 from app.schemas.validate import validate_policy
 from batch.agents.cli import CachedLLM
 from batch.agents.contract import A2_OUTPUT_SCHEMA, CONDITION_SCHEMA, STRUCTURABLE_FIELDS
 from batch.agents.questions import DEFAULT_QUESTION_TEMPLATES
-from batch.agents.structure import UNREPRESENTABLE_MARKER, merge, structure_policy
+from batch.agents.structure import (
+    UNREPRESENTABLE_MARKER,
+    merge,
+    resolve_conflict_targets,
+    structure_policy,
+)
 from batch.agents.text import assemble_text, quote_found
 from batch.collect.normalize import record_to_policy
 
@@ -332,6 +344,51 @@ def test_서류와_상충은_검증을_거쳐_붙는다():
     assert [c.target_policy_name for c in merged.conflicts] == ["청년월세 한시 특별지원"]
     assert {x.code for x in report.rejected} == {"QUOTE_NOT_VERBATIM", "CONFLICT_TARGET_MISSING"}
     assert validate_policy(merged) == []
+
+
+def test_분류_상충의_target_category_는_솔버가_비교하는_enum_이다():
+    # graph.py 는 target_category == meta.category 로 간선을 만든다. 자유 문구면 간선 0개.
+    schema = A2_OUTPUT_SCHEMA["properties"]["conflicts"]["items"]["properties"]
+    assert set(schema["target_category"]["enum"]) == {*typing.get_args(Category), None}
+    assert set(schema["target_benefit_type"]["enum"]) == {*typing.get_args(BenefitType), None}
+
+    c = {
+        "type": "category_overlap",
+        "target_policy_name": None,
+        "target_category": "housing",
+        "target_benefit_type": "cash_monthly",
+        "target_authority": None,
+        "source_quote": "청년월세 한시 특별지원과 중복 수혜 불가",
+        "confidence": "ESTIMATED",
+    }
+    merged, _ = merge(base_policy(), output(conflicts=[c]), assemble_text(rec()))
+    assert merged.conflicts[0].target_category == "housing"
+    assert merged.conflicts[0].target_benefit_type == "cash_monthly"
+
+
+def test_명시_상충의_정책명은_같은_묶음의_제목과_이어진다():
+    text = assemble_text(rec())
+    c = {
+        "type": "explicit_policy",
+        "target_policy_name": "청년월세 한시 특별지원",
+        "target_category": None,
+        "target_benefit_type": None,
+        "target_authority": None,
+        "source_quote": "청년월세 한시 특별지원과 중복 수혜 불가",
+        "confidence": "CONFIRMED",
+    }
+    a, _ = merge(base_policy(), output(conflicts=[c]), text)
+    b = record_to_policy(rec(plcyNo="R2", plcyNm="2026년 청년월세 한시 특별지원 (국토교통부)"))
+    b2 = record_to_policy(rec(plcyNo="R3", plcyNm="청년월세 한시 특별지원 2차"))
+
+    policies = [a, b]
+    assert resolve_conflict_targets(policies) == {}
+    assert policies[0].conflicts[0].target_policy_ids == ["R2"]
+
+    # 후보가 둘이면 잇지 않는다 — 틀린 간선은 받을 수 있는 조합을 몰래 지운다
+    policies = [a, b, b2]
+    assert resolve_conflict_targets(policies) == {"R1": ["청년월세 한시 특별지원"]}
+    assert policies[0].conflicts[0].target_policy_ids == []
 
 
 def test_담당부서_전화번호는_인용_없이_받지_않는다():

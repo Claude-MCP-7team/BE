@@ -43,6 +43,15 @@ GAPYEONG: Profile = {
         "employment_start_date": "2025-01-02",
     }
 }
+# 시나리오 C — 23세(2026-10-15 에 24세) · 수원 · 2020-03-01 부터 거주 → FUTURE_PASS (시나리오 3)
+SUWON_23: Profile = {
+    "core": {
+        "birth_date": "2002-10-15",
+        "region_code": "41110",
+        "residence_start_date": "2020-03-01",
+        "employment_status": "job_seeking",
+    }
+}
 
 
 def main() -> int:
@@ -65,7 +74,10 @@ def main() -> int:
             for u in res["unmatched"]:
                 quote = u["source_quote"][:50]
                 need = f"내 값={u['user_value']} 필요={u['required']}"
-                print(f'      FAIL {u["field"]}: {need}  ⟵ "{quote}"')
+                when = f"  → {u['satisfiable_from']}부터 가능" if u.get("satisfiable_from") else ""
+                if u.get("permanently_unsatisfiable"):
+                    when = "  → 시간이 지나도 충족 불가"
+                print(f'      FAIL {u["field"]}: {need}{when}  ⟵ "{quote}"')
             for u in res["unknown"]:
                 print(f"      ?    {u['field']}: {u['question_template']}")
 
@@ -81,6 +93,8 @@ def main() -> int:
     )
 
     judge("B-1  25세 가평 미혼 1인가구 직장인", GAPYEONG)
+
+    judge("C-1  23세(다음 달 24세) 수원 거주 6년 → 청년기본소득 향후 가능일", SUWON_23)
 
     print("\n=== B-2  조합 추천")
     for scenario in post("/v1/combinations", GAPYEONG)["scenarios"]:

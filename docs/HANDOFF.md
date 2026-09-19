@@ -374,6 +374,7 @@ pytest && ruff check . && python tools/export_contract.py && git diff --exit-cod
 | 9 | 배포 Base URL · CORS | 팀 | Render Free 예정 |
 | 10 | `needs_review_fields` 의 `unrepresentable_conditions` 표식을 판정 confidence 에 반영할지 | BE | 엔진이 못 보는 조건이 있는 정책이 CONFIRMED·ELIGIBLE 로 나간다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정으로, 예산 얼마) | 팀 | published 1,555건 × Opus 5 ≈ 정책당 $0.03 안팎 추정, 캐시 적용 전 |
+| 12 | 충족 예상일이 다른 룰과 모순될 때 | BE | 24세 사용자의 청년기본소득: 거주 36개월은 "2029-05-15부터 가능"인데 그때는 27세라 나이 룰이 깨진다. 룰별 날짜만 내고 정책 수준 교차검증은 없음 (`tools/demo_scenario.py` A-1) |
 
 ---
 

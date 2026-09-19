@@ -125,8 +125,9 @@
   "conflicts": [
     {
       "type": "explicit_policy",
-      "target_policy_name": "청년월세 한시 특별지원(국토교통부)",
+      "target_policy_name": "청년월세 한시 특별지원",
       "target_category": null,
+      "target_benefit_type": null,
       "target_authority": null,
       "source_quote": "청년월세 한시 특별지원(국토교통부) 또는 타 지자체 월세지원사업 참여자",
       "confidence": "CONFIRMED"
@@ -134,7 +135,8 @@
     {
       "type": "category_overlap",
       "target_policy_name": null,
-      "target_category": "타 지자체 월세지원사업",
+      "target_category": "housing",
+      "target_benefit_type": "cash_monthly",
       "target_authority": null,
       "source_quote": "청년월세 한시 특별지원(국토교통부) 또는 타 지자체 월세지원사업 참여자",
       "confidence": "ESTIMATED"
@@ -142,7 +144,8 @@
     {
       "type": "category_overlap",
       "target_policy_name": null,
-      "target_category": "정부 또는 타 지방자치단체 주거(자금) 지원 사업",
+      "target_category": "housing",
+      "target_benefit_type": null,
       "target_authority": null,
       "source_quote": "정부 또는 타 지방자치단체 주거(자금) 지원 사업 참여자",
       "confidence": "ESTIMATED"

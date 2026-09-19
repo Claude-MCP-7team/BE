@@ -59,11 +59,15 @@ JSON 스키마가 강제된다. 각 항목의 의미:
 제출 서류. `name` 은 공고문 표기 그대로(예: "주민등록등본"), `issuer` 는 발급처가 적혀 있을 때만. 각각 `source_quote`. 발급 소요일은 적지 마라 — 서류 마스터가 결정한다.
 
 ### conflicts[]
-중복수혜 제한 문구. 계산은 하지 말고 관계만 적는다.
-- `explicit_policy`: 특정 정책명이 지목됨 → `target_policy_name`
-- `category_overlap`: "동일 목적의 타 사업", "유사 지원사업" 등 분류 단위 → `target_category` 에 그 표현(예: "동일 목적의 주거지원")
-- `same_authority`: "본 시에서 시행하는 다른 사업" 등 기관 단위 → `target_authority`
+중복수혜 제한 문구. 계산은 하지 말고 관계만 적는다. 코드는 이 관계를 정책 간 간선으로 바꾼다.
+- `explicit_policy`: 특정 정책명이 지목됨 → `target_policy_name` 에 공고문 표기 그대로
+- `category_overlap`: "동일 목적의 타 사업", "타 지자체 월세지원", "정부·지자체 주거 지원사업" 등 분류 단위 →
+  `target_category` 는 **분류 코드 하나**: `job`(일자리) `housing`(주거) `education`(교육) `welfare`(복지·소득) `participation`(참여·활동).
+  급부 형태까지 특정되면 `target_benefit_type` 에 `cash_lump` `cash_monthly` `loan` `voucher` `service` 중 하나, 아니면 null.
+  예: "타 지자체 월세지원사업 참여자 제외" → `housing` + `cash_monthly`. "주거(자금) 지원 사업 참여자 제외" → `housing` + null
+- `same_authority`: "본 시에서 시행하는 다른 사업" 등 기관 단위 → `target_authority` 에 기관명
 - `confidence`: 정책명이 명시되면 `CONFIRMED`, 그 외 `ESTIMATED`
+- 문구 자체는 `source_quote` 에 남는다. 사용자에게 보이는 건 그 인용문이다.
 
 ### dept
 담당 부서명과 전화번호가 원문에 있으면 적는다. 전화번호는 원문 표기 그대로.

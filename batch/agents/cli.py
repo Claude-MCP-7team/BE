@@ -34,7 +34,7 @@ import msgspec
 from app.core.console import force_utf8_console
 from app.llm.client import LLM, LLMError, load_prompt
 from app.schemas.policy import PolicySchema
-from batch.agents.structure import A2Report, structure_policy
+from batch.agents.structure import A2Report, resolve_conflict_targets, structure_policy
 from batch.agents.text import Record, assemble_text
 from batch.collect.client import load_raw
 from batch.collect.normalize import record_to_policy
@@ -150,6 +150,11 @@ def cmd_structure(args: argparse.Namespace) -> int:
 
     if responses is None:
         cache_hits = cached.hits
+
+    unresolved = resolve_conflict_targets(policies)
+    for pid, names in unresolved.items():
+        print(f"  ! {pid}: 상충 상대 정책을 이 묶음에서 찾지 못함 — {', '.join(names)}")
+
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(msgspec.json.format(msgspec.json.encode(policies), indent=2))

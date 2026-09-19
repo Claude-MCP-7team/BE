@@ -12,9 +12,10 @@ PolicySchema 를 그대로 쓰지 않고 별도 스키마를 두는 이유:
 
 from __future__ import annotations
 
+import typing
 from typing import Any
 
-from app.schemas.enums import KNOWN_FIELDS
+from app.schemas.enums import KNOWN_FIELDS, BenefitType, Category
 
 # 모델이 만들 수 있는 필드. region_code 와 received_policy_ids 는 제외한다 —
 # 지역은 API 코드가 권위이고, 정책 ID 는 모델이 알 수 없다 (프롬프트와 일치).
@@ -75,7 +76,7 @@ A2_OUTPUT_SCHEMA: dict[str, Any] = _obj(
             {
                 "type": {
                     "type": ["string", "null"],
-                    "enum": ["cash_lump", "cash_monthly", "loan", "voucher", "service", None],
+                    "enum": [*typing.get_args(BenefitType), None],
                 },
                 "amount_krw": _NULLABLE_INT,
                 "duration_months": _NULLABLE_INT,
@@ -111,7 +112,16 @@ A2_OUTPUT_SCHEMA: dict[str, Any] = _obj(
                         "enum": ["explicit_policy", "category_overlap", "same_authority"],
                     },
                     "target_policy_name": _NULLABLE_STR,
-                    "target_category": _NULLABLE_STR,
+                    # 솔버(app/solver/graph.py)는 target_category 를 meta.category 와 등호로
+                    # 비교한다. 자유 문구를 넣으면 간선이 조용히 하나도 안 생긴다.
+                    "target_category": {
+                        "type": ["string", "null"],
+                        "enum": [*typing.get_args(Category), None],
+                    },
+                    "target_benefit_type": {
+                        "type": ["string", "null"],
+                        "enum": [*typing.get_args(BenefitType), None],
+                    },
                     "target_authority": _NULLABLE_STR,
                     "source_quote": {"type": "string"},
                     "confidence": {"type": "string", "enum": ["CONFIRMED", "ESTIMATED"]},
