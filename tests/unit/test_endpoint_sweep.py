@@ -198,24 +198,109 @@ def test_모든_POST_가_공용_디코더를_쓴다() -> None:
         )
 
 
-def test_docs_가_계약_JSON_으로_안내한다() -> None:
-    """`/docs` 는 POST 본문을 보여주지 못한다. 그 사실을 거기 적어 둬야 한다.
+def test_본문을_받는_엔드포인트는_스키마에도_본문이_있다() -> None:
+    """`/docs` 와 생성된 클라이언트가 빈 요청을 보내지 않게 한다.
 
-    스키마에 requestBody 가 없는 건 본문을 직접 디코드하기 때문이고, 당장 고칠
-    계획이 없다. 그러면 최소한 FE 가 /docs 를 보고 "본문 없는 엔드포인트"로 오해한
-    채 연동하지는 않게 해야 한다. 이 단언이 깨지는 경우는 둘이다 — 안내를 지웠거나,
-    requestBody 를 제대로 붙였거나. 후자면 안내를 지우면서 이 테스트도 지우면 된다.
+    본문을 Pydantic 파라미터가 아니라 msgspec 으로 직접 읽기 때문에 FastAPI 가
+    스스로는 본문을 모른다. `openapi_extra` 로 채워 넣는데, 새 엔드포인트에서
+    그걸 빠뜨리면 문서만 조용히 틀린다 — 에러가 안 나는 고장이라 연동하는 쪽이
+    한참 헤맨 뒤에야 안다.
     """
     from app.main import app
 
     schema = app.openapi()
-    still_missing = [
-        path for path, ops in schema["paths"].items()
-        if "post" in ops and not ops["post"].get("requestBody")
+    missing = [
+        f"{verb.upper()} {path}"
+        for path, ops in schema["paths"].items()
+        for verb in ("post", "put")
+        if verb in ops and not ops[verb].get("requestBody")
     ]
-    if not still_missing:
-        pytest.fail("requestBody 가 생겼다 — /docs 안내와 이 테스트를 지울 것")
+    assert not missing, (
+        f"요청 본문이 문서에 없다: {missing} — app.api.schema.profile_body() 를 "
+        f"openapi_extra 로 붙일 것"
+    )
 
-    description = schema["info"]["description"]
-    assert "docs/contracts" in description, "/docs 에 계약 JSON 안내가 없다"
-    assert "user_profile.json" in description, "요청 본문이 어느 파일인지 적어야 한다"
+
+def test_요청_본문_스키마가_실제_모델을_가리킨다() -> None:
+    """ref 만 있고 컴포넌트가 없으면 /docs 는 본문을 빈 객체로 그린다.
+
+    증상이 '본문이 없다'에서 '본문이 비어 있다'로 바뀔 뿐 고쳐진 게 아니다.
+    """
+    from app.main import app
+
+    schema = app.openapi()
+    components = schema["components"]["schemas"]
+    assert "UserProfile" in components
+
+    ref = schema["paths"]["/v1/judge"]["post"]["requestBody"]["content"]
+    name = ref["application/json"]["schema"]["$ref"].rsplit("/", 1)[-1]
+    body = components[name]
+    assert "core" in body.get("properties", {}), body
+    assert body.get("required") == ["core"], body
+
+    # core 안까지 실제로 풀려야 FE 가 어떤 필드를 보낼지 알 수 있다
+    core_name = body["properties"]["core"]["$ref"].rsplit("/", 1)[-1]
+    core = components[core_name]["properties"]
+    assert {"birth_date", "region_code", "household_income_ratio_median"} <= set(core)
+
+
+def test_본문이_선택인_곳은_선택으로_적힌다() -> None:
+    """전부 required=true 로 적으면 문서가 또 틀린다 — 방향만 반대다.
+
+    `POST /v1/sessions` 는 본문 없이 부르면 프로필 없는 익명 세션이 발급된다.
+    """
+    from app.main import app
+
+    paths = app.openapi()["paths"]
+    assert paths["/v1/sessions"]["post"]["requestBody"]["required"] is False
+    assert paths["/v1/judge"]["post"]["requestBody"]["required"] is True
+
+
+def test_문서에_적힌_대로_보내면_실제로_통과한다(client) -> None:
+    """문서와 서버가 갈라지는 것을 막는 진짜 검사.
+
+    스키마가 붙어 있다는 것만으로는 부족하다 — 엉뚱한 모델을 가리켜도 붙어는 있다.
+    커밋된 데모 프로필은 `Core` 의 모든 필드를 채우고 있으므로, 이게 200 이면
+    문서가 선언한 필드를 서버가 전부 받아들인다는 뜻이다.
+    """
+    import json as _json
+    from pathlib import Path
+
+    profile = _json.loads(
+        Path("data/demo/profile.demo.json").read_text(encoding="utf-8")
+    )
+    r = client.post("/v1/judge", json=profile)
+    assert r.status_code == 200, r.text
+
+
+def test_문서의_필드_목록이_실제_모델과_같다() -> None:
+    """한쪽만 바뀌면 FE 는 보내도 되는 필드를 못 보내거나, 없는 필드를 보낸다.
+
+    `forbid_unknown_fields` 때문에 후자는 프로필 전체가 422 로 튕긴다 — 문서를
+    믿고 만든 클라이언트가 아무것도 못 하게 된다.
+    """
+    import msgspec
+
+    from app.main import app
+    from app.schemas.user import Core
+
+    documented = set(
+        app.openapi()["components"]["schemas"]["Core"]["properties"]
+    )
+    actual = {f.encode_name for f in msgspec.inspect.type_info(Core).fields}
+    assert documented == actual, (
+        f"문서에만: {sorted(documented - actual)} / 모델에만: {sorted(actual - documented)}"
+    )
+
+
+def test_문서가_필수라고_한_것은_실제로_필수다(client) -> None:
+    """required 가 거짓이면 FE 는 선택 필드로 알고 안 보낸다."""
+    from app.main import app
+
+    components = app.openapi()["components"]["schemas"]
+    for field in components["Core"]["required"]:
+        body = {"core": {"birth_date": "1998-03-14", "region_code": "41190"}}
+        del body["core"][field]
+        r = client.post("/v1/judge", json=body)
+        assert r.status_code == 422, f"{field} 를 빼도 통과한다 ({r.status_code})"
+        assert field in r.json()["detail"], r.json()

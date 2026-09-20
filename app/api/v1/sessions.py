@@ -22,6 +22,7 @@ import msgspec
 from fastapi import APIRouter, Path, Request, Response
 
 from app.api.decode import decode_profile
+from app.api.schema import profile_body
 from app.core.crypto import DecryptionFailed
 from app.core.problem import (
     SESSION_NOT_FOUND,
@@ -68,7 +69,15 @@ def _decode_profile(body: bytes) -> UserProfile:
     return decode_profile(body)
 
 
-@router.post("/sessions", status_code=201)
+@router.post(
+    "/sessions",
+    status_code=201,
+    # 본문 없이 부르면 프로필 없는 익명 세션이 발급된다 — 그래서 required=False.
+    openapi_extra=profile_body(
+        required=False,
+        description="저장할 프로필. 생략하면 빈 세션만 발급한다",
+    ),
+)
 async def create_session(request: Request) -> Response:
     """익명 세션 발급. 본문에 프로필을 담으면 함께 저장한다.
 
@@ -123,7 +132,7 @@ async def get_session(session_id: SessionId) -> Response:
     )
 
 
-@router.put("/sessions/{session_id}")
+@router.put("/sessions/{session_id}", openapi_extra=profile_body())
 async def put_session(session_id: SessionId, request: Request) -> Response:
     """프로필을 통째로 덮어쓴다 (FE 의 `PUT /api/profile`).
 

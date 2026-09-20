@@ -19,6 +19,7 @@ import msgspec
 from fastapi import APIRouter, Header, Query, Request, Response
 
 from app.api.decode import decode_profile
+from app.api.schema import profile_body
 from app.core.clock import today_kst
 from app.core.problem import (
     POLICY_NOT_FOUND,
@@ -55,7 +56,7 @@ def profile_hash(profile: UserProfile) -> str:
     return hashlib.sha256(msgspec.json.encode(profile)).hexdigest()[:16]
 
 
-@router.post("/judge")
+@router.post("/judge", openapi_extra=profile_body())
 async def judge(
     request: Request,
     include: Annotated[
@@ -290,7 +291,7 @@ async def snapshot_meta() -> dict[str, object]:
     return snapshot_store.holder.info
 
 
-@router.post("/questions")
+@router.post("/questions", openapi_extra=profile_body())
 async def questions(request: Request) -> Response:
     """조건을 받아 역질문 큐를 돌려준다 (S3).
 
@@ -321,7 +322,7 @@ async def questions(request: Request) -> Response:
     )
 
 
-@router.post("/combinations")
+@router.post("/combinations", openapi_extra=profile_body())
 async def combinations(request: Request) -> Response:
     """적격 정책들의 최적 조합을 보수/최대 2안으로 돌려준다 (S6).
 
@@ -369,7 +370,7 @@ async def _plan_from_request(request: Request) -> tuple[Snapshot, PlanResponse]:
     return snapshot, plan
 
 
-@router.post("/plan")
+@router.post("/plan", openapi_extra=profile_body())
 async def plan(request: Request) -> Response:
     """적격 정책의 신청 일정 — 서류·권장 착수일 (US-05, S7).
 
@@ -388,7 +389,7 @@ async def plan(request: Request) -> Response:
     )
 
 
-@router.post("/plan.ics")
+@router.post("/plan.ics", openapi_extra=profile_body())
 async def plan_ics(request: Request) -> Response:
     """같은 계획을 캘린더로. 사용자가 앱을 다시 열지 않아도 마감을 기억하게 한다."""
     _, payload = await _plan_from_request(request)

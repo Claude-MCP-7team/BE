@@ -36,12 +36,12 @@ BE 는 배포되어 있고 (`https://be-27y9.onrender.com`), FE 계약 3건(소�
 
 | 항목 | 값 |
 | --- | --- |
-| HEAD | `7a508cc` Answer malformed request bodies with 422, not 500 |
+| HEAD | `dev` 최신 — `git log -1` 로 확인할 것 |
 | 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 |
 | 배포 | `https://be-27y9.onrender.com` (Render, `render.yaml`). **데모 스냅샷 5건**으로 떠 있다 — 실데이터가 아니다 |
 | CORS | **비어 있다.** FE 주소가 정해지면 Render → Environment → `CORS_ORIGINS` 에 넣는다. 그때까지 브라우저에서 호출 불가 |
 | 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
-| 테스트 | **638건 통과** (DB 통합 포함, skip 0) |
+| 테스트 | **644건 통과** (DB 통합 포함, skip 0) |
 | CI | 통과 (lint · **타입** · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
 
 > ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
@@ -64,7 +64,7 @@ python bench/engine_bench.py
 pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
 ```
 
-`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 638건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 644건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
 
 **API 키 없이도 전 경로가 돈다.** `data/demo/` 의 고정 정책 5건이 그 바닥을 받친다:
 
@@ -460,9 +460,35 @@ issubclass(msgspec.ValidationError, msgspec.DecodeError)  # True
 짧게 끝나 그 엔드포인트 훑기가 전부 skip 된다. 안 도는 테스트는 없는 테스트다.
 `DATABASE_URL` 을 주는 이유와 같다.
 
-> ⚠️ 관련해서 **아직 안 고친 것**: POST 6개 전부 OpenAPI 스키마에 `requestBody` 가
-> 없다. `await request.body()` 로 직접 읽어서 FastAPI 가 본문을 모른다. `/docs` 와
-> FE 의 자동 생성 클라이언트가 "본문 없는 엔드포인트"로 본다.
+### 요청 본문은 문서에 직접 붙여 넣는다 (`app/api/schema.py`)
+
+본문을 Pydantic 파라미터가 아니라 `await request.body()` + msgspec 으로 읽는다.
+내부 모델이 msgspec 이라 변환이 한 번 줄고 오류 메시지도 필드 경로까지 나오는데,
+대가가 하나 있었다 — **FastAPI 가 본문을 모른다.** `/docs` 에 POST 엔드포인트가
+'본문 없는 엔드포인트'로 그려졌고, 스키마로 클라이언트를 만들면 빈 요청을 보냈다.
+에러가 아니라 **문서가 틀린 것**이라, 연동하는 쪽이 한참 헤맨 뒤에야 안다.
+
+디코드 방식은 그대로 두고 스키마만 바로잡았다. `openapi_extra=profile_body()` 로
+라우트에 본문을 선언하고, `install_request_schemas(app)` 이 msgspec 컴포넌트를
+OpenAPI 문서에 합친다. **런타임 동작에는 영향이 없다** — 문서 생성에만 관여한다.
+
+- `msgspec.json.schema()` 가 아니라 `schema_components(ref_template=...)` 를 쓴다.
+  전자는 `$defs` 를 쓰는데 OpenAPI 는 `#/components/schemas/` 를 본다. 맞춰 주지
+  않으면 `/docs` 가 참조를 못 찾아 본문을 **빈 객체로** 그린다 — 증상이 '본문이
+  없다'에서 '본문이 비어 있다'로 바뀔 뿐 고쳐진 게 아니다.
+- `required` 는 라우트마다 정한다. `POST /v1/sessions` 는 본문 없이 부르면 프로필
+  없는 익명 세션이 발급되므로 `required=False` 다. 전부 필수로 적으면 문서가 또
+  틀린다 — 방향만 반대일 뿐 같은 종류의 거짓말이다.
+
+**테스트는 '스키마가 붙어 있다'가 아니라 '문서대로 보내면 통과한다'를 본다.**
+엉뚱한 모델을 가리켜도 붙어는 있기 때문이다 (`tests/unit/test_endpoint_sweep.py`):
+
+| 검사 | 막는 것 |
+| --- | --- |
+| 데모 프로필(전 필드)이 200 | 문서가 선언한 필드를 서버가 거부하는 경우 |
+| 문서의 `Core` 필드 == 모델 필드 | 한쪽만 바뀌어 FE 가 없는 필드를 보내는 경우 (→ 전체 422) |
+| `required` 를 빼면 422 | 필수를 선택으로 잘못 적어 FE 가 안 보내는 경우 |
+
 
 ### 설명문이 실패해도 판정은 나간다
 
