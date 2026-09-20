@@ -196,3 +196,26 @@ def test_모든_POST_가_공용_디코더를_쓴다() -> None:
         assert "msgspec.json.decode(body" not in src, (
             f"{name} 이 직접 디코드한다 — app.api.decode.decode_profile 를 쓸 것"
         )
+
+
+def test_docs_가_계약_JSON_으로_안내한다() -> None:
+    """`/docs` 는 POST 본문을 보여주지 못한다. 그 사실을 거기 적어 둬야 한다.
+
+    스키마에 requestBody 가 없는 건 본문을 직접 디코드하기 때문이고, 당장 고칠
+    계획이 없다. 그러면 최소한 FE 가 /docs 를 보고 "본문 없는 엔드포인트"로 오해한
+    채 연동하지는 않게 해야 한다. 이 단언이 깨지는 경우는 둘이다 — 안내를 지웠거나,
+    requestBody 를 제대로 붙였거나. 후자면 안내를 지우면서 이 테스트도 지우면 된다.
+    """
+    from app.main import app
+
+    schema = app.openapi()
+    still_missing = [
+        path for path, ops in schema["paths"].items()
+        if "post" in ops and not ops["post"].get("requestBody")
+    ]
+    if not still_missing:
+        pytest.fail("requestBody 가 생겼다 — /docs 안내와 이 테스트를 지울 것")
+
+    description = schema["info"]["description"]
+    assert "docs/contracts" in description, "/docs 에 계약 JSON 안내가 없다"
+    assert "user_profile.json" in description, "요청 본문이 어느 파일인지 적어야 한다"

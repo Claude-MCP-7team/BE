@@ -53,7 +53,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="YPC Backend",
-    description="청년정책 자격 판정 및 조합 최적화 API",
+    description=(
+        "청년정책 자격 판정 및 조합 최적화 API\n\n"
+        "> ⚠️ **POST 엔드포인트의 요청 본문은 이 화면에 표시되지 않습니다.**\n"
+        "> 본문을 msgspec 으로 직접 디코드해서 FastAPI 가 스키마를 모릅니다.\n"
+        "> 실제 요청 형식은 저장소의 `docs/contracts/` 를 보세요 —\n"
+        "> 이쪽이 코드에서 생성되는 원본이고, CI 가 드리프트를 검사합니다.\n"
+        ">\n"
+        "> | 파일 | 내용 |\n"
+        "> | --- | --- |\n"
+        "> | `user_profile.json` | **요청 본문** (POST 전부 동일) |\n"
+        "> | `judgement_result.json` | 판정 응답 |\n"
+        "> | `rule_fields.json` | 룰이 쓰는 필드 · 숫자 범위 · 단위 |\n"
+        "> | `problems.json` | 에러 유형 |\n"
+        ">\n"
+        "> 바로 쓸 수 있는 예시 본문: `data/demo/profile.demo.json`"
+    ),
     version="0.1.0",
     lifespan=lifespan,
 )
