@@ -18,9 +18,9 @@ from typing import Annotated, Literal
 import msgspec
 from fastapi import APIRouter, Header, Query, Request, Response
 
+from app.api.decode import decode_profile
 from app.core.clock import today_kst
 from app.core.problem import (
-    INVALID_PROFILE,
     POLICY_NOT_FOUND,
     SNAPSHOT_NOT_READY,
     Problem,
@@ -73,10 +73,7 @@ async def judge(
         raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
-    try:
-        profile = msgspec.json.decode(body, type=UserProfile)
-    except msgspec.ValidationError as e:
-        raise Problem(INVALID_PROFILE, str(e)) from e
+    profile = decode_profile(body)
 
     etag = f'W/"{snapshot.version}:{profile_hash(profile)}:{include}:{explain_mode}"'
     if if_none_match == etag:
@@ -311,10 +308,7 @@ async def questions(request: Request) -> Response:
         raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
-    try:
-        profile = msgspec.json.decode(body, type=UserProfile)
-    except msgspec.ValidationError as e:
-        raise Problem(INVALID_PROFILE, str(e)) from e
+    profile = decode_profile(body)
 
     today = today_kst()
     verdicts = judge_all(snapshot, profile, today)
@@ -340,10 +334,7 @@ async def combinations(request: Request) -> Response:
         raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
-    try:
-        profile = msgspec.json.decode(body, type=UserProfile)
-    except msgspec.ValidationError as e:
-        raise Problem(INVALID_PROFILE, str(e)) from e
+    profile = decode_profile(body)
 
     verdicts = judge_all(snapshot, profile, today_kst())
     payload = recommend(snapshot, verdicts)
@@ -367,10 +358,7 @@ async def _plan_from_request(request: Request) -> tuple[Snapshot, PlanResponse]:
         raise Problem(SNAPSHOT_NOT_READY, str(e)) from e
 
     body = await request.body()
-    try:
-        profile = msgspec.json.decode(body, type=UserProfile)
-    except msgspec.ValidationError as e:
-        raise Problem(INVALID_PROFILE, str(e)) from e
+    profile = decode_profile(body)
 
     raw_ids = request.headers.get("X-Policy-Ids")
     policy_ids = [s.strip() for s in raw_ids.split(",") if s.strip()] if raw_ids else None

@@ -66,9 +66,16 @@ def test_같은_503_이라도_원인이_다르면_type_이_다르다(client, mon
     CI 에서만 드러난다.
     """
     monkeypatch.setattr("app.engine.snapshot.holder", SnapshotHolder())
+    # 저장소가 없는 상태를 **명시적으로** 만든다. 예전에는 테스트 기계에
+    # PROFILE_ENC_KEYS 나 DATABASE_URL 이 없다는 데 기대고 있었다 — 둘 중 하나라도
+    # 설정된 환경에서는 /v1/sessions 가 본문 디코드까지 진행해 422 가 되고, 이
+    # 테스트가 검사하려던 503 구분은 검사되지 않은 채 실패로만 나타났다.
+    import app.db.pool as db_pool
+
+    monkeypatch.setattr(type(db_pool.db), "ready", property(lambda self: False))
 
     스냅샷없음 = problem(client.post("/v1/judge", json=BODY))
-    저장소없음 = problem(client.post("/v1/sessions", json={"profile": BODY}))
+    저장소없음 = problem(client.post("/v1/sessions", json=BODY))
 
     assert 스냅샷없음["status"] == 저장소없음["status"] == 503
     assert 스냅샷없음["type"] == "/problems/snapshot-not-ready"

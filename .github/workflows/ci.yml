@@ -60,6 +60,10 @@ jobs:
           # 읽는다) — DSN 이 로그나 에러 메시지에 그대로 찍히는 경로가 많다.
           DATABASE_URL: postgresql://postgres@localhost:5432/ypc_test
           PGPASSWORD: postgres
+          # 같은 이유로 암호화 키도 준다. 없으면 /v1/sessions 가 저장소 없음(503)
+          # 으로 짧게 끝나, 그 엔드포인트를 훑는 테스트가 전부 skip 된다.
+          # 테스트 전용 키다 — 어디에도 쓰이지 않는다.
+          PROFILE_ENC_KEYS: "1:dGVzdC1vbmx5LWtleS1kby1ub3QtdXNlLTMyYnl0ZXM="
         run: pytest
 
       - name: DB 통합 테스트가 실제로 실행됐는지 확인

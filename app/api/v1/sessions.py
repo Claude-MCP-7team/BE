@@ -21,9 +21,9 @@ import asyncpg
 import msgspec
 from fastapi import APIRouter, Path, Request, Response
 
+from app.api.decode import decode_profile
 from app.core.crypto import DecryptionFailed
 from app.core.problem import (
-    INVALID_PROFILE,
     SESSION_NOT_FOUND,
     SESSION_NOT_READABLE,
     SESSION_STORE_UNAVAILABLE,
@@ -65,10 +65,7 @@ def _repo() -> SessionRepository:
 
 
 def _decode_profile(body: bytes) -> UserProfile:
-    try:
-        return msgspec.json.decode(body, type=UserProfile)
-    except msgspec.ValidationError as e:
-        raise Problem(INVALID_PROFILE, str(e)) from e
+    return decode_profile(body)
 
 
 @router.post("/sessions", status_code=201)
