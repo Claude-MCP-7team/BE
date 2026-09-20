@@ -613,6 +613,9 @@ tests/
 ├─ unit/              계층별
 └─ e2e/               🟢 제출용 시나리오 6종 — 데모 대본이자 회귀 감시
 
+scripts/
+└─ preflight.sh       🔴 푸시 전 검사 — CI 세 잡의 조건을 로컬에서 재현 (§6)
+
 batch/
 ├─ collect/           온통청년 수집기 + G0 조사 하네스 + normalize(코드값 → 룰)
 ├─ agents/            A2 구조화 (AI 역할)
@@ -796,7 +799,33 @@ python -m batch.build_snapshot data/policies.json -o snapshot.json
 
 ## 6. 작업 규칙
 
-### 커밋 전 반드시
+### 푸시 전 반드시
+
+```bash
+DATABASE_URL="postgresql://postgres@127.0.0.1:55432/ypc_test" ./scripts/preflight.sh
+```
+
+CI 세 잡의 조건을 로컬에서 그대로 돌린다. **`pytest && ruff && mypy` 만으로는
+부족하다** — CI 잡마다 환경이 다르고, 실제로 그 차이 때문에 5커밋 연속 빨간불이
+난 적이 있다 (로컬에는 `[batch]` 가 깔려 있는데 `windows-cp949` 잡에는 없었다).
+
+| 검사 | 대응 CI 잡 |
+| --- | --- |
+| 린트 · 타입 · 계약 드리프트 · 벤치마크 | `test` |
+| 전체 테스트 (DB 통합 포함) | `test` |
+| DB 통합 테스트가 실제로 돌았나 (skip 금지) | `test` |
+| SDK 없음 + DB 없음 + cp949 | `windows-cp949` |
+
+`docker` 잡만 빠져 있다 — 도커 데몬이 없는 기계가 있어서다. Dockerfile 이나
+`render.yaml` 을 건드렸으면 그건 CI 에서 확인한다.
+
+`DATABASE_URL` 없이 돌리면 DB 검사를 건너뛰고 **종료코드 2** 로 끝난다.
+건너뛴 검사는 CI 가 대신 돌리므로, 초록불을 본 게 아니라는 뜻이다.
+
+> cp949 조건을 만들려고 `anthropic` 패키지를 잠시 치웠다가 되돌린다. 중단되어
+> 숨겨진 채로 남으면 다음 실행이 알아서 복구한다.
+
+### 커밋 전 최소한
 
 ```bash
 pytest && ruff check . && mypy && python tools/export_contract.py && git diff --exit-code docs/contracts/
