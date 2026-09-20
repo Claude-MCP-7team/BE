@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 
 import pytest
@@ -18,6 +19,24 @@ import app.llm.explain as explain_mod
 from app.llm.client import REQUEST_MAX_RETRIES, REQUEST_TIMEOUT_S, LLMError
 from app.llm.explain import explain_all
 from app.schemas.judgement import JudgementResult
+
+
+# anthropic SDK 는 `[batch]` 에만 들어 있다. API 서버도, CI 의 windows-cp949 잡도
+# 설치하지 않는다 — 그게 의도다 (ADR: 서버 이미지에 배치 의존성을 넣지 않는다).
+# 그래서 **SDK 객체를 실제로 만들어 보는 테스트만** 건너뛴다. 폴백·로깅처럼
+# SDK 없이도 검증되는 것은 어디서나 돈다.
+def _has_sdk() -> bool:
+    # find_spec 은 부모 패키지가 없으면 던지기도 한다. 여기서 터지면 '설치 안 됨'
+    # 과 구별할 수 없으므로 같은 뜻으로 받는다.
+    try:
+        return importlib.util.find_spec("anthropic") is not None
+    except (ImportError, ValueError):  # pragma: no cover - 환경에 따라 다름
+        return False
+
+
+needs_sdk = pytest.mark.skipif(
+    not _has_sdk(), reason="anthropic SDK 가 없습니다 (`pip install -e .[batch]`)"
+)
 
 
 def _result() -> JudgementResult:
@@ -82,6 +101,7 @@ def test_요청_경로는_오래_기다리지_않는다() -> None:
     assert REQUEST_MAX_RETRIES == 0
 
 
+@needs_sdk
 def test_요청경로_클라이언트에_실제로_설정이_걸린다(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -101,6 +121,7 @@ def test_요청경로_클라이언트에_실제로_설정이_걸린다(
     assert llm._client.max_retries == REQUEST_MAX_RETRIES
 
 
+@needs_sdk
 def test_배치_경로는_기본값을_쓴다(monkeypatch: pytest.MonkeyPatch) -> None:
     """A2 구조화는 수백 건을 돌리므로 레이트리밋 재시도가 이득이다.
 
@@ -149,3 +170,19 @@ def test_LLM_이_죽어도_judge_는_200_이다(monkeypatch: pytest.MonkeyPatch)
     body = r.json()
     assert body["summary"]["eligible"] == 1
     assert body["results"][0]["explanation"], "설명문 자리가 비면 FE 가 빈 카드를 그린다"
+
+
+def test_SDK_가_없으면_LLM_경로를_아예_타지_않는다(monkeypatch: pytest.MonkeyPatch) -> None:
+    """서버 이미지에는 anthropic 이 없다. 그때 키가 있어도 None 이어야 한다.
+
+    None 이 아니면 import 에서 터지고, 그 예외는 판정 응답을 타고 나간다.
+    위 두 테스트가 SDK 없는 환경에서 skip 되므로, 그 환경을 검사하는 것은 이쪽이다.
+    """
+    import app.llm.client as client_mod
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-not-a-real-key")
+    monkeypatch.setattr(client_mod, "_shared", None)
+
+    if _has_sdk():
+        pytest.skip("SDK 가 설치된 환경이다 — windows-cp949 잡이 이 경로를 검사한다")
+    assert client_mod.get_llm() is None

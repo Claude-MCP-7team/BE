@@ -749,6 +749,29 @@ PYTHONUTF8=0 pytest        # cp949 로캘 흉내 (git-bash)
 $env:PYTHONUTF8=0; pytest  # PowerShell
 ```
 
+### `windows-cp949` 잡은 인코딩만 다른 게 아니다 — 의존성도 다르다
+
+이 잡은 `pip install -e ".[dev]"` 만 한다. **`anthropic` SDK 가 없다.** 서버 이미지에
+배치 의존성을 넣지 않는다는 원칙(§3)을 CI 가 한 칸에서 실제로 지키는 셈이다.
+
+그래서 테스트가 SDK 를 전제하면 **여기서만 깨진다.** 실제로 그렇게 깨진 적이 있다 —
+로컬 venv 에는 `[batch]` 가 깔려 있어 cp949 로 돌려도 통과했고, CI 에서만 5연속
+실패했다. cp949 를 흉내 내는 것만으로는 부족하다는 뜻이다.
+
+SDK 를 실제로 만들어 보는 테스트에는 `@needs_sdk` 를 붙인다
+(`tests/unit/test_llm_failure.py`). 폴백·로깅처럼 SDK 없이 검증되는 것은 어디서나 돈다.
+SDK 가 **없을 때** `get_llm()` 이 None 이라는 것 자체도 계약이라, 그건 반대로
+SDK 가 있는 환경에서 skip 된다 — 두 환경이 서로 다른 절반을 검사한다.
+
+로컬에서 그 환경을 흉내 내려면 패키지를 잠시 치운다:
+
+```bash
+ANT=$(python -c "import anthropic,os;print(os.path.dirname(anthropic.__file__))")
+mv "$ANT" "$ANT.hidden"
+env -u DATABASE_URL -u PROFILE_ENC_KEYS PYTHONUTF8=0 pytest   # windows-cp949 와 같은 조건
+mv "$ANT.hidden" "$ANT"
+```
+
 ### 실행
 
 ```bash
