@@ -69,19 +69,115 @@ def test_확인완료로_올리려면_무엇을_봤는지_남아야_한다(specs
 
     도메인 루트(`https://www.gov.kr`)로는 그 서류의 소요일·수수료를 확인할 수 없다.
     확인한 사람이 본 페이지가 남아 있어야 다음 사람이 재확인할 수 있다.
-
-    지금은 36종 전부 `확인필요` 라 이 테스트는 비어 있는 채로 통과한다.
-    표시를 올리는 순간부터 규칙이 된다.
     """
     근거없이_확인됨 = [
         f"{s.doc_code} {s.name} (출처={s.source_url!r})"
         for s in specs.values()
-        if s.verified and not (s.source_url and _DEEP_LINK.match(s.source_url))
+        if s.verified
+        and s.verification_kind == "공적출처"
+        and not (s.source_url and _DEEP_LINK.match(s.source_url))
     ]
     assert not 근거없이_확인됨, (
         "확인완료로 표시했지만 무엇을 확인했는지 가리키는 링크가 없습니다: "
         f"{근거없이_확인됨}"
     )
+
+
+def test_링크만으로는_확인완료가_되지_않는다(specs):
+    """2026-09-20 검증이 찾은 구멍: 링크가 있어도 그 페이지가 CSV 값을 말해주지
+    않을 수 있다.
+
+    실제 사례가 D020(대학 졸업증명서)이다. 원본에서 유일하게 딥링크를 갖고 있던
+    행인데, 그 페이지는 처리기간을 '즉시'라고 적어 CSV 의 1~3일과 어긋났고
+    수수료는 금액 자체를 적지 않았다. 링크 존재만 요구하면 이 행이 통과한다.
+
+    그래서 **그 페이지가 뭐라고 적었는지**를 한 줄로 남기게 한다. 옮겨 적는 순간
+    CSV 값과 다르면 눈에 띈다.
+    """
+    빈칸 = [
+        f"{s.doc_code} {s.name}"
+        for s in specs.values()
+        if s.verified and not s.evidence_quote
+    ]
+    assert not 빈칸, f"확인완료인데 근거문구가 없습니다: {빈칸}"
+
+    날짜없음 = [
+        f"{s.doc_code} {s.name}" for s in specs.values() if s.verified and not s.verified_on
+    ]
+    assert not 날짜없음, (
+        f"확인완료인데 검증일이 없습니다 — 언제 본 것인지 알 수 없습니다: {날짜없음}"
+    )
+
+
+def test_검증할_출처가_원래_없는_서류는_따로_분류한다(specs):
+    """'아직 검증 안 함'과 '검증할 출처가 원래 없음'이 같은 값이면 안 된다.
+
+    뭉개 두면 다음 사람이 재직증명서의 정부 페이지를 찾으러 다닌다. 그런 페이지는
+    없다 — 회사가 써주는 서류다.
+    """
+    kinds = {s.verification_kind for s in specs.values()}
+    assert kinds <= {"공적출처", "기관자율", "본인보관"}, kinds
+
+    for s in specs.values():
+        expected = {"THIRD_PARTY": "기관자율", "SELF_HELD": "본인보관"}.get(
+            s.issue_kind, "공적출처"
+        )
+        assert s.verification_kind == expected, (
+            f"{s.doc_code} {s.name}: 발급유형 {s.issue_kind} 인데 "
+            f"검증유형이 {s.verification_kind}"
+        )
+
+
+def test_기관자율_서류는_소요일이_범위여야_한다(specs):
+    """재직증명서를 '정확히 N일'로 적으면 회사 사정을 안다고 주장하는 것이다.
+
+    링크를 면제받는 대신 이쪽을 지킨다. 범위로 두면 화면이 '1~5영업일'로 보여주고,
+    역산은 최댓값을 써서 보수적으로 잡는다.
+    """
+    위반 = [
+        f"{s.doc_code} {s.name} ({s.lead_min_business_days}~{s.lead_max_business_days})"
+        for s in specs.values()
+        if s.verification_kind == "기관자율"
+        and s.lead_min_business_days == s.lead_max_business_days
+    ]
+    assert not 위반, f"기관자율인데 소요일이 단일값입니다: {위반}"
+
+
+def test_본인보관_서류는_소요일이_0이다(specs):
+    """이미 갖고 있는 것에 발급 소요일을 붙이면 착수일이 근거 없이 당겨진다."""
+    위반 = [
+        f"{s.doc_code} {s.name} ({s.lead_max_business_days}일)"
+        for s in specs.values()
+        if s.verification_kind == "본인보관" and s.lead_max_business_days != 0
+    ]
+    assert not 위반, f"본인보관인데 소요일이 0 이 아닙니다: {위반}"
+
+
+def test_유효기간은_소요일과_별개로_검증해야_한다(specs):
+    """정부24 민원안내 페이지는 **유효기간을 적지 않는다** (2026-09-20 검증).
+
+    소요일·수수료만 확인하고 화면의 '추정치' 딱지를 떼면, 근거 없는 유효기간이
+    검증된 값처럼 보인다. 유효기간은 '너무 일찍 떼면 만료된다'는 하한을 정하므로
+    틀리면 준비 시작일이 반대로 어긋난다.
+
+    그래서 축을 나눴다. 근거가 생긴 행만 딱지가 떨어진다.
+    """
+    for s in specs.values():
+        if s.validity_days is None:
+            assert s.validity_grounded, f"{s.doc_code}: 만료 개념이 없으면 근거도 불필요"
+        elif not s.validity_source:
+            assert not s.is_fully_grounded, (
+                f"{s.doc_code} {s.name}: 유효기간 {s.validity_days}일에 근거가 없는데 "
+                f"화면에서 검증된 것처럼 보입니다"
+            )
+
+    # 근거를 적었다면 그것도 구체적이어야 한다 (법령 조문 등).
+    부실 = [
+        f"{s.doc_code} ({s.validity_source!r})"
+        for s in specs.values()
+        if s.validity_source and len(s.validity_source.strip()) < 5
+    ]
+    assert not 부실, f"유효기간 근거가 너무 짧습니다: {부실}"
 
 
 def test_별칭은_존재하는_서류를_가리킨다():

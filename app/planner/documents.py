@@ -77,8 +77,36 @@ class DocumentSpec:
 
     condition: str | None
     source_url: str | None
-    verified: bool  # '확인필요' 는 False — 화면이 추정치임을 밝혀야 한다
+
+    # --- 검증 (축이 둘이다) -------------------------------------------------
+    #
+    # 2026-09-20 검증에서 드러난 것: 정부24 민원안내 페이지는 **유효기간을 적지
+    # 않는다.** 소요일·수수료만 확인할 수 있다. 그런데 유효기간은 "너무 일찍 떼면
+    # 제출일에 만료된다"는 하한을 정하므로, 그게 틀리면 소요일이 맞아도 계획이
+    # 어긋난다 (backplan.py §유효기간).
+    #
+    # 한 칸으로 뭉치면 소요일만 확인하고 유효기간까지 보증한 것처럼 보인다.
+    # 그래서 축을 나눠 두고, 화면에 나가는 `is_fully_grounded` 는 둘 다 요구한다.
+    verification_kind: str  # 공적출처 | 기관자율 | 본인보관
+    verified: bool  # 소요일·수수료 축. '확인필요' 는 False
+    evidence_quote: str | None  # 그 페이지가 실제로 뭐라고 적었는가
+    verified_on: str | None
+    validity_source: str | None  # 유효기간의 근거 (법령 조문). 정부24에는 없다
     notes: str | None
+
+    @property
+    def validity_grounded(self) -> bool:
+        """유효기간에 근거가 있는가. 만료 개념이 없으면 근거도 필요 없다."""
+        return self.validity_days is None or bool(self.validity_source)
+
+    @property
+    def is_fully_grounded(self) -> bool:
+        """화면에서 '추정치' 표시를 뗄 수 있는가.
+
+        두 축을 모두 요구한다. 소요일만 확인하고 딱지를 떼면, 근거 없는
+        유효기간이 검증된 값처럼 보인다 — 그게 가장 조용한 종류의 오류다.
+        """
+        return self.verified and self.validity_grounded
 
     # --- 계획이 실제로 쓰는 값 ---------------------------------------------
 
@@ -177,8 +205,11 @@ def parse_master(rows: list[dict[str, str]]) -> dict[str, DocumentSpec]:
             validity_days=validity,
             condition=_clean(row.get("조건분기", "")),
             source_url=_clean(row.get("출처링크", "")),
-            # 표의 모든 행이 아직 '확인필요'다. 확인된 것만 True 로 올린다.
+            verification_kind=(row.get("검증유형") or "공적출처").strip() or "공적출처",
             verified=(row.get("검증상태") or "").strip() == "확인완료",
+            evidence_quote=_clean(row.get("근거문구", "")),
+            verified_on=_clean(row.get("검증일", "")),
+            validity_source=_clean(row.get("유효기간_근거", "")),
             notes=_clean(row.get("비고", "")),
         )
 

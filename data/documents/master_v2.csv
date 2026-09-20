@@ -1,37 +1,37 @@
-doc_id,서류명,발급유형,발급채널,소요영업일_최소,소요영업일_최대,수수료_온라인,수수료_방문,인증강도,유효기간_일,조건분기,출처링크,검증상태,비고
-D001,주민등록표 등본,ONLINE_INSTANT,정부24,0,0,0,400,SIMPLE,90,,https://www.gov.kr,확인필요,시행규칙 별지18호
-D002,주민등록표 초본,ONLINE_INSTANT,정부24,0,0,0,400,SIMPLE,90,,https://www.gov.kr,확인필요,시행규칙 별지19호
-D003,가족관계증명서(상세),ONLINE_INSTANT,정부24/전자가족관계등록,0,0,0,1000,SIMPLE,90,일반형과 상세형 구분 필요,https://efamily.scourt.go.kr,확인필요,
-D004,혼인관계증명서,ONLINE_INSTANT,정부24/전자가족관계등록,0,0,0,1000,SIMPLE,90,,https://efamily.scourt.go.kr,확인필요,
-D005,기본증명서(상세),ONLINE_INSTANT,정부24/전자가족관계등록,0,0,0,1000,SIMPLE,90,,https://efamily.scourt.go.kr,확인필요,
-D006,인감증명서,CONDITIONAL,정부24 또는 주민센터,0,1,0,600,STRONG,90,재산권 관련 용도는 방문 필수,https://www.gov.kr,확인필요,휴대폰 본인인증 추가 필요
-D007,본인서명사실확인서,OFFLINE_ONLY,읍면동 주민센터,0,1,,600,STRONG,90,전자본인서명확인서 전환 시 최초 1회 방문 승인,https://www.gov.kr,확인필요,이용승인 유효기간 4년
-D008,소득금액증명,ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,90,전년도 신고분 확정 이후만 발급,https://hometax.go.kr,확인필요,5월 신고기간 전후 공백 주의
-D009,사실증명(신고사실없음),ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,90,,https://hometax.go.kr,확인필요,무소득 청년 필수
-D010,사업자등록증명,ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,90,,https://hometax.go.kr,확인필요,
-D011,납세증명서(국세완납),ONLINE_INSTANT,정부24/홈택스,0,0,0,1000,SIMPLE,30,,https://hometax.go.kr,확인필요,유효기간 30일 - 발급 타이밍 역산 필요
-D012,지방세 납세증명서,ONLINE_INSTANT,정부24/위택스,0,0,0,800,SIMPLE,30,,https://www.wetax.go.kr,확인필요,
-D013,근로소득 원천징수영수증,CONDITIONAL,정부24/홈택스 또는 회사,0,3,0,0,SIMPLE,,당해연도분은 회사 발급만 가능,https://hometax.go.kr,확인필요,홈택스는 전년분까지
-D014,건강보험 자격득실확인서,ONLINE_INSTANT,정부24/건보공단,0,0,0,0,SIMPLE,90,,https://www.nhis.or.kr,확인필요,취업여부 판정 핵심
-D015,건강보험료 납부확인서,ONLINE_INSTANT,정부24/건보공단,0,0,0,0,SIMPLE,90,,https://www.nhis.or.kr,확인필요,소득 대리지표
-D016,건강보험 자격확인서,ONLINE_INSTANT,정부24/건보공단,0,0,0,0,SIMPLE,90,,https://www.nhis.or.kr,확인필요,
-D017,고용보험 피보험자격 이력내역서,ONLINE_INSTANT,정부24/근로복지공단,0,0,0,0,SIMPLE,90,,https://total.comwel.or.kr,확인필요,미취업 요건 판정 핵심
-D018,국민연금 가입자 가입증명,ONLINE_INSTANT,정부24/국민연금공단,0,0,0,0,SIMPLE,90,,https://www.nps.or.kr,확인필요,
-D019,4대 사회보험 가입자 가입내역 확인서,ONLINE_INSTANT,정부24/4대보험 정보연계센터,0,0,0,0,SIMPLE,90,,https://www.4insure.or.kr,확인필요,
-D020,졸업증명서(대학),ANYWHERE_VISIT,정부24 신청+주민센터 수령,1,3,,1000,SIMPLE,90,대학 홈페이지 직접 발급 시 0일,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13404000009,확인필요,온라인 출력 불가 - 현금 수령
-D021,졸업증명서(초중고),ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr,확인필요,PDF 출력은 PC에서만
-D022,재학증명서(대학),ANYWHERE_VISIT,정부24 신청+주민센터 수령,1,3,,1000,SIMPLE,30,대학 홈페이지 직접 발급 시 0일,https://www.gov.kr,확인필요,
-D023,성적증명서(대학),ANYWHERE_VISIT,정부24 신청+주민센터 수령,1,3,,1000,SIMPLE,90,대학 홈페이지 직접 발급 시 0일,https://www.gov.kr,확인필요,
-D024,건축물대장 등초본,ONLINE_INSTANT,정부24,0,0,0,500,NONE,90,,https://www.gov.kr,확인필요,본인인증 불필요
-D025,병적증명서,ONLINE_INSTANT,정부24/병무청,0,0,0,0,SIMPLE,90,,https://www.mma.go.kr,확인필요,남성 대상
-D026,장애인증명서,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr,확인필요,
-D027,출입국에 관한 사실증명,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr,확인필요,거주요건 확인용
-D028,기초생활수급자 증명서,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr,확인필요,
-D029,차상위계층 확인서,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr,확인필요,
-D030,등기사항전부증명서(부동산),ONLINE_INSTANT,인터넷등기소,0,0,700,1200,NONE,90,,http://www.iros.go.kr,확인필요,정부24 미제공
-D031,확정일자 부여현황,ONLINE_INSTANT,인터넷등기소/주민센터,0,0,0,0,SIMPLE,90,,http://www.iros.go.kr,확인필요,
-D032,재직증명서,THIRD_PARTY,재직 회사,1,5,,0,NONE,90,회사 규정에 따름,,확인필요,소요일 편차 최대 - 병목 후보
-D033,퇴직증명서,THIRD_PARTY,이전 직장,1,5,,0,NONE,90,,,확인필요,연락 두절 시 고용보험 이력내역서로 대체
-D034,근로계약서 사본,SELF_HELD,본인 보관,0,0,0,0,NONE,,미보관 시 회사 요청 필요,,확인필요,
-D035,임대차계약서 사본,SELF_HELD,본인 보관,0,0,0,0,NONE,,,,확인필요,
-D036,통장 사본,SELF_HELD,모바일뱅킹,0,0,0,0,SIMPLE,,,,확인필요,사실상 즉시
+doc_id,서류명,발급유형,발급채널,소요영업일_최소,소요영업일_최대,수수료_온라인,수수료_방문,인증강도,유효기간_일,조건분기,출처링크,검증유형,근거문구,검증일,유효기간_근거,검증상태,비고
+D001,주민등록표 등본,ONLINE_INSTANT,정부24,0,0,0,400,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000015,공적출처,"처리기간 즉시(근무시간 내 3시간) / 수수료 방문 400원(이해관계인 500), 인터넷 무료",2026-09-20,,확인완료,시행규칙 별지18호
+D002,주민등록표 초본,ONLINE_INSTANT,정부24,0,0,0,400,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000015,공적출처,"주민등록표 등·초본 교부 동일 민원 / 처리기간 즉시 / 방문 400원, 인터넷 무료",2026-09-20,,확인완료,시행규칙 별지19호
+D003,가족관계증명서(상세),ONLINE_INSTANT,정부24/전자가족관계등록,0,0,0,1000,SIMPLE,90,일반형과 상세형 구분 필요,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=97400000004,공적출처,"처리기간 즉시 / 수수료 방문 1,000원, 인터넷 무료",2026-09-20,,확인완료,
+D004,혼인관계증명서,ONLINE_INSTANT,정부24/전자가족관계등록,0,0,0,1000,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=97400000004,공적출처,"처리기간 즉시 / 수수료 방문 1,000원, 인터넷 무료",2026-09-20,,확인완료,
+D005,기본증명서(상세),ONLINE_INSTANT,정부24/전자가족관계등록,0,0,0,1000,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=97400000004,공적출처,"처리기간 즉시 / 수수료 방문 1,000원, 인터넷 무료",2026-09-20,,확인완료,
+D006,인감증명서,CONDITIONAL,정부24 또는 주민센터,0,0,0,600,STRONG,90,재산권 관련 용도는 방문 필수,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000025,공적출처,"처리기간 즉시(근무시간 내 3시간) / 수수료 방문 600원, 인터넷 무료",2026-09-20,,확인완료,휴대폰 본인인증 추가 필요
+D007,본인서명사실확인서,OFFLINE_ONLY,읍면동 주민센터,0,1,,0,STRONG,90,전자본인서명확인서 전환 시 최초 1회 방문 승인,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13110000047,공적출처,,,,확인필요,이용승인 유효기간 4년 / 검증로그 §2 는 '즉시'라고 인용했는데 소요max=1 — 둘 중 하나가 틀렸다
+D008,소득금액증명,ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,90,전년도 신고분 확정 이후만 발급,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12100000021,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,5월 신고기간 전후 공백 주의
+D009,사실증명(신고사실없음),ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12100000352,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,무소득 청년 필수
+D010,사업자등록증명,ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12100000016,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,
+D011,납세증명서(국세완납),ONLINE_INSTANT,정부24/홈택스,0,0,0,0,SIMPLE,30,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12100000011,공적출처,처리기간 즉시(국외이주 여권용은 총 10일) / 수수료 없음,2026-09-20,,확인완료,유효기간 30일 - 발급 타이밍 역산 필요
+D012,지방세 납세증명서,ONLINE_INSTANT,정부24/위택스,0,0,0,0,SIMPLE,30,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13100000056,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,
+D013,근로소득 원천징수영수증,CONDITIONAL,정부24/홈택스 또는 회사,0,3,0,0,SIMPLE,,당해연도분은 회사 발급만 가능,https://hometax.go.kr,공적출처,,,,확인필요,홈택스는 전년분까지
+D014,건강보험 자격득실확인서,ONLINE_INSTANT,정부24/건보공단,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=PG4CADM0107,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,취업여부 판정 핵심
+D015,건강보험료 납부확인서,ONLINE_INSTANT,정부24/건보공단,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=SG4CADM2017,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,소득 대리지표
+D016,건강보험 자격확인서,ONLINE_INSTANT,정부24/건보공단,0,0,0,0,SIMPLE,90,,https://www.gov.kr/portal/service/serviceInfo/PTR000050332,공적출처,,,,확인필요,
+D017,고용보험 피보험자격 이력내역서,ONLINE_INSTANT,정부24/근로복지공단,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=14920000084,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,미취업 요건 판정 핵심
+D018,국민연금 가입자 가입증명,ONLINE_INSTANT,정부24/국민연금공단,0,0,0,0,SIMPLE,90,,https://www.nps.or.kr,공적출처,,,,확인필요,
+D019,4대 사회보험 가입자 가입내역 확인서,ONLINE_INSTANT,정부24/4대보험 정보연계센터,0,0,0,0,SIMPLE,90,,https://www.gov.kr/portal/service/serviceInfo/B55201500032,공적출처,,,,확인필요,
+D020,졸업증명서(대학),ANYWHERE_VISIT,정부24 신청+주민센터 수령,1,3,,1000,SIMPLE,90,대학 홈페이지 직접 발급 시 0일,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13404000009,공적출처,,,,확인필요,온라인 출력 불가 - 현금 수령
+D021,졸업증명서(초중고),ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13410000020,공적출처,처리기간 즉시(근무시간 내 3시간) / 전자(인터넷)민원 발급 무료,2026-09-20,,확인완료,PDF 출력은 PC에서만
+D022,재학증명서(대학),ANYWHERE_VISIT,정부24 신청+주민센터 수령,1,3,,1000,SIMPLE,30,대학 홈페이지 직접 발급 시 0일,https://www.gov.kr,공적출처,,,,확인필요,
+D023,성적증명서(대학),ANYWHERE_VISIT,정부24 신청+주민센터 수령,1,3,,1000,SIMPLE,90,대학 홈페이지 직접 발급 시 0일,https://www.gov.kr,공적출처,,,,확인필요,
+D024,건축물대장 등초본,ONLINE_INSTANT,정부24,0,0,0,500,NONE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=15000000098,공적출처,"처리기간 즉시(근무시간 내 3시간) / 방문 발급 500원·열람 300원, 인터넷 무료",2026-09-20,,확인완료,본인인증 불필요
+D025,병적증명서,ONLINE_INSTANT,정부24/병무청,0,1,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13000000016,공적출처,처리기간 즉시(병역면제자 등 총 1일) / 수수료 없음,2026-09-20,,확인완료,남성 대상
+D026,장애인증명서,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=14600000273,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,
+D027,출입국에 관한 사실증명,ONLINE_INSTANT,정부24,0,0,0,2000,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=12700000024,공적출처,"처리기간 즉시(근무시간 내 3시간) / 방문 1통 2,000원, 인터넷 무료",2026-09-20,,확인완료,거주요건 확인용
+D028,기초생활수급자 증명서,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=14600000280,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,
+D029,차상위계층 확인서,ONLINE_INSTANT,정부24,0,0,0,0,SIMPLE,90,,https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13520000098,공적출처,처리기간 즉시(근무시간 내 3시간) / 수수료 없음,2026-09-20,,확인완료,
+D030,등기사항전부증명서(부동산),ONLINE_INSTANT,인터넷등기소,0,0,700,1200,NONE,90,,http://www.iros.go.kr,공적출처,,,,확인필요,정부24 미제공
+D031,확정일자 부여현황,ONLINE_INSTANT,인터넷등기소/주민센터,0,0,0,0,SIMPLE,90,,http://www.iros.go.kr,공적출처,,,,확인필요,
+D032,재직증명서,THIRD_PARTY,재직 회사,1,5,,0,NONE,90,회사 규정에 따름,,기관자율,,,,확인필요,소요일 편차 최대 - 병목 후보
+D033,퇴직증명서,THIRD_PARTY,이전 직장,1,5,,0,NONE,90,,,기관자율,,,,확인필요,연락 두절 시 고용보험 이력내역서로 대체
+D034,근로계약서 사본,SELF_HELD,본인 보관,0,0,0,0,NONE,,미보관 시 회사 요청 필요,,본인보관,,,,확인필요,
+D035,임대차계약서 사본,SELF_HELD,본인 보관,0,0,0,0,NONE,,,,본인보관,,,,확인필요,
+D036,통장 사본,SELF_HELD,모바일뱅킹,0,0,0,0,SIMPLE,,,,본인보관,,,,확인필요,사실상 즉시

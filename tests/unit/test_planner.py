@@ -729,9 +729,22 @@ def test_유효기간이_없는_서류도_있다() -> None:
     assert doc_master()["D011"].validity_days == 30
 
 
-def test_전_항목이_아직_미검증이다() -> None:
-    """검증상태가 전부 '확인필요'다 — 화면이 추정치임을 밝혀야 한다."""
-    assert all(not s.verified for s in doc_master().values())
+def test_유효기간에_근거가_없으면_화면은_계속_추정치라고_말한다() -> None:
+    """2026-09-20 검증으로 21행의 소요일·수수료가 확인됐지만, 유효기간은 아니다.
+
+    정부24 민원안내 페이지가 유효기간을 적지 않기 때문이다. 그 값은 '너무 일찍
+    떼면 만료된다'는 하한을 정하므로, 근거 없이 검증 표시를 떼면 계획의 절반이
+    추정인 채로 확정처럼 보인다.
+
+    이 테스트는 원래 '전 항목이 미검증'이었다. 검증이 진행되면서 사실이 아니게
+    됐지만, 지켜야 할 것은 그대로다 — 화면이 추정치를 추정치라고 말하는 것.
+    """
+    specs = doc_master().values()
+    assert any(s.verified for s in specs), "검증 결과가 반영되지 않았습니다"
+    assert not any(s.is_fully_grounded for s in specs), (
+        "유효기간 근거가 생겼다면 이 테스트를 갱신할 것 — "
+        "그때부터는 일부 서류가 화면에서 확정으로 나간다"
+    )
 
 
 def test_doc_code_가_이름보다_우선한다() -> None:

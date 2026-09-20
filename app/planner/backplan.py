@@ -263,7 +263,9 @@ def _from_spec(doc: Document, spec: DocumentSpec) -> PlanDocument:
         channel=spec.channel,
         validity_days=spec.validity_days,
         requires_visit=spec.requires_visit,
-        master_unverified=not spec.verified,
+        # 소요일만 확인된 서류도 '미검증'으로 표시한다. 유효기간에 근거가
+        # 없으면 '언제부터 준비' 하한이 여전히 추정이기 때문이다 (documents.py).
+        master_unverified=not spec.is_fully_grounded,
         notes=doc.notes or spec.notes,
         source_quote=doc.source_quote,
     )
