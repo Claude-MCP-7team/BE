@@ -25,6 +25,8 @@ from typing import Any
 import httpx
 from mcp.server.mcpserver import MCPServer
 
+from app.llm.answers import apply_answers
+
 API_BASE = os.environ.get("YPC_API_BASE", "http://127.0.0.1:8765")
 
 INSTRUCTIONS = """청년정책 자격 판정 도구다.
@@ -124,7 +126,8 @@ def _profile(
             core[key] = value
     profile: dict[str, Any] = {"core": core}
     if answers:
-        profile["answers"] = answers
+        # "120%", "예", "작년 5월부터" 같은 자유 형식도 받는다. 못 바꾼 값은 빠져서 다시 묻게 된다.
+        profile = apply_answers(profile, answers)
     return profile
 
 
@@ -140,7 +143,8 @@ PROFILE_DOC = """
   marital_status  single | married | divorced | widowed
   household_size  가구원 수 (본인 포함)
   household_income_ratio_median  가구 소득의 기준 중위소득 대비 % (정수)
-  answers  역질문에 대한 답. {"household_income_ratio_median": 120} 처럼 필드명이 키
+  answers  역질문에 대한 답. {"household_income_ratio_median": 120} 처럼 필드명이 키.
+           "120%", "예", "혼자 살아요", "2024년 5월부터" 같은 말 그대로도 된다
 """
 
 JUDGE_DOC = (

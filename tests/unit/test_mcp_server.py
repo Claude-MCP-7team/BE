@@ -40,9 +40,20 @@ def test_코드표는_경기도_5자리_코드다():
 def test_프로필은_비운_값을_보내지_않는다():
     p = _profile("2002-03-01", "41465", None, "", None, None, None, None, None, None)
     assert p == {"core": {"birth_date": "2002-03-01", "region_code": "41465"}}
-    p = _profile("2002-03-01", "41465", "2026-05-15", None, "student", None, None, 1, 120, {"x": 1})
+    p = _profile(
+        "2002-03-01",
+        "41465",
+        "2026-05-15",
+        None,
+        "student",
+        None,
+        None,
+        1,
+        120,
+        {"similar_program_participation_2y": "없어요", "x": 1},
+    )
     assert p["core"]["household_size"] == 1 and p["core"]["household_income_ratio_median"] == 120
-    assert p["answers"] == {"x": 1}
+    assert p["answers"] == {"similar_program_participation_2y": False}  # 모르는 필드 x 는 빠진다
 
 
 def test_도구_여섯_개가_등록되어_있다():
