@@ -36,12 +36,12 @@ BE 는 배포되어 있고 (`https://be-27y9.onrender.com`), FE 계약 3건(소�
 
 | 항목 | 값 |
 | --- | --- |
-| HEAD | `058a026` Record why follow-up answers fill gaps but never promise dates |
+| HEAD | `7a508cc` Answer malformed request bodies with 422, not 500 |
 | 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 |
 | 배포 | `https://be-27y9.onrender.com` (Render, `render.yaml`). **데모 스냅샷 5건**으로 떠 있다 — 실데이터가 아니다 |
 | CORS | **비어 있다.** FE 주소가 정해지면 Render → Environment → `CORS_ORIGINS` 에 넣는다. 그때까지 브라우저에서 호출 불가 |
 | 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
-| 테스트 | **534건 통과** (DB 통합 28건 포함, skip 0) |
+| 테스트 | **638건 통과** (DB 통합 포함, skip 0) |
 | CI | 통과 (lint · **타입** · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
 
 > ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
@@ -64,7 +64,7 @@ python bench/engine_bench.py
 pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
 ```
 
-`DATABASE_URL` 이 있으면 534건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 638건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
 
 **API 키 없이도 전 경로가 돈다.** `data/demo/` 의 고정 정책 5건이 그 바닥을 받친다:
 
@@ -410,6 +410,59 @@ needs_review_fields` 로 무엇을 못 봤는지도 함께 준다 — confidence
 나간다 — 프롬프트에만 적으면 그 프롬프트를 쓰는 생산자에게만 닿는다.
 
 엔진이 스스로 부정하게 만들면 안 된다. 이미 부정형으로 들어온 룰이 두 번 뒤집힌다.
+
+### 예외는 잡으려는 것의 **부모**를 확인하고 잡는다
+
+이 저장소에서 같은 실수가 세 번 났다. 전부 "자식 클래스만 잡아서 부모가 빠져나간"
+경우다. 증상은 매번 **500 인데 원인은 잘못된 입력**이었다.
+
+| 잡던 것 | 실제로 날아온 것 | 결과 |
+| --- | --- | --- |
+| `fastapi.HTTPException` | `starlette.exceptions.HTTPException` (부모) | 루트 404 가 `{"detail":"Not Found"}` |
+| `LLMError` | `APITimeoutError` 등 SDK 계층 | 판정 응답 전체가 500 |
+| `msgspec.ValidationError` | `msgspec.DecodeError` (부모) | POST 5개가 깨진 JSON 에 500 |
+
+```python
+issubclass(msgspec.ValidationError, msgspec.DecodeError)  # True
+```
+
+**5xx 가 나쁜 이유는 FE 가 자기 버그를 BE 장애로 읽기 때문이다.** 잘못된 요청은
+"네가 보낸 게 틀렸다"(4xx)여야 고칠 사람이 고친다. 발표 중에 나오면 서버가 죽은
+것처럼 보인다.
+
+**디코드는 `app/api/decode.py` 한 군데서만 한다.** 엔드포인트마다 try/except 를 쓰면
+다음에 추가하는 사람이 둘 중 하나를 빠뜨린다. `judge.py`·`sessions.py` 가 본문을 직접
+디코드하지 않는지 테스트가 검사한다.
+
+두 실패는 구분해서 내보낸다 — FE 가 고칠 곳이 다르다:
+
+| type | 뜻 | FE 가 볼 곳 |
+| --- | --- | --- |
+| `invalid-request` | 본문이 JSON 이 아니다 | 직렬화·전송 |
+| `invalid-profile` | JSON 은 맞는데 값이 틀렸다 | `detail` 이 필드명을 준다 |
+
+### 전 엔드포인트 훑기 (`tests/unit/test_endpoint_sweep.py`)
+
+마일스톤 M5 의 "API 누락·500 Error 점검"을 사람이 한 번 하고 끝내지 않기 위한
+테스트다. 손으로 훑으면 그 시점의 엔드포인트만 보게 된다.
+
+- **라우트를 OpenAPI 스키마에서 읽는다.** `app.routes` 는 못 쓴다 — 이 FastAPI 버전은
+  include 한 라우터를 `_IncludedRouter` 로 감싸 두고 펼치지 않아서, 훑기가 조용히
+  0건을 검사하게 된다. 그래서 "훑을 대상이 실제로 있다"는 단언을 따로 뒀다.
+- **기준은 '5xx 금지'가 아니라 '미처리 예외 금지'다.** 503 `session-store-unavailable`
+  처럼 **선언된** 5xx 는 정상이다 — 무슨 일인지 FE 에 말하고 있으니 처리된 것이다.
+  `internal-error` 는 catch-all 이 마지막에 붙이는 딱지라, 그게 보이면 아무도 그
+  입력을 예상 못 했다는 뜻이다.
+- `POST /v1/sessions` 의 빈 본문 201 은 정상이다 (프로필 없는 익명 세션 발급).
+  `EMPTY_BODY_OK` 에 명시했고, 목록이 낡으면 테스트가 잡는다.
+
+**CI 는 `PROFILE_ENC_KEYS` 를 준다.** 없으면 `/v1/sessions` 가 저장소 없음(503)으로
+짧게 끝나 그 엔드포인트 훑기가 전부 skip 된다. 안 도는 테스트는 없는 테스트다.
+`DATABASE_URL` 을 주는 이유와 같다.
+
+> ⚠️ 관련해서 **아직 안 고친 것**: POST 6개 전부 OpenAPI 스키마에 `requestBody` 가
+> 없다. `await request.body()` 로 직접 읽어서 FastAPI 가 본문을 모른다. `/docs` 와
+> FE 의 자동 생성 클라이언트가 "본문 없는 엔드포인트"로 본다.
 
 ### 설명문이 실패해도 판정은 나간다
 
