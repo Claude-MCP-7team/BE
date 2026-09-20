@@ -28,6 +28,17 @@ DEFAULT_MODEL = "claude-opus-5"
 # 구조화 출력은 정책 1건당 수 KB 라 non-streaming 으로 충분하다. 상한만 넉넉히 둔다.
 DEFAULT_MAX_TOKENS = 16000
 
+# 요청 경로와 배치 경로는 기다려서 잃는 것이 다르다.
+#
+# SDK 기본값은 타임아웃 10분 · 재시도 2회다. 재시도도 각각 타임아웃을 다시 쓰므로
+# 최악의 경우 한 호출이 30분을 붙잡는다. 배치에서는 맞는 값이지만 요청 경로에서는
+# 아니다 — 설명문은 이미 만들어 둔 템플릿이 있는 덤이고, 판정은 그 전에 끝나 있다.
+# 워커 하나짜리 배포에서 그 하나가 LLM 을 기다리면 다른 사용자의 판정까지 멈춘다.
+#
+# 그래서 요청 경로는 짧게 끊고 재시도하지 않는다. 끊기면 템플릿으로 간다.
+REQUEST_TIMEOUT_S = 8.0
+REQUEST_MAX_RETRIES = 0
+
 
 class LLMError(RuntimeError):
     """모델이 유효한 구조화 응답을 내지 못했다 (거부·토큰 상한·JSON 파싱 실패)."""
@@ -59,7 +70,11 @@ def get_llm() -> LLM | None:
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
         return None
     try:
-        _shared = AnthropicLLM(effort="low")  # 설명문은 요약이지 추론이 아니다
+        _shared = AnthropicLLM(
+            effort="low",  # 설명문은 요약이지 추론이 아니다
+            timeout=REQUEST_TIMEOUT_S,
+            max_retries=REQUEST_MAX_RETRIES,
+        )
     except ImportError:
         return None
     return _shared
@@ -78,12 +93,20 @@ class AnthropicLLM:
         model: str | None = None,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         effort: Effort = "high",
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> None:
         import anthropic
 
         self._anthropic = anthropic
         # API 키는 ANTHROPIC_API_KEY 환경변수 또는 `ant auth login` 프로필에서 SDK 가 읽는다.
-        self._client = anthropic.Anthropic()
+        # timeout/max_retries 를 주지 않으면 SDK 기본값(10분 · 2회)을 쓴다 — 배치용이다.
+        options: dict[str, Any] = {}
+        if timeout is not None:
+            options["timeout"] = timeout
+        if max_retries is not None:
+            options["max_retries"] = max_retries
+        self._client = anthropic.Anthropic(**options)
         self.model = model or os.environ.get("YPC_LLM_MODEL", DEFAULT_MODEL)
         self.max_tokens = max_tokens
         self.effort = effort

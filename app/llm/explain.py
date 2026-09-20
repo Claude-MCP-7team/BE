@@ -16,13 +16,16 @@ N번 붙어 응답이 초 단위가 된다.
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
 import msgspec
 
-from app.llm.client import LLM, LLMError, load_prompt
+from app.llm.client import LLM, load_prompt
 from app.schemas.judgement import JudgementResult, UnknownRule, UnmatchedRule
+
+log = logging.getLogger(__name__)
 
 # 사용자에게 보이는 조건 이름. 룰의 field 는 계약(rule_fields.json)의 식별자라 그대로 못 보여준다.
 FIELD_LABELS: dict[str, str] = {
@@ -207,7 +210,17 @@ def explain_all(
             user=msgspec.json.encode(material).decode(),
             schema=EXPLAIN_SCHEMA,
         )
-    except LLMError:
+    except Exception:
+        # 예외 종류를 가리지 않는다. 전에는 LLMError 만 잡았는데, 그건 이 모듈이
+        # 스스로 던지는 것(거부·토큰 상한·JSON 파싱 실패)뿐이다. 정작 흔한 실패인
+        # SDK 의 타임아웃·연결 끊김·레이트리밋(APITimeoutError 등)은 LLMError 가
+        # 아니라 그대로 빠져나가, **이미 계산이 끝난 판정 응답 전체를 500 으로**
+        # 만들었다. 설명문은 덤이고 템플릿이라는 대안이 항상 있으므로, 여기서
+        # 무엇이 터지든 판정을 내보내는 쪽이 맞다.
+        #
+        # 삼키지는 않는다 — 로그가 없으면 LLM 이 한 번도 성공하지 않는 배포를
+        # 아무도 눈치채지 못한다. 템플릿이 그럴듯해서 화면은 멀쩡해 보인다.
+        log.warning("LLM 설명문 생성 실패 — 템플릿으로 내보냅니다", exc_info=True)
         return drafts
 
     out = dict(drafts)
