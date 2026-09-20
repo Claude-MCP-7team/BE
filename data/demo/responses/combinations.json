@@ -1,0 +1,135 @@
+{
+  "snapshot_version": "demo-2026-10-01",
+  "eligible_count": 2,
+  "scenarios": [
+    {
+      "kind": "conservative",
+      "label": "보수 조합",
+      "description": "추정 상충까지 모두 피한 조합입니다. 반려 위험이 가장 낮습니다.",
+      "combinations": [
+        {
+          "rank": 1,
+          "total_krw": 3000000,
+          "members": [
+            {
+              "policy_id": "DEMO-MOEL-2026-0005",
+              "title": "[데모] 청년 구직활동 지원금",
+              "estimated_total_krw": 3000000,
+              "amount_estimated": false
+            }
+          ],
+          "excluded": [
+            {
+              "policy_id": "DEMO-GG-2026-0001",
+              "title": "[데모] 경기도 청년 면접수당",
+              "estimated_total_krw": 500000,
+              "conflicts_with": "DEMO-MOEL-2026-0005",
+              "conflicts_with_title": "[데모] 청년 구직활동 지원금",
+              "confidence": "CONFIRMED",
+              "conflict_type": "explicit_policy",
+              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
+              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
+              "dept_name": "경기도 청년정책과",
+              "dept_tel": "031-000-0000"
+            }
+          ],
+          "total_is_estimated": false
+        },
+        {
+          "rank": 2,
+          "total_krw": 500000,
+          "members": [
+            {
+              "policy_id": "DEMO-GG-2026-0001",
+              "title": "[데모] 경기도 청년 면접수당",
+              "estimated_total_krw": 500000,
+              "amount_estimated": false
+            }
+          ],
+          "excluded": [
+            {
+              "policy_id": "DEMO-MOEL-2026-0005",
+              "title": "[데모] 청년 구직활동 지원금",
+              "estimated_total_krw": 3000000,
+              "conflicts_with": "DEMO-GG-2026-0001",
+              "conflicts_with_title": "[데모] 경기도 청년 면접수당",
+              "confidence": "CONFIRMED",
+              "conflict_type": "explicit_policy",
+              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
+              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
+              "dept_name": "고용노동부 청년고용기획과",
+              "dept_tel": "044-000-0001"
+            }
+          ],
+          "total_is_estimated": false
+        }
+      ],
+      "approximate": false
+    },
+    {
+      "kind": "maximal",
+      "label": "최대 조합",
+      "description": "공고문에 명시된 중복 제한만 반영한 조합입니다. 추정 상충은 담당부서 확인이 필요합니다.",
+      "combinations": [
+        {
+          "rank": 1,
+          "total_krw": 3000000,
+          "members": [
+            {
+              "policy_id": "DEMO-MOEL-2026-0005",
+              "title": "[데모] 청년 구직활동 지원금",
+              "estimated_total_krw": 3000000,
+              "amount_estimated": false
+            }
+          ],
+          "excluded": [
+            {
+              "policy_id": "DEMO-GG-2026-0001",
+              "title": "[데모] 경기도 청년 면접수당",
+              "estimated_total_krw": 500000,
+              "conflicts_with": "DEMO-MOEL-2026-0005",
+              "conflicts_with_title": "[데모] 청년 구직활동 지원금",
+              "confidence": "CONFIRMED",
+              "conflict_type": "explicit_policy",
+              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
+              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
+              "dept_name": "경기도 청년정책과",
+              "dept_tel": "031-000-0000"
+            }
+          ],
+          "total_is_estimated": false
+        },
+        {
+          "rank": 2,
+          "total_krw": 500000,
+          "members": [
+            {
+              "policy_id": "DEMO-GG-2026-0001",
+              "title": "[데모] 경기도 청년 면접수당",
+              "estimated_total_krw": 500000,
+              "amount_estimated": false
+            }
+          ],
+          "excluded": [
+            {
+              "policy_id": "DEMO-MOEL-2026-0005",
+              "title": "[데모] 청년 구직활동 지원금",
+              "estimated_total_krw": 3000000,
+              "conflicts_with": "DEMO-GG-2026-0001",
+              "conflicts_with_title": "[데모] 경기도 청년 면접수당",
+              "confidence": "CONFIRMED",
+              "conflict_type": "explicit_policy",
+              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
+              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
+              "dept_name": "고용노동부 청년고용기획과",
+              "dept_tel": "044-000-0001"
+            }
+          ],
+          "total_is_estimated": false
+        }
+      ],
+      "approximate": false
+    }
+  ],
+  "disclaimer": "본 서비스의 판정 결과는 공고문 분석에 기반한 참고 정보이며 법적 효력이 없습니다. 최종 자격 여부는 각 정책 담당부서의 확인을 받으시기 바랍니다."
+}

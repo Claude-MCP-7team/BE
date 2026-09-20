@@ -7,6 +7,41 @@
 | --- | --- |
 | `policies.demo.json` | `PolicySchema` 배열 5건 |
 | `profile.demo.json` | `UserProfile` 1건 (25세·부천·미취업·중위소득 85%) |
+| `responses/*.json` | 위 둘로 실제 API 를 호출해 **녹화한 응답** (FE Mock) |
+
+## FE Mock — `responses/`
+
+BE 없이 화면을 만들 수 있게, 위 데모 데이터로 실제 API 를 호출해 받은 응답을
+그대로 커밋해 둔 것이다. `docs/contracts/` 는 스키마지 인스턴스가 아니라서, 필드가
+실제로 어떤 값으로 채워지는지(빈 배열인지 `null` 인지, 날짜 형식이 무엇인지)를
+알 수 없다.
+
+| 파일 | 대응 호출 |
+| --- | --- |
+| `judge.json` / `judge.all.json` | `POST /v1/judge` (기본 / `?include=all`) |
+| `questions.json` | `POST /v1/questions` |
+| `combinations.json` | `POST /v1/combinations` |
+| `plan.json` | `POST /v1/plan` |
+| `policies.json` / `policy.detail.json` | `GET /v1/policies` / `/v1/policies/{id}` |
+| `meta.snapshot.json` | `GET /v1/meta/snapshot` |
+| `error.*.json` | 에러 4종 (`problem+json`) — **에러에도 화면이 있다** |
+
+`judge.all.json` 한 건에 **네 가지 판정 상태가 전부** 들어 있다 (적격 2 · 부적격 2 ·
+확인필요 1 · 충족예상일 1). 배지 4종을 한 응답으로 다 그려볼 수 있다.
+
+**손으로 고치지 말 것.** 갱신은 이렇게 한다:
+
+```bash
+python tools/record_mock_responses.py
+```
+
+`tests/unit/test_mock_responses.py` 가 매번 앱을 다시 호출해 커밋된 것과 비교한다.
+응답 모양이 바뀌었는데 녹화본이 그대로면 CI 가 실패한다 — 녹화본의 유일한 실패
+모드가 '낡는 것'이고, 손으로 쓴 예시였다면 아무도 못 잡는다.
+
+기준일은 `2026-10-01` 로 고정했다. 나이·충족예상일·신청일정이 오늘 날짜를 타면
+매일 diff 가 나서 아무도 diff 를 읽지 않게 된다. 같은 이유로 `latency_ms` 와
+`loaded_at` 도 고정값이다 — 실제 응답에서는 측정값이 들어온다.
 
 ## ⚠️ 합성 데이터다 — 실제 공고문이 아니다
 

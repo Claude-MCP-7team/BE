@@ -1,0 +1,7 @@
+{
+  "type": "/problems/route-not-found",
+  "title": "그런 경로가 없습니다",
+  "status": 404,
+  "detail": "그런 경로가 없습니다",
+  "instance": "/no-such-path"
+}

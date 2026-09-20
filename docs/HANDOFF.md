@@ -41,7 +41,7 @@ BE 는 배포되어 있고 (`https://be-27y9.onrender.com`), FE 계약 3건(소�
 | 배포 | `https://be-27y9.onrender.com` (Render, `render.yaml`). **데모 스냅샷 5건**으로 떠 있다 — 실데이터가 아니다 |
 | CORS | **비어 있다.** FE 주소가 정해지면 Render → Environment → `CORS_ORIGINS` 에 넣는다. 그때까지 브라우저에서 호출 불가 |
 | 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
-| 테스트 | **644건 통과** (DB 통합 포함, skip 0) |
+| 테스트 | **652건 통과** (DB 통합 포함, skip 0) |
 | CI | 통과 (lint · **타입** · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
 
 > ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
@@ -64,7 +64,7 @@ python bench/engine_bench.py
 pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
 ```
 
-`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 644건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 652건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
 
 **API 키 없이도 전 경로가 돈다.** `data/demo/` 의 고정 정책 5건이 그 바닥을 받친다:
 
@@ -605,6 +605,7 @@ app/
 
 data/
 ├─ demo/              🟢 고정 데모 5건 + 사용자 1명 (합성). 키 없이 전 경로가 돈다
+│   └─ responses/     🟢 FE Mock — 실제 응답 12건 녹화본 (아래 참고)
 ├─ manual/            실제 공고 손입력 + A2 응답 (`--responses` 로 키 없이 검증)
 └─ documents/         서류 마스터 36종 CSV
 
@@ -623,6 +624,27 @@ batch/
 ├─ build_snapshot.py  🔴 스냅샷 빌더 (검증 관문)
 └─ holidays.py        한국천문연구원 특일 API 동기화
 ```
+
+### FE Mock — `data/demo/responses/`
+
+데모 데이터로 실제 API 를 호출해 받은 응답 12건을 커밋해 뒀다. FE 가 BE 없이 화면을
+만들 수 있다. `docs/contracts/` 는 스키마지 인스턴스가 아니라서, 필드가 실제로 어떤
+값으로 채워지는지(빈 배열인지 `null` 인지, 날짜 형식이 무엇인지)를 알 수 없다.
+
+`judge.all.json` 한 건에 **네 가지 판정 상태가 전부** 들어 있다 (적격 2 · 부적격 2 ·
+확인필요 1 · 충족예상일 1). 에러 4종도 녹화돼 있다 — **에러에도 화면이 있다.**
+
+**손으로 고치지 않는다.** `python tools/record_mock_responses.py` 로 갱신하고 함께
+커밋한다 (`docs/contracts/` 와 같은 방식).
+
+녹화본의 유일한 실패 모드는 **낡는 것**이다. 응답 모양이 바뀌어도 파일은 그대로라
+FE 가 없어진 필드를 믿고 화면을 만든다. 손으로 쓴 예시였다면 아무도 못 잡는다.
+그래서 `tests/unit/test_mock_responses.py` 가 매번 앱을 다시 호출해 대조한다.
+
+기준일은 `2026-10-01` 고정이다. 나이·충족예상일·신청일정이 오늘 날짜를 타면 매일
+diff 가 나고, 그러면 아무도 diff 를 읽지 않게 된다. `latency_ms` 와 `loaded_at` 도
+같은 이유로 고정값이며, 녹화기와 대조 테스트가 **같은 `stabilize()` 함수**를 써서
+둘이 갈라질 수 없게 했다.
 
 ### 계약면 — 코드가 원본이다
 `docs/contracts/*.json` 은 `tools/export_contract.py` 가 생성한다.
@@ -815,7 +837,6 @@ pytest && ruff check . && mypy && python tools/export_contract.py && git diff --
 | 16 | 실공고로 중복수혜 조합(시나리오 5)을 보여줄 데이터 | 데이터 | 상충 쌍이던 국토부 청년월세가 2026-05-29 에 마감됐다. 신청기간이 열려 있는 전국·경기 단위 주거 정책 1건이 더 필요하다 (`data/manual/README.md`). 합성 데이터로는 `data/demo/` 에서 돌고 `tests/e2e` 가 단언한다 |
 | 9 | FE 공개 배포 주소 (→ `CORS_ORIGINS`) | FE | BE 는 떠 있다 (아래 '결정된 것'). FE 주소가 없어 CORS 가 비어 있고, **그래서 지금은 브라우저에서 BE 를 못 부른다**. 주소가 나오면 Render 환경변수에 넣는 것만 남았다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
-| 15 | FE Mock JSON | FE·BE | `docs/contracts/*.json` 은 스키마지 예시 인스턴스가 아니다. `data/demo/` 가 그 역할을 대신할 수 있다 |
 
 ### 결정된 것 (2026-09-19, FE 회신)
 
@@ -878,6 +899,9 @@ FE 에 이미 전달한 것 (화면에 영향이 있다):
 | 12 | 충족 예상일이 다른 룰과 모순 | 후보 날짜로 전 조건을 재평가해 막는다 (§3) |
 | 13 | `apply_end` 가 지난 정책이 `ELIGIBLE`·조합 후보로 나온다 | 빌더가 마감 기간을 직접 보고 거른다 + `normalize` 가 status 를 바로잡는다 (§3) |
 | 14 | 에러 응답 규격 | RFC 9457 `problem+json` 으로 맞췄다. 유형 표는 `docs/contracts/problems.json` (§3) |
+| 15 | FE Mock JSON | `data/demo/responses/` 에 실제 응답 12건을 녹화해 커밋했다 (§4) |
+| 19 | `/docs` 에 POST 요청 본문이 안 나옴 | `openapi_extra` + msgspec 컴포넌트 병합으로 채웠다 (§3) |
+| 20 | POST 5개가 깨진 JSON 에 500 | 디코드를 한 군데로 모으고 `DecodeError` 까지 잡는다 (§3) |
 | 1·2·3 | 소득 단위 · 경로 접두사 · 불필요 필드 | FE 회신으로 확정. 셋 다 BE 현재 동작과 일치해 변경 없었다 (위 '결정된 것') |
 | 9 | 배포 Base URL | `https://be-27y9.onrender.com` (§1). 남은 건 반대 방향 — FE 주소다 |
 | 17 | 역질문 답변(근속·거주 개월수)이 판정에 반영되지 않음 | `resolve()` 가 `answers` 로 폴백한다. 미래 날짜는 일부러 주지 않는다 (§3) |

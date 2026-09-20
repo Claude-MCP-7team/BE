@@ -1,0 +1,210 @@
+{
+  "session_id": "anonymous",
+  "snapshot_version": "demo-2026-10-01",
+  "summary": {
+    "eligible": 2,
+    "ineligible": 2,
+    "needs_info": 1,
+    "future_eligible": 1
+  },
+  "results": [
+    {
+      "policy_id": "DEMO-GG-2026-0001",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "GG1-AGE",
+          "field": "age",
+          "user_value": 25,
+          "source_quote": "공고일 기준 만 18세 이상 34세 이하인 자",
+          "source_url": "https://demo.invalid/policies/DEMO-GG-2026-0001"
+        },
+        {
+          "rule_id": "GG1-REGION",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41190"
+          ],
+          "source_quote": "경기도에 주민등록을 둔 자",
+          "source_url": "https://demo.invalid/policies/DEMO-GG-2026-0001"
+        },
+        {
+          "rule_id": "GG1-EMP",
+          "field": "employment_status",
+          "user_value": "job_seeking",
+          "source_quote": "신청일 현재 미취업 상태인 청년",
+          "source_url": "https://demo.invalid/policies/DEMO-GG-2026-0001"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'[데모] 경기도 청년 면접수당'의 확인된 조건 3개를 모두 충족해요.",
+      "dept_name": "경기도 청년정책과",
+      "dept_tel": "031-000-0000",
+      "origin_url": "https://demo.invalid/policies/DEMO-GG-2026-0001",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "DEMO-MOLIT-2026-0002",
+      "verdict": "INELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "MOLIT2-AGE",
+          "field": "age",
+          "user_value": 25,
+          "source_quote": "만 19세 이상 34세 이하의 무주택 청년",
+          "source_url": "https://demo.invalid/policies/DEMO-MOLIT-2026-0002"
+        }
+      ],
+      "unmatched": [
+        {
+          "rule_id": "MOLIT2-INCOME",
+          "field": "household_income_ratio_median",
+          "user_value": 85,
+          "required": 60,
+          "source_quote": "청년가구 소득이 기준 중위소득 60% 이하일 것",
+          "unit": "%",
+          "source_url": "https://demo.invalid/policies/DEMO-MOLIT-2026-0002",
+          "time_satisfiable": false,
+          "satisfiable_from": null,
+          "permanently_unsatisfiable": false
+        }
+      ],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'[데모] 청년 월세 한시 특별지원'은(는) 지금 기준으로 조건 1개가 맞지 않아요. 가구 소득(기준 중위소득 대비): 내 값 85%, 공고 기준 60% (\"청년가구 소득이 기준 중위소득 60% 이하일 것\"). 다른 조건 1개는 충족했어요.",
+      "dept_name": "국토교통부 주거복지지원과",
+      "dept_tel": "044-000-0000",
+      "origin_url": "https://demo.invalid/policies/DEMO-MOLIT-2026-0002",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "DEMO-BUCHEON-2026-0003",
+      "verdict": "INELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "BC3-AGE",
+          "field": "age",
+          "user_value": 25,
+          "source_quote": "만 19세 이상 39세 이하인 자",
+          "source_url": "https://demo.invalid/policies/DEMO-BUCHEON-2026-0003"
+        },
+        {
+          "rule_id": "BC3-REGION",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41190"
+          ],
+          "source_quote": "부천시에 주민등록을 둔 자",
+          "source_url": "https://demo.invalid/policies/DEMO-BUCHEON-2026-0003"
+        }
+      ],
+      "unmatched": [
+        {
+          "rule_id": "BC3-RESIDENCE",
+          "field": "residence_months_continuous",
+          "user_value": 30,
+          "required": 36,
+          "source_quote": "신청일 기준 부천시에 계속하여 36개월 이상 거주한 자",
+          "unit": "개월",
+          "source_url": "https://demo.invalid/policies/DEMO-BUCHEON-2026-0003",
+          "time_satisfiable": true,
+          "satisfiable_from": "2027-04-01",
+          "permanently_unsatisfiable": false
+        }
+      ],
+      "unknown": [],
+      "future_eligible_from": "2027-04-01",
+      "needs_review_fields": [],
+      "explanation": "'[데모] 부천시 청년 자립지원금'은(는) 지금 기준으로 조건 1개가 맞지 않아요. 현재 지역 연속 거주 기간: 내 값 30개월, 공고 기준 36개월 (\"신청일 기준 부천시에 계속하여 36개월 이상 거주한 자\"). 이 조건은 2027-04-01부터 충족돼요. 다른 조건 2개는 충족했어요.",
+      "dept_name": "부천시 청년정책팀",
+      "dept_tel": "032-000-0000",
+      "origin_url": "https://demo.invalid/policies/DEMO-BUCHEON-2026-0003",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "DEMO-GG-2026-0004",
+      "verdict": "NEEDS_INFO",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "GG4-AGE",
+          "field": "age",
+          "user_value": 25,
+          "source_quote": "만 19세 이상 34세 이하인 자",
+          "source_url": "https://demo.invalid/policies/DEMO-GG-2026-0004"
+        },
+        {
+          "rule_id": "GG4-REGION",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41190"
+          ],
+          "source_quote": "경기도에 주민등록을 둔 자",
+          "source_url": "https://demo.invalid/policies/DEMO-GG-2026-0004"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [
+        {
+          "rule_id": "GG4-DUP",
+          "field": "similar_program_participation_2y",
+          "source_quote": "최근 2년 이내 도(道) 또는 시·군의 유사 자격증 응시료 지원사업에 참여한 자는 제외",
+          "question_template": "최근 2년 안에 다른 자격증 응시료 지원사업에 참여한 적이 있나요?",
+          "source_url": "https://demo.invalid/policies/DEMO-GG-2026-0004"
+        }
+      ],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'[데모] 경기도 청년 자격증 응시료 지원'은(는) 판단에 1가지 정보가 더 필요해요. 지금까지 확인된 조건 2개는 충족했어요. (1) 최근 2년 안에 다른 자격증 응시료 지원사업에 참여한 적이 있나요?",
+      "dept_name": "경기도일자리재단 청년사업팀",
+      "dept_tel": "031-000-0001",
+      "origin_url": "https://demo.invalid/policies/DEMO-GG-2026-0004",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "DEMO-MOEL-2026-0005",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "MOEL5-AGE",
+          "field": "age",
+          "user_value": 25,
+          "source_quote": "만 19세 이상 34세 이하인 자",
+          "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005"
+        },
+        {
+          "rule_id": "MOEL5-EMP",
+          "field": "employment_status",
+          "user_value": "job_seeking",
+          "source_quote": "신청일 현재 미취업 상태로 구직활동 중인 자",
+          "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'[데모] 청년 구직활동 지원금'의 확인된 조건 2개를 모두 충족해요.",
+      "dept_name": "고용노동부 청년고용기획과",
+      "dept_tel": "044-000-0001",
+      "origin_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
+      "disclaimer_required": true
+    }
+  ],
+  "latency_ms": 0,
+  "disclaimer": "본 서비스의 판정 결과는 공고문 분석에 기반한 참고 정보이며 법적 효력이 없습니다. 최종 자격 여부는 각 정책 담당부서의 확인을 받으시기 바랍니다."
+}
