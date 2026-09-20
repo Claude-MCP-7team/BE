@@ -89,7 +89,10 @@ def build_plan(
         summary=_summarize(plans),
         plans=plans,
         documents=tasks,
-        total_document_cost_krw=sum(t.cost_krw or 0 for t in tasks),
+        total_document_cost_krw=sum(t.cost_krw for t in tasks if t.cost_krw is not None),
+        # 금액을 모르는 서류가 몇 건인지 따로 센다. 합계만 내보내면 그 합계가
+        # 전부인 것처럼 보이고, 사용자는 창구에서 예상 못 한 돈을 낸다.
+        cost_unknown_document_count=sum(1 for t in tasks if t.cost_krw is None),
         visit_required_count=sum(1 for t in tasks if t.requires_visit),
         unverified_document_count=sum(1 for t in tasks if t.master_unverified),
         calendar_source_ref=cal.source_ref,

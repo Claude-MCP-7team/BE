@@ -124,10 +124,18 @@ class DocumentSpec:
         return self.lead_max_business_days != self.lead_min_business_days
 
     @property
-    def cheapest_fee_krw(self) -> int:
-        """발급 가능한 채널 중 가장 싼 값. 둘 다 불가하면 0."""
+    def cheapest_fee_krw(self) -> int | None:
+        """발급 가능한 채널 중 가장 싼 값. **금액을 모르면 None 이다.**
+
+        예전에는 0 을 돌려줬는데, 그러면 '무료'와 '금액 미상'이 같은 값이 된다.
+        대학 졸업·재학·성적증명서(D020·D022·D023)가 실제로 그렇다 — 유료지만
+        수수료가 국립대는 규칙, 사립대는 학칙에 따라 달라 단일 금액이 없다.
+        0 으로 내보내면 화면이 "무료"라고 말하고, 사용자는 창구에서 돈을 낸다.
+
+        모르는 것은 모른다고 해야 화면이 "학교마다 다름"으로 쓸 수 있다.
+        """
         fees = [f for f in (self.fee_online_krw, self.fee_offline_krw) if f is not None]
-        return min(fees) if fees else 0
+        return min(fees) if fees else None
 
     @property
     def online_available(self) -> bool:

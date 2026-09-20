@@ -29,7 +29,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "시행규칙 별지18호",
+          "notes": "방문 일반 400원·이해관계인 500원·무인발급기 50%감면 / 확인 2026-09-20",
           "source_quote": "주민등록표 등본 1부",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -46,7 +46,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "5월 신고기간 전후 공백 주의",
+          "notes": "5월 신고기간 전후 공백 주의 / 확인 2026-09-20",
           "source_quote": "소득금액증명원 1부",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -63,7 +63,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "유효기간 30일 - 발급 타이밍 역산 필요",
+          "notes": "[수정] 방문 수수료 1000원→0원(수수료 없음) / 유효기간 30일: 법제처 조문 본문 페이지 렌더 실패로 국세징수법 시행령 원문 미확보 - 지방세(시행령 제7조 30일)와 동일 구조로 추정되나 미검증 / 확인 2026-09-20",
           "source_quote": "국세 납세증명서 1부(발급일로부터 30일 이내)",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -80,7 +80,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "미취업 요건 판정 핵심",
+          "notes": "고용·산재보험 제증명 발급 민원에 포함 / 미취업 요건 판정 핵심 / 확인 2026-09-20",
           "source_quote": "고용보험 피보험자격 이력내역서 1부",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -95,9 +95,9 @@
           "doc_code": "D020",
           "issuer": "대학교",
           "lead_time_business_days": 3,
-          "cost_krw": 1000,
+          "cost_krw": null,
           "lead_time_estimated": false,
-          "notes": "온라인 출력 불가 - 현금 수령",
+          "notes": "[갱신] 전용 민원 페이지(대학(교) 졸업(예정)증명서 발급)로 링크 교체. 해당 페이지 처리기간 표기는 '즉시'이며 수수료는 금액 미공시('수수료 징수규칙 및 어디서나민원 처리지침에 따름'). 기존 1000원은 근거 없어 삭제. 어디서나민원 수령까지의 1~3일은 여전히 근거 미확보",
           "source_quote": "최종학력 졸업증명서 1부",
           "lead_time_min_business_days": 1,
           "issue_kind": "ANYWHERE_VISIT",
@@ -134,7 +134,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "시행규칙 별지18호",
+          "notes": "방문 일반 400원·이해관계인 500원·무인발급기 50%감면 / 확인 2026-09-20",
           "source_quote": "주민등록표 등본 1부",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -151,7 +151,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "취업여부 판정 핵심",
+          "notes": "취업여부 판정 핵심 / 확인 2026-09-20",
           "source_quote": "건강보험 자격득실확인서 1부(미취업 확인용)",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -168,7 +168,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "미취업 요건 판정 핵심",
+          "notes": "고용·산재보험 제증명 발급 민원에 포함 / 미취업 요건 판정 핵심 / 확인 2026-09-20",
           "source_quote": "고용보험 피보험자격 이력내역서 1부",
           "lead_time_min_business_days": 0,
           "issue_kind": "ONLINE_INSTANT",
@@ -185,7 +185,7 @@
           "lead_time_business_days": 0,
           "cost_krw": 0,
           "lead_time_estimated": false,
-          "notes": "사실상 즉시",
+          "notes": "공적 출처 없음 / 사실상 즉시",
           "source_quote": "본인 명의 통장 사본 1부",
           "lead_time_min_business_days": 0,
           "issue_kind": "SELF_HELD",
@@ -230,7 +230,7 @@
       "validity_days": 90,
       "issue_not_before": "2026-09-17",
       "single_issue_covers_all": true,
-      "notes": "미취업 요건 판정 핵심"
+      "notes": "고용·산재보험 제증명 발급 민원에 포함 / 미취업 요건 판정 핵심 / 확인 2026-09-20"
     },
     {
       "name": "주민등록표 등본",
@@ -256,7 +256,7 @@
       "validity_days": 90,
       "issue_not_before": "2026-09-17",
       "single_issue_covers_all": true,
-      "notes": "시행규칙 별지18호"
+      "notes": "방문 일반 400원·이해관계인 500원·무인발급기 50%감면 / 확인 2026-09-20"
     },
     {
       "name": "납세증명서(국세완납)",
@@ -280,7 +280,7 @@
       "validity_days": 30,
       "issue_not_before": "2026-11-11",
       "single_issue_covers_all": true,
-      "notes": "유효기간 30일 - 발급 타이밍 역산 필요"
+      "notes": "[수정] 방문 수수료 1000원→0원(수수료 없음) / 유효기간 30일: 법제처 조문 본문 페이지 렌더 실패로 국세징수법 시행령 원문 미확보 - 지방세(시행령 제7조 30일)와 동일 구조로 추정되나 미검증 / 확인 2026-09-20"
     },
     {
       "name": "소득금액증명",
@@ -304,7 +304,7 @@
       "validity_days": 90,
       "issue_not_before": "2026-09-12",
       "single_issue_covers_all": true,
-      "notes": "5월 신고기간 전후 공백 주의"
+      "notes": "5월 신고기간 전후 공백 주의 / 확인 2026-09-20"
     },
     {
       "name": "졸업증명서(대학)",
@@ -313,7 +313,7 @@
       "lead_time_business_days": 3,
       "lead_time_min_business_days": 1,
       "lead_time_estimated": false,
-      "cost_krw": 1000,
+      "cost_krw": null,
       "issue_kind": "ANYWHERE_VISIT",
       "channel": "정부24 신청+주민센터 수령",
       "requires_visit": true,
@@ -328,7 +328,7 @@
       "validity_days": 90,
       "issue_not_before": "2026-09-12",
       "single_issue_covers_all": true,
-      "notes": "온라인 출력 불가 - 현금 수령"
+      "notes": "[갱신] 전용 민원 페이지(대학(교) 졸업(예정)증명서 발급)로 링크 교체. 해당 페이지 처리기간 표기는 '즉시'이며 수수료는 금액 미공시('수수료 징수규칙 및 어디서나민원 처리지침에 따름'). 기존 1000원은 근거 없어 삭제. 어디서나민원 수령까지의 1~3일은 여전히 근거 미확보"
     },
     {
       "name": "건강보험 자격득실확인서",
@@ -352,7 +352,7 @@
       "validity_days": 90,
       "issue_not_before": "2026-09-17",
       "single_issue_covers_all": true,
-      "notes": "취업여부 판정 핵심"
+      "notes": "취업여부 판정 핵심 / 확인 2026-09-20"
     },
     {
       "name": "통장 사본",
@@ -376,10 +376,11 @@
       "validity_days": null,
       "issue_not_before": null,
       "single_issue_covers_all": true,
-      "notes": "사실상 즉시"
+      "notes": "공적 출처 없음 / 사실상 즉시"
     }
   ],
-  "total_document_cost_krw": 1000,
+  "total_document_cost_krw": 0,
+  "cost_unknown_document_count": 1,
   "visit_required_count": 1,
   "unverified_document_count": 7,
   "calendar_source_ref": "관공서의 공휴일에 관한 규정 (대통령령) · 한국천문연구원 특일 정보",

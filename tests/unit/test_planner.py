@@ -711,10 +711,30 @@ def test_수수료는_발급_가능한_채널_중_최저가() -> None:
 
 def test_온라인_불가_서류는_방문_수수료를_쓴다() -> None:
     """온라인 수수료가 빈칸인 것은 0원이 아니라 '그 채널로 발급 안 됨'이다."""
-    spec = doc_master()["D020"]  # 졸업증명서(대학) — 정부24 신청 + 창구 수령
+    spec = doc_master()["D007"]  # 본인서명사실확인서 — OFFLINE_ONLY
     assert spec.fee_online_krw is None
-    assert spec.cheapest_fee_krw == 1000
+    assert spec.cheapest_fee_krw == 0  # 방문 수수료 면제 (2028-12-31까지)
     assert spec.requires_visit
+
+
+def test_금액_미상은_무료와_다르다() -> None:
+    """0 으로 뭉개면 화면이 '무료'라고 말하고 사용자는 창구에서 돈을 낸다.
+
+    대학 제증명(D020·D022·D023)은 유료인데 금액이 국립대는 규칙, 사립대는 학칙에
+    따라 달라 단일값이 없다. 2026-09-20 검증에서 근거 없던 1,000원을 지우면서
+    두 칸이 모두 비었고, 그때 '무료'로 보이기 시작했다.
+    """
+    graduation = doc_master()["D020"]
+    assert graduation.fee_online_krw is None
+    assert graduation.fee_offline_krw is None
+    assert graduation.cheapest_fee_krw is None, "금액 미상이 0원으로 나갑니다"
+
+    free = doc_master()["D008"]  # 소득금액증명 — 실제로 무료
+    assert free.cheapest_fee_krw == 0
+
+    # 합계는 아는 것만 더하고, 모르는 건 건수로 따로 알린다.
+    for code in ("D020", "D022", "D023"):
+        assert doc_master()[code].cheapest_fee_krw is None, code
 
 
 def test_방문_필요_서류를_구분한다() -> None:
@@ -739,12 +759,21 @@ def test_유효기간에_근거가_없으면_화면은_계속_추정치라고_�
     이 테스트는 원래 '전 항목이 미검증'이었다. 검증이 진행되면서 사실이 아니게
     됐지만, 지켜야 할 것은 그대로다 — 화면이 추정치를 추정치라고 말하는 것.
     """
-    specs = doc_master().values()
+    specs = list(doc_master().values())
     assert any(s.verified for s in specs), "검증 결과가 반영되지 않았습니다"
-    assert not any(s.is_fully_grounded for s in specs), (
-        "유효기간 근거가 생겼다면 이 테스트를 갱신할 것 — "
-        "그때부터는 일부 서류가 화면에서 확정으로 나간다"
+
+    # 2026-09-20 검증 2차에서 D012(지방세 납세증명서)가 처음으로 유효기간 근거를
+    # 확보했다 — 지방세징수법 시행령 제7조. 이 행부터 화면에서 확정으로 나간다.
+    grounded = {s.doc_code for s in specs if s.is_fully_grounded}
+    assert grounded == {"D012"}, (
+        f"유효기간 근거가 있는 행이 바뀌었다: {sorted(grounded)} — "
+        f"늘었다면 이 목록을 갱신하고, 줄었다면 근거가 사라진 것이다"
     )
+
+    # 나머지는 소요일만 확인된 상태다. 유효기간이 추정인 채로 딱지가 떨어지면 안 된다.
+    lead_only = [s for s in specs if s.verified and not s.validity_grounded]
+    assert lead_only, "전부 근거를 확보했다면 이 테스트를 지울 것"
+    assert not any(s.is_fully_grounded for s in lead_only)
 
 
 def test_doc_code_가_이름보다_우선한다() -> None:

@@ -141,6 +141,9 @@ class PlanResponse(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     # 서류 기준으로 합친 할 일 목록
     documents: list[DocumentTask] = msgspec.field(default_factory=list)
     total_document_cost_krw: int = 0
+    # 금액을 알 수 없는 서류 수. 합계에서 빠져 있으므로 화면이 함께 알려야 한다
+    # (대학 제증명은 유료지만 학교마다 금액이 다르다).
+    cost_unknown_document_count: int = 0
     # 창구 방문이 필요한 서류 수 — 온라인으로 끝나는지 사용자가 먼저 알아야 한다
     visit_required_count: int = 0
     # 마스터 값이 미검증인 서류 수 (검증상태 '확인필요')
