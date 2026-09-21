@@ -29,6 +29,85 @@ docker run --rm -p 8000:8000 \
 **없어도 기동한다는 점이 설계다.** 설정 하나가 빠졌다고 프로세스가 죽으면, 그 설정과
 무관한 기능까지 같이 멈춘다. 대신 무엇이 꺼졌는지 기동 로그에 남는다.
 
+## 세션 저장을 켜는 절차 (Render)
+
+`/v1/sessions` 가 503 `session-store-unavailable` 이면 **둘 중 하나가 없는 것**이다 —
+DB 연결, 또는 암호화 키. 판정은 그동안에도 정상 동작한다 (ADR-001).
+
+키가 없는 상태로 평문 저장하는 경로는 만들지 않았다. 설정 실수 한 번으로 개인정보가
+평문으로 쌓이고, 그건 아무 증상 없이 계속된다.
+
+### 1. PostgreSQL 만들기
+
+Render 대시보드 → **New → PostgreSQL** (free 플랜). 생성되면 **Internal Database URL**
+을 복사한다 (External 이 아니라 Internal — 같은 리전 안에서는 외부로 나갔다 오지
+않는다).
+
+### 2. 마이그레이션 적용
+
+Render 의 무료 웹 서비스에는 셸이 없다. **로컬에서 External URL 로 한 번 적용한다:**
+
+```bash
+# Render 대시보드 → PostgreSQL → Connect → External Connection 의 psql 명령
+psql "<EXTERNAL_DATABASE_URL>" -v ON_ERROR_STOP=1 -f db/migrations/0001_init.sql
+psql "<EXTERNAL_DATABASE_URL>" -f db/verify_schema.sql   # 제약조건 확인
+```
+
+`0001_init.sql` 은 재실행 안전하지 않다. **한 번만** 돌린다.
+
+### 3. 환경변수 3개
+
+| 키 | 값 |
+| --- | --- |
+| `DATABASE_URL` | 1번의 **Internal** Database URL |
+| `PROFILE_ENC_KEYS` | `1:<키>` — 아래 명령으로 생성 |
+| `CORS_ORIGINS` | FE 출처 (아래 참고) |
+
+```bash
+python -c "from app.core.crypto import generate_key; print('1:' + generate_key())"
+```
+
+**`1:` 접두사가 필수다.** 키 회전을 위한 버전 번호이고, 빼면 키를 못 읽어 세션 API 가
+계속 503 이다 (판정은 계속 된다).
+
+### 4. 확인
+
+```bash
+curl -s https://<서비스>/readyz | python -m json.tool
+# database.configured=true, database.ready=true 여야 한다
+```
+
+`configured=true, ready=false` 면 DSN 은 읽혔는데 연결이 안 되는 것이다 — Internal URL
+을 썼는지, 같은 리전인지 본다.
+
+## CORS — preflight 가 405 면 설정이 빈 것이다
+
+`CORS_ORIGINS` 가 비어 있으면 **미들웨어 자체가 등록되지 않는다.** 그러면 `OPTIONS` 를
+처리할 핸들러가 없어서 **405 `method-not-allowed`** 가 나가고, 응답에
+`access-control-allow-origin` 이 아예 없다. 브라우저는 그 시점에 본 요청을 중단하므로
+화면에는 `Failed to fetch` 만 보인다 — CORS 라는 말이 안 나온다.
+
+설정하면 preflight 가 바로 통과한다 (로컬 확인):
+
+```
+OPTIONS /v1/judge  (Origin: http://127.0.0.1:5173)
+→ 405, allow-origin 없음                     # CORS_ORIGINS 비어 있을 때
+→ 200                                        # 설정 후
+   access-control-allow-origin: http://127.0.0.1:5173
+   access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+   access-control-allow-headers: ... Content-Type, If-None-Match, X-Session-Id
+```
+
+**출처에 경로를 붙이지 않는다.** `https://example.github.io/FE/` 가 아니라
+`https://example.github.io` 다 — 브라우저가 보내는 `Origin` 헤더에는 경로가 없다.
+끝의 `/` 는 코드가 떼지만, 경로는 떼지 않는다.
+
+로컬 점검용 출처도 함께 넣을 수 있다:
+
+```
+CORS_ORIGINS=https://example.github.io,http://127.0.0.1:5173,http://127.0.0.1:5174
+```
+
 ## 스냅샷을 이미지에 굽지 않는 이유
 
 실데이터 스냅샷은 매일 바뀌고 수집 키가 필요하다. 이미지에 넣으면 배포할 때마다
