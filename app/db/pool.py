@@ -102,14 +102,31 @@ class Database:
                 self._pool = pool
                 log.info("DB 풀 연결 완료")
                 return True
-            except (OSError, asyncpg.PostgresError, TimeoutError) as e:
+            # 예외 종류를 가리지 않는다. 여기서 무엇이 터지든 결론은 하나다 —
+            # 세션 저장만 끄고 기동한다.
+            #
+            # 전에는 (OSError, PostgresError, TimeoutError) 만 잡았다. 그런데
+            # DSN 이 잘못됐을 때 asyncpg 가 던지는 ClientConfigurationError 는
+            # InterfaceError → ValueError 계열이라 셋 중 어디에도 안 걸린다.
+            # 그래서 **환경변수 오타 하나가 프로세스를 죽여** 재시작 루프에
+            # 빠뜨렸다. DB 를 한 번도 안 쓰는 판정 경로까지 같이 멈춘 것이다
+            # (ADR-001: 판정은 DB 를 쓰지 않는다).
+            #
+            # 설정이 틀렸다는 사실은 /readyz 의 database.ready=false 와 아래
+            # 경고 로그로 드러난다. 그게 맞는 알림 방식이고, 프로세스 종료는
+            # 아니다 — DEPLOY.md '없어도 기동한다는 점이 설계다'.
+            except Exception as e:
                 last = e
                 if pool is not None:
                     await pool.close()
                 if attempt < CONNECT_RETRIES - 1:
                     await asyncio.sleep(CONNECT_BACKOFF_SECONDS * (2**attempt))
 
-        log.warning("DB 풀 연결 실패 — 세션 저장 없이 기동합니다: %s", last)
+        log.warning(
+            "DB 풀 연결 실패 — 세션 저장 없이 기동합니다 (%s): %s",
+            type(last).__name__,
+            last,
+        )
         return False
 
     async def close(self) -> None:
