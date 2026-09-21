@@ -24,11 +24,11 @@
 현재 **판정 · 역질문 · 조합 · 일정 · 세션 저장 · 정책 목록 · A2 구조화 · C2 설명문이 모두 동작**한다.
 제출용 E2E 시나리오 6종(`tests/e2e/`)이 키 없이 돌고, 고정 데모 데이터(`data/demo/`)가 커밋되어 있다.
 
-BE 는 배포되어 있고 (`https://be-27y9.onrender.com`), FE 계약 3건(소득 단위·경로
-접두사·불필요 필드)은 2026-09-19 FE 회신으로 확정됐다 (§8 '결정된 것').
+**BE 는 배포돼 있고 DB·CORS 까지 붙어 있다** (`https://be-27y9.onrender.com`).
+FE 가 브라우저에서 판정부터 세션 저장까지 전 경로를 호출할 수 있는 상태다 (§8).
 
-남은 것은 **코드보다 정렬**이다: FE 배포 주소(→ `CORS_ORIGINS`)와 서류 마스터 검증.
-자세한 것은 §8.
+남은 것은 **코드가 아니라 데이터와 결정**이다: 스냅샷을 실공고로 바꿀지(#17),
+서류 유효기간 근거(#8), FE 공개 주소(#9). 자세한 것은 §8.
 
 ---
 
@@ -38,10 +38,12 @@ BE 는 배포되어 있고 (`https://be-27y9.onrender.com`), FE 계약 3건(소�
 | --- | --- |
 | HEAD | `dev` 최신 — `git log -1` 로 확인할 것 |
 | 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 |
-| 배포 | `https://be-27y9.onrender.com` (Render, `render.yaml`). **데모 스냅샷 5건**으로 떠 있다 — 실데이터가 아니다 |
-| CORS | **비어 있다.** FE 주소가 정해지면 Render → Environment → `CORS_ORIGINS` 에 넣는다. 그때까지 브라우저에서 호출 불가 |
+| 배포 | `https://be-27y9.onrender.com` (Render, oregon). **데모 스냅샷 5건** — 실데이터가 아니다 |
+| DB | **연결됨** (2026-09-21). `ypc-db` Postgres 18, oregon. 세션 저장·조회 동작 |
+| CORS | `http://127.0.0.1:5173,:5174` **로컬만.** FE 공개 주소는 아직 없다 — 나오면 덧붙인다 |
+| FE 협업 | [FE#21](https://github.com/Claude-MCP-7team/FE/issues/21) 이 배포·연동 점검의 실시간 창구다 |
 | 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
-| 테스트 | **652건 통과** (DB 통합 포함, skip 0) |
+| 테스트 | **668건 통과** (DB 통합 포함, skip 0) |
 | CI | 통과 (lint · **타입** · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
 
 > ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
@@ -64,7 +66,7 @@ python bench/engine_bench.py
 pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
 ```
 
-`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 652건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 668건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
 
 **API 키 없이도 전 경로가 돈다.** `data/demo/` 의 고정 정책 5건이 그 바닥을 받친다:
 
@@ -100,11 +102,14 @@ BE 현재 동작과 일치해서 BE 변경은 없었다 (§8 '결정된 것' 에
 - **네 번째 판정 상태** — BE 는 `verdict` 3값 + `future_eligible_from` 으로 냈다 (§3).
   Design 이 4상태 배지를 전제로 만들고 있으니 이 매핑을 공유해야 한다.
 
-**실제로 막혀 있는 건 `CORS_ORIGINS` 하나다** (§8 #9). FE 공개 배포 주소가 아직 없어
-CORS 가 비어 있고, 그동안은 브라우저에서 BE 를 못 부른다 (서버 간 호출은 된다).
-주소가 나오면 Render → Environment 에 넣으면 끝이다.
+**2026-09-21 로 배포·연동이 끝났다** (§8 '배포 완료 상태'). 최신 코드·CORS·DB 가
+전부 붙어 있고, FE 가 브라우저에서 전 경로를 호출한다. 남은 것은 FE 공개 주소를
+`CORS_ORIGINS` 에 덧붙이는 것뿐이다 (#9) — 로컬 출처 2개는 이미 열려 있다.
 
-### ② `batch/crawl` + `batch/agents` (BE-M1-4~5)
+진행 상황은 [FE#21](https://github.com/Claude-MCP-7team/FE/issues/21) 에서 오간다.
+**BE 담당이 먼저 볼 곳이 여기다.**
+
+### ② `batch/collect` + `batch/agents` (BE-M1-4~5)
 **API 는 확정됐다** (2026-09-14 실응답 기준, 상세는 `batch/collect/client.py` 도크스트링).
 `/go/ythip/getPlcy` · JSON · 1,000건/페이지 · 지역은 `zipCd=41000`(법정동 5자리, 전국 정책 포함).
 구 엔드포인트는 죽었고 구 지역 파라미터는 조용히 무시된다.
@@ -161,7 +166,8 @@ normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn
   그런 정책이 ELIGIBLE 로 나올 때 confidence 를 낮출지는 BE 결정 사항 (§8 미결 #10).
 - `askable` 룰의 `question_template` 은 모델 문구 → 없으면 `batch/agents/questions.py` 표준 문구. 필드별 병합(G3) 때문에
   같은 필드는 같은 문구가 낫다.
-- 응답은 `data/a2-cache/` 에 (프롬프트+텍스트) 해시로 캐시된다. 프롬프트를 고치면 자동으로 다시 호출된다.
+- 응답은 `data/a2-cache/` 에 (프롬프트+텍스트) 해시로 캐시된다 (첫 실행 때 만들어진다).
+  프롬프트를 고치면 자동으로 다시 호출된다.
 - 아직 **실제 Anthropic 키로 돌려보지 못했다.** 테스트 21건은 가짜 LLM 으로 검증·병합 로직만 본다.
 - 실데이터(2026-09-19 수집, 2,819건)로 텍스트 쪽은 확인했다: `plcyExplnCn`·`plcySprtCn` 은 전건, `sbmsnDcmntCn` 962·
   `addAplyQlfcCndCn` 926·`ptcpPrpTrgtCn` 667·`earnEtcCn` 336건. 목록에 없던 `bizPrdEtcCn`(1,185건)은 `*Cn` 자동 포착으로 들어온다.
@@ -487,6 +493,7 @@ needs_review_fields` 로 무엇을 못 봤는지도 함께 준다 — confidence
 | `fastapi.HTTPException` | `starlette.exceptions.HTTPException` (부모) | 루트 404 가 `{"detail":"Not Found"}` |
 | `LLMError` | `APITimeoutError` 등 SDK 계층 | 판정 응답 전체가 500 |
 | `msgspec.ValidationError` | `msgspec.DecodeError` (부모) | POST 5개가 깨진 JSON 에 500 |
+| `(OSError, PostgresError, TimeoutError)` | `ClientConfigurationError` (`ValueError` 계열) | **환경변수 오타 하나로 서비스 전체가 재시작 루프** |
 
 ```python
 issubclass(msgspec.ValidationError, msgspec.DecodeError)  # True
@@ -506,6 +513,32 @@ issubclass(msgspec.ValidationError, msgspec.DecodeError)  # True
 | --- | --- | --- |
 | `invalid-request` | 본문이 JSON 이 아니다 | 직렬화·전송 |
 | `invalid-profile` | JSON 은 맞는데 값이 틀렸다 | `detail` 이 필드명을 준다 |
+
+### 설정이 틀려도 서버는 뜬다
+
+`Database.connect()` 는 **무엇이 터지든** `False` 를 돌려주고 기동을 계속한다
+(`except Exception`). 판정 경로는 DB 를 쓰지 않으므로(ADR-001), DB 설정이 잘못됐을 때
+막혀야 하는 것은 **세션 저장뿐**이다.
+
+실제로 한 번 안 그랬다. `DATABASE_URL` 에 스킴 없는 값이 들어가자 asyncpg 가
+`ClientConfigurationError` 를 던졌는데, 그건 `InterfaceError` → `ValueError` 계열이라
+`except (OSError, PostgresError, TimeoutError)` 어디에도 안 걸렸다. 예외가 lifespan 으로
+올라가 **프로세스가 종료되고 재시작 루프**에 빠졌다 — 환경변수 오타 하나로 서비스
+전체가 내려간 것이다. 운영 중에 실제로 발생했다 (2026-09-21).
+
+여기서는 예외 분류가 필요 없다. 연결 중 무엇이 잘못되든 답은 하나 —
+**세션 저장 없이 기동한다.** 대신 로그에 **예외 종류를 함께** 남긴다. DSN 오타
+(`ClientConfigurationError`)와 DB 다운(`OSError`)은 운영자가 볼 곳이 다르다:
+
+```
+DB 풀 연결 실패 — 세션 저장 없이 기동합니다 (InvalidPasswordError): password authentication failed
+```
+
+`tests/unit/test_db_startup.py` 가 운영자가 실제로 저지르는 실수 7가지(빈 값·공백·
+스킴 없음·psql 명령 통째로·앞뒤 공백·스킴 오타·한글 안내문)로 검사한다. 같이 지키는 것
+두 가지: 연결 안 된 풀에서 `acquire()` 하면 **예외가 난다**(조용히 저장된 척하면 안
+된다), 그리고 `/readyz` 가 `configured` 와 `ready` 를 **분리**해 내보낸다(값이 틀린
+것과 DB 가 죽은 것을 운영자가 구분해야 한다).
 
 ### 전 엔드포인트 훑기 (`tests/unit/test_endpoint_sweep.py`)
 
@@ -953,8 +986,46 @@ pytest && ruff check . && mypy && python tools/export_contract.py && git diff --
 | 6 | 응답 envelope (`{data, request_id}` 래핑) | FE | 현재 페이로드 직접 반환 |
 | 8 | 서류 마스터 — 유효기간 근거 (법령 조문) | 사람 | 소요일·수수료 23/36. **유효기간은 1/36**(D012) 이라 나머지는 화면에서 계속 추정치다 (§2-③) |
 | 16 | 실공고로 중복수혜 조합(시나리오 5)을 보여줄 데이터 | 데이터 | 상충 쌍이던 국토부 청년월세가 2026-05-29 에 마감됐다. 신청기간이 열려 있는 전국·경기 단위 주거 정책 1건이 더 필요하다 (`data/manual/README.md`). 합성 데이터로는 `data/demo/` 에서 돌고 `tests/e2e` 가 단언한다 |
-| 9 | FE 공개 배포 주소 (→ `CORS_ORIGINS`) | FE | BE 는 떠 있다 (아래 '결정된 것'). FE 주소가 없어 CORS 가 비어 있고, **그래서 지금은 브라우저에서 BE 를 못 부른다**. 주소가 나오면 Render 환경변수에 넣는 것만 남았다 |
+| 9 | FE 공개 배포 주소 (→ `CORS_ORIGINS`) | FE | 로컬 출처 2개는 열려 있어 FE 가 개발 중 연동은 한다. **배포된 FE 에서는 아직 못 부른다.** 주소가 나오면 Render 환경변수에 쉼표로 덧붙인다 |
+| 17 | 스냅샷을 실공고로 바꿀지 | 팀 | 지금은 데모 5건이 배포돼 있다. `data/manual/a2/` 의 실공고 5건으로 바꾸면 `[데모]` 딱지는 사라지지만 **시나리오 5 상충 쌍이 빠진다** (#16 과 같은 뿌리). FE 도 실공고 쪽이 낫다는 의견 (FE#21) |
+| 18 | 무료 Postgres 가 **2026-10-21 에 삭제**된다 | 팀 | 제출(10/1) 이후다. 그 뒤로 데모를 유지하려면 유료 전환이나 재생성이 필요하다 |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
+
+### 배포 완료 상태 (2026-09-21)
+
+FE 의 배포 점검([FE#21](https://github.com/Claude-MCP-7team/FE/issues/21))에서 요청한
+4개 항목 중 3개가 끝났다. 절차는 전부 `docs/DEPLOY.md` 에 있다.
+
+| | 확인한 응답 |
+| --- | --- |
+| 최신 코드 | `POST /v1/judge` 에 `{oops` → **422** `invalid-request` |
+| CORS | `OPTIONS /v1/judge` → **200** + `access-control-allow-origin` |
+| DB | `POST /v1/sessions` → **201** + `session_id` / `/readyz` 의 `database.ready=true` |
+| 스냅샷 | 데모 5건 — 팀 결정 대기 (#17) |
+
+**여기까지 오면서 걸린 것들** (전부 `docs/DEPLOY.md` 에 적어 뒀다):
+
+1. **재배포가 안 되고 있었다.** 대시보드에 옛 커밋이 Live 로 남아 있는데 아무도
+   몰랐다. FE 가 "500 이 난다"고 보고한 게 유일한 신호였다. **커밋 해시를 눈으로
+   확인하는 것**이 가장 확실하다 — `Manual Deploy` 를 눌렀다고 반영된 게 아니다.
+2. **한국어 Windows 에서 `psql` 이 마이그레이션을 거부한다** (cp949/UHC). CLAUDE.md 가
+   경고하는 그 함정인데, 우리 코드가 아니라 `psql` 이라 환경변수로 줘야 한다.
+3. **Internal URL 과 External URL 은 쓰는 곳이 다르다.** Internal 은 Render 안에서만
+   열려서 개발자 PC 의 psql 로는 못 붙는다.
+4. **`verify_schema.sql` 은 ERROR 가 나는 게 정상이다.** 제약조건이 실제로 막는지
+   보려고 일부러 위반한다. 처음 보면 실패한 줄 안다.
+5. **`PROFILE_ENC_KEYS` 의 `1:` 접두사.** 빼면 세션만 계속 503 이고 판정은 정상이라
+   설정이 먹은 것처럼 보인다.
+
+**`POST /v1/sessions` 의 본문 규칙**도 여기 적어 둔다 — FE 점검에서 한 번 걸렸다:
+
+```
+본문 없음        → 201  익명 세션 발급
+{}              → 422  "프로필을 보냈는데 core 가 없다"
+{"core": {...}} → 201  프로필과 함께 저장
+```
+
+빈 객체를 조용히 받아주면 "저장한 줄 알았는데 안 된" 프로필이 생긴다.
 
 ### 결정된 것 (2026-09-19, FE 회신)
 
