@@ -53,7 +53,49 @@ psql "<EXTERNAL_DATABASE_URL>" -v ON_ERROR_STOP=1 -f db/migrations/0001_init.sql
 psql "<EXTERNAL_DATABASE_URL>" -f db/verify_schema.sql   # 제약조건 확인
 ```
 
-`0001_init.sql` 은 재실행 안전하지 않다. **한 번만** 돌린다.
+**Internal 이 아니라 External URL 이다.** Internal(`dpg-...-a`, 도메인 없음)은 Render
+내부 네트워크에서만 열리고, 개발자 PC 에서는 붙지 않는다. Internal 은 3번에서
+`DATABASE_URL` 로 쓴다.
+
+`0001_init.sql` 은 재실행 안전하지 않다. **한 번만** 돌린다. 다만 파일 전체가
+`BEGIN`/`COMMIT` 으로 감싸여 있어, 중간에 실패하면 전부 롤백된다 — 실패한 뒤에
+다시 돌리는 것은 안전하다.
+
+#### 한국어 Windows: `PGCLIENTENCODING` 을 먼저 준다
+
+```powershell
+$env:PGCLIENTENCODING = "UTF8"   # 이거 없으면 아래 에러가 난다
+chcp 65001                       # 출력 한글이 깨지는 것도 같이 잡힌다
+```
+
+없으면 이렇게 멈춘다:
+
+```
+ERROR: character with byte sequence 0x80 0xec in encoding "UHC"
+       has no equivalent in encoding "UTF8"
+```
+
+마이그레이션 파일에 한글 주석·제약조건명이 들어 있는데(비ASCII 1,678바이트),
+`psql` 은 클라이언트 인코딩을 **콘솔 코드페이지**에서 가져온다. 한국어 Windows 는
+그게 UHC(cp949) 라서, UTF-8 파일을 cp949 로 읽으려다 죽는다. 파일이 깨진 게 아니다.
+
+CLAUDE.md 가 경고하는 그 cp949 함정이 배포 절차에서 다시 나온 경우다. 파이썬 쪽은
+`encoding="utf-8"` 과 `force_utf8_console()` 로 막아 뒀지만, `psql` 은 우리 코드가
+아니라서 환경변수로 줘야 한다.
+
+#### `verify_schema.sql` 은 에러가 나는 게 정상이다
+
+제약조건이 실제로 막는지 확인하려고 **일부러 위반을 시도**한다. `[MUST FAIL]` 로
+표시된 항목에서 ERROR 가 나와야 통과다. 13건의 기대값:
+
+| | 기대 |
+| --- | --- |
+| 1·2·4·5·10·11·13 | **ERROR** (제약조건이 막아야 함) |
+| 3·6·12 | INSERT 성공 |
+| 7 | INSERT 1건 후 ERROR (활성 스냅샷은 항상 1개) |
+| 8·9 | 지역 접두체인 조회 — 각각 3건 / 1건 |
+
+ERROR 가 **안 나오면** 그게 문제다. 제약조건이 빠진 채로 배포된 것이다.
 
 ### 3. 환경변수 3개
 
