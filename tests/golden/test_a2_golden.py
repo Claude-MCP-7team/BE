@@ -1,4 +1,4 @@
-"""데모 5건이 골든 정답표를 재현하는가 — 프롬프트·병합·서류 매핑의 회귀 테스트.
+"""손으로 쓴 A2 응답이 골든 정답표를 재현하는가 — 프롬프트·병합·서류 매핑의 회귀 테스트.
 
 data/manual/a2 의 응답을 FileLLM 으로 같은 파이프라인에 태워 채점한다. 이 테스트가 깨지면
 (a) 정답표를 바꿀 만한 근거가 생겼거나 (b) 병합 코드가 뭔가를 조용히 떨어뜨리기 시작한 것이다.
@@ -26,7 +26,13 @@ def build_manual_policies():
     policies = []
     for rec in records:
         base = record_to_policy(rec, crawled_at="20260919T000000Z")
-        llm = FileLLM(MANUAL / "a2" / f"{base.policy_id}.json")
+        response = MANUAL / "a2" / f"{base.policy_id}.json"
+        # 손으로 쓴 응답이 있는 것만 채점한다. 수집 원본에는 응답을 안 쓴 공고가
+        # 섞여 있고(2026-09-24 수집분 20건), 그것까지 요구하면 원본을 추가할
+        # 때마다 이 테스트가 FileNotFoundError 로 죽는다.
+        if not response.exists():
+            continue
+        llm = FileLLM(response)
         merged, report = structure_policy(base, rec, llm, system_prompt="golden")
         assert report.rejected == [], (base.policy_id, [r.__dict__ for r in report.rejected])
         policies.append(merged)
@@ -34,9 +40,9 @@ def build_manual_policies():
     return policies
 
 
-def test_데모_11건이_골든_정답표를_전부_재현한다():
+def test_골든_정답표에_적힌_공고를_전부_재현한다():
     scores = score_all(build_manual_policies(), GOLDEN)
-    assert len(scores) == 11
+    assert len(scores) == len(GOLDEN["policies"])
     assert all(s.passed for s in scores), "\n" + render(scores)
 
 

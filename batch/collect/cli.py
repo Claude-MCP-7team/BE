@@ -26,7 +26,7 @@ import msgspec
 
 from app.core.console import force_utf8_console
 from batch.collect.client import CollectConfig, YouthCenterClient, load_raw
-from batch.collect.normalize import record_to_policy
+from batch.collect.normalize import code_universe, record_to_policy
 from batch.collect.parse import Record
 from batch.collect.survey import build_report, render_markdown
 
@@ -89,7 +89,12 @@ def cmd_normalize(args: argparse.Namespace) -> int:
         print(f"레코드가 없습니다: {directory}", file=sys.stderr)
         return 2
     crawled_at = directory.name.split("-")[0]  # 원본 디렉터리명이 수집 시각이다
-    policies = [record_to_policy(r, crawled_at=crawled_at) for r in records]
+    # 묶음 전체의 zipCd 합집합이 '전국'의 기준이다. 레코드 하나만 보면 238개가
+    # 전국인지 전국에서 18개를 뺀 것인지 알 수 없다 (normalize.resolve_region).
+    universe = code_universe(records)
+    policies = [
+        record_to_policy(r, crawled_at=crawled_at, universe=universe) for r in records
+    ]
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(msgspec.json.format(msgspec.json.encode(policies), indent=2))

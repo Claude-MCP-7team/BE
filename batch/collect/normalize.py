@@ -35,6 +35,7 @@ API 가 코드로 준 것(나이·결혼·취업·학력·지역·신청기간·
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from datetime import date
 from typing import Any
 
@@ -45,6 +46,109 @@ from app.schemas.policy import Dept, Meta, Period, PolicySchema, Quality, Rule, 
 Record = dict[str, Any]
 
 NATIONWIDE_MIN_CODES = 100  # 실측: 시도 단위 최대 47, 전국 최소 189
+
+
+def code_universe(records: Iterable[Record]) -> frozenset[str]:
+    """이 묶음에 등장한 모든 **시군구** 코드. '전국'이 몇 개인지의 기준이 된다.
+
+    레코드 하나만 보면 zipCd 238개가 전국인지, 전국에서 18개를 뺀 것인지 알 수
+    없다. 묶음 전체의 합집합을 봐야 판단이 선다.
+
+    5자리가 아닌 코드는 뺀다. 광역 단위 공고는 zipCd 에 `41`(경기) 처럼 2자리를
+    적는데, 그게 합집합에 섞이면 **어떤 전국 공고도 합집합을 덮지 못한다** —
+    전국 목록은 시군구만 열거하기 때문이다. 그러면 전국 공고가 전부 '전국 아님'이
+    되어 코드 250여 개짜리 룰로 나간다.
+    """
+    return frozenset(
+        c for rec in records for c in _codes(rec, "zipCd") if len(c) == 5
+    )
+
+
+def _si_code(code: str) -> str | None:
+    """구 코드면 그 구가 속한 시 코드. 시·군 코드면 None.
+
+    법정동 코드는 시군구가 5자리고, 구 있는 시는 시가 끝자리 0, 구가 1~9 로
+    같은 앞 4자리를 쓴다 (용인시 41460 · 처인구 41461 · 기흥구 41463).
+    """
+    if len(code) == 5 and code[4] != "0":
+        return code[:4] + "0"
+    return None
+
+
+def resolve_region(
+    codes: list[str], universe: frozenset[str] | None
+) -> tuple[list[str], list[str], str]:
+    """zipCd 목록을 룰 값과 근거 문구로 바꾼다.
+
+    두 가지를 같이 처리한다. 둘 다 **조용히 틀리는** 쪽이라 신고가 안 들어온다.
+
+    1. **전국으로 접으면 제외 지자체가 사라진다.**
+       농식품 바우처는 zipCd 가 238개인데 전국은 256개고, 빠진 18곳이 공고문에
+       "미추진"으로 적힌 부천·수원·안산 등이다. 개수만 보고 접으면 부천 사용자가
+       받을 수 없는 정책을 적격으로 받는다. 그래서 묶음의 합집합(`universe`)을
+       전부 덮을 때만 접는다.
+
+    2. **시 단위로 입력한 사용자가 구 단위 공고를 못 본다.**
+       API 는 용인을 41461·41463·41465(처인·기흥·수지)로 적는다. 사용자가
+       41460(용인시)으로 입력하면 `region_chain` 이 ['00','41','41460'] 이라
+       교집합이 비고, 정책이 **목록에서 사라진다.** 부적격도 확인필요도 아니라
+       화면에 아무것도 안 남는다. 그래서 한 시의 구가 전부 있으면 시 코드도
+       같이 넣는다.
+
+       '전부'는 `universe` 로 판단한다. 없으면 구가 하나라도 있을 때 시 코드를
+       넣는다 — 처인구 전용 공고에 기흥구 사용자가 딸려오는 과잉 포함이 생기지만,
+       정책이 통째로 사라지는 것보다는 낫다 (CLAUDE.md).
+
+    (판정용 룰 값, 표시용 meta 값, 근거 문구)를 돌려준다. **둘을 나누는 이유**:
+    판정은 250여 개 목록이 필요하지만, 그걸 `meta.region_code` 에까지 넣으면
+    목록 응답 한 페이지가 40KB 씩 불어난다. 목록은 접힌 값으로 넓게 걸러 보여주고
+    (사용자는 카드를 본 뒤 판정에서 정확한 사유를 받는다), 판정만 명시 목록으로
+    한다. `judge.py` 의 필터는 meta 를, 엔진은 룰을 본다.
+    """
+    if not codes:
+        return [], [], ""
+
+    given = set(codes)
+    expanded = _with_si_codes(given, universe)
+
+    if universe is not None:
+        # 같은 장소를 시(41590)로 적은 공고와 구(41591·41593…)로 적은 공고가 섞여
+        # 있다. 양쪽 다 시 코드까지 펼친 뒤에 비교해야 단위가 맞는다.
+        if expanded >= _with_si_codes(set(universe), universe):
+            return ["00"], ["00"], f"전국 (zipCd {len(codes)}개 — 수집 묶음의 전 시군구)"
+    elif len(codes) >= NATIONWIDE_MIN_CODES:
+        # 기준 집합 없이 개수로만 판단하는 경로. 정확하지 않으므로 문구에 남긴다.
+        return ["00"], ["00"], f"전국으로 간주 (zipCd {len(codes)}개, 기준 집합 없음)"
+
+    value = sorted(expanded)
+    added = sorted(expanded - given)
+    quote = f"시행 지역 zipCd: {', '.join(codes)}"
+    if added:
+        quote += f" (구 전체라 시 코드 {', '.join(added)} 포함)"
+    # 표시용은 접는다. 목록에서 넓게 보여주고 정확한 사유는 판정이 낸다.
+    display = ["00"] if len(value) >= NATIONWIDE_MIN_CODES else value
+    return value, display, quote
+
+
+def _with_si_codes(codes: set[str], universe: frozenset[str] | None) -> set[str]:
+    """구 코드 묶음에 그 구들이 속한 시 코드를 더한다.
+
+    `universe` 가 있으면 **그 시의 구가 전부 있을 때만** 더한다. 없으면 구가
+    하나라도 있으면 더한다 — 처인구 전용 공고에 기흥구 사용자가 딸려오는 과잉
+    포함이 생기지만, 정책이 목록에서 통째로 사라지는 것보다는 낫다.
+    """
+    out = set(codes)
+    for code in codes:
+        si = _si_code(code)
+        if si is None or si in out:
+            continue
+        if universe is None:
+            out.add(si)
+            continue
+        siblings = {c for c in universe if _si_code(c) == si}
+        if siblings and siblings <= codes:
+            out.add(si)
+    return out
 
 _CATEGORY: dict[str, Category] = {
     "일자리": "job",
@@ -103,7 +207,11 @@ def _iso(yyyymmdd: str) -> str:
 
 
 def record_to_policy(
-    rec: Record, *, crawled_at: str | None = None, today: date | None = None
+    rec: Record,
+    *,
+    crawled_at: str | None = None,
+    today: date | None = None,
+    universe: frozenset[str] | None = None,
 ) -> PolicySchema:
     plcy_no = _s(rec, "plcyNo")
     today = today or today_kst()
@@ -124,14 +232,8 @@ def record_to_policy(
         )
 
     # --- 지역: 엔진은 meta.region_code 로 거르지 않으므로 룰로도 넣는다 ---------
-    zips = _codes(rec, "zipCd")
-    region = ["00"] if len(zips) >= NATIONWIDE_MIN_CODES else zips
+    region, region_display, quote = resolve_region(_codes(rec, "zipCd"), universe)
     if region:
-        quote = (
-            f"전국 (zipCd {len(zips)}개 전 시군구)"
-            if region == ["00"]
-            else f"시행 지역 zipCd: {', '.join(zips)}"
-        )
         rule("region", "region_code", "in", region, quote)
 
     # --- 나이 -----------------------------------------------------------------
@@ -220,7 +322,7 @@ def record_to_policy(
             title=_s(rec, "plcyNm"),
             category=_CATEGORY.get(lclsf, "welfare"),
             authority_level=level,  # type: ignore[arg-type]
-            region_code=region,
+            region_code=region_display,
             dept=Dept(name=_s(rec, "sprvsnInstCdNm") or _s(rec, "rgtrInstCdNm") or None),
         ),
         source=Source(

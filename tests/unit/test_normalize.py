@@ -8,7 +8,12 @@ from __future__ import annotations
 from datetime import date
 
 from app.schemas.validate import validate_policy
-from batch.collect.normalize import NATIONWIDE_MIN_CODES, record_to_policy
+from batch.collect.normalize import (
+    NATIONWIDE_MIN_CODES,
+    code_universe,
+    record_to_policy,
+    resolve_region,
+)
 
 
 def rec(**over: str) -> dict[str, str]:
@@ -46,7 +51,11 @@ def test_구조화_필드가_룰과_기간으로_옮겨지고_검증을_통과�
     assert validate_policy(p) == []
     assert p.status == "published"
     r = rules_of(p)
-    assert r["region_code"].op == "in" and r["region_code"].value == ["41192", "41194"]
+    # 41190(부천시)이 딸려 나온다. 기준 집합 없이 부르는 경로라 '구가 하나라도
+    # 있으면 시 코드를 넣는' 쪽으로 동작한다 — 시 단위로 입력한 사용자에게 정책이
+    # 통째로 사라지는 것보다 낫다는 판단이다 (resolve_region 도크스트링).
+    assert r["region_code"].op == "in"
+    assert r["region_code"].value == ["41190", "41192", "41194"]
     assert r["age"].op == "between" and r["age"].value == [19, 39]
     assert r["age"].time_satisfiable
     assert p.period.apply_start == "2026-09-10" and p.period.apply_end == "2026-10-04"
@@ -158,3 +167,81 @@ def test_상시모집은_종료일이_없어_영향받지_않는다():
     p = record_to_policy(rec(aplyPrdSeCd="0057002"), today=date(2099, 1, 1))
     assert p.period.is_rolling is True
     assert p.status == "published"
+
+
+# --- 지역 코드: 둘 다 조용히 틀리던 것이다 (HANDOFF §8 #20) -----------------
+
+
+def test_전국에_가까운_목록은_전국으로_접지_않는다():
+    """접으면 공고문이 '미추진'이라고 적은 지자체가 사라진다.
+
+    농식품 바우처는 zipCd 가 238개인데 전국은 256개고, 빠진 곳이 부천·수원·안산
+    등이다. 개수만 보고 접으면 **부천 사용자가 받을 수 없는 정책을 적격으로 받는다.**
+    틀린 적격은 신고가 들어오지만, 그 전에 사용자가 헛되이 서류를 뗀다.
+    """
+    universe = frozenset({"41190", "41210", "41220", "41250"})
+    거의전국 = ["41210", "41220", "41250"]  # 부천(41190)만 빠졌다
+
+    value, display, quote = resolve_region(거의전국, universe)
+    assert value == 거의전국, "전국으로 접혀 부천 제외가 사라졌다"
+    assert "41190" not in value
+    assert "전국" not in quote
+
+    전부, _, 전부문구 = resolve_region(sorted(universe), universe)
+    assert 전부 == ["00"]
+    assert "전국" in 전부문구
+
+
+def test_구가_전부_있으면_시_코드도_넣는다():
+    """없으면 시 단위로 입력한 사용자에게 정책이 통째로 사라진다.
+
+    API 는 용인을 41461·41463·41465(처인·기흥·수지)로 적는다. 사용자가
+    41460(용인시)으로 입력하면 region_chain 이 ['00','41','41460'] 이라 교집합이
+    비고, 목록에서 그냥 없어진다 — 부적격도 확인필요도 아니라 화면에 아무 흔적이
+    없다. 이 누락이 이 저장소가 가장 경계하는 실패다.
+    """
+    # 합집합에는 다른 지역도 있다. 용인 셋만 있으면 그게 곧 '전국'이 되어 접힌다.
+    universe = frozenset({"41461", "41463", "41465", "41220", "41190"})
+    value, _, quote = resolve_region(["41461", "41463", "41465"], universe)
+
+    assert "41460" in value
+    assert "시 코드 41460 포함" in quote
+
+
+def test_구가_일부만_있으면_시_코드를_넣지_않는다():
+    """처인구 전용 공고에 기흥구 사용자가 딸려오면 틀린 적격이다."""
+    universe = frozenset({"41461", "41463", "41465", "41220"})
+    value, _, _ = resolve_region(["41461"], universe)
+    assert value == ["41461"]
+
+
+def test_표시용_지역은_접고_판정용은_펼친다():
+    """250여 개 목록이 meta 에까지 들어가면 목록 응답 한 페이지가 40KB 불어난다.
+
+    목록은 넓게 걸러 보여주고(사용자는 카드를 본 뒤 판정에서 정확한 사유를 받는다),
+    정확한 제외는 판정 룰이 한다. judge.py 의 필터는 meta 를, 엔진은 룰을 본다.
+    """
+    universe = frozenset(f"{n:05d}" for n in range(11110, 11110 + 150))
+    거의전국 = sorted(universe)[:-1]  # 한 곳만 뺀다
+
+    value, display, _ = resolve_region(거의전국, universe)
+    assert len(value) == len(거의전국)  # 판정은 정확히
+    assert display == ["00"]  # 표시는 접어서
+
+
+def test_합집합은_시군구_코드만_모은다():
+    """광역 공고의 2자리 코드가 섞이면 어떤 전국 공고도 합집합을 못 덮는다.
+
+    경기도 청년기본소득은 zipCd 가 '41' 하나다. 그게 기준 집합에 남으면 전국
+    공고가 전부 '전국 아님'이 되어 250여 개짜리 룰로 나간다.
+    """
+    records = [{"zipCd": "41"}, {"zipCd": "41110,41190"}]
+    assert code_universe(records) == frozenset({"41110", "41190"})
+
+
+def test_기준_집합이_없으면_개수로_판단하고_문구에_남긴다():
+    """단위 테스트처럼 레코드 하나만 있는 경로. 근사값임을 근거 문구가 밝힌다."""
+    많음 = [f"{n:05d}" for n in range(11110, 11110 + 120)]
+    value, _, quote = resolve_region(많음, None)
+    assert value == ["00"]
+    assert "기준 집합 없음" in quote

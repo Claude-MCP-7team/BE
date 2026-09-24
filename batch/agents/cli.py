@@ -41,7 +41,7 @@ from batch.agents.crosscheck import CrossCheckReport, cross_check
 from batch.agents.structure import A2Report, resolve_conflict_targets, structure_policy
 from batch.agents.text import Record, assemble_text
 from batch.collect.client import load_raw
-from batch.collect.normalize import record_to_policy
+from batch.collect.normalize import code_universe, record_to_policy
 
 REPORT_DIR = Path("docs/a2")
 CACHE_DIR = Path("data/a2-cache")
@@ -106,7 +106,12 @@ def cmd_structure(args: argparse.Namespace) -> int:
         print(f"레코드가 없습니다: {directory}", file=sys.stderr)
         return 2
     crawled_at = directory.name.split("-")[0]
-    policies = [record_to_policy(r, crawled_at=crawled_at) for r in records]
+    # 묶음 전체의 zipCd 합집합이 '전국'의 기준이다. 레코드 하나만 보면 238개가
+    # 전국인지 전국에서 18개를 뺀 것인지 알 수 없다 (normalize.resolve_region).
+    universe = code_universe(records)
+    policies = [
+        record_to_policy(r, crawled_at=crawled_at, universe=universe) for r in records
+    ]
 
     ids = {s.strip() for s in args.ids.split(",")} if args.ids else None
     responses = Path(args.responses) if args.responses else None
