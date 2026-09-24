@@ -7,7 +7,10 @@
       "value_number": null,
       "value_text": null,
       "value_bool": null,
-      "value_list": [24, 24],
+      "value_list": [
+        24,
+        24
+      ],
       "unit": "세",
       "source_quote": "경기도에 사는 24세 청년",
       "time_satisfiable": true,

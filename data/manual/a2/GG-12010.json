@@ -7,7 +7,10 @@
       "value_number": null,
       "value_text": null,
       "value_bool": null,
-      "value_list": [19, 39],
+      "value_list": [
+        19,
+        39
+      ],
       "unit": "세",
       "source_quote": "신청일 기준 가평군에 주민등록을 두고 있는 19 ~ 39세 1인 청년(미혼) 독립가구",
       "time_satisfiable": true,
@@ -111,16 +114,66 @@
     "source_quote": "신청기간 : 2026. 9. 14.(월) ~ 9. 30.(수) 18:00까지"
   },
   "documents": [
-    {"name": "가족관계증명서(상세)", "issuer": "행정복지센터, 대법원전자가족관계등록시스템", "source_quote": "가족관계증명서(상세)(필수) — 행정복지센터, 대법원전자가족관계등록시스템"},
-    {"name": "주택 임대차계약서 사본", "issuer": null, "source_quote": "주택 임대차계약서 사본(필수)"},
-    {"name": "통장 사본", "issuer": null, "source_quote": "통장 사본(필수)"},
-    {"name": "지방세(재산세)미과세증명서", "issuer": "행정복지센터 또는 위택스", "source_quote": "지방세(재산세)미과세증명서(필수)"},
-    {"name": "본인신용정보조회서", "issuer": "신용정보원(크레딧포유)", "source_quote": "본인신용정보조회서(필수) — 신용정보원(크레딧포유)"},
-    {"name": "월세 납부 증명자료", "issuer": null, "source_quote": "2026. 6. ~ 8. 월세 납부 증명자료(필수)"},
-    {"name": "주민등록표 등본", "issuer": null, "source_quote": "주민등록표 등본 — 사전 동의 필요 (미 동의시 신청자 제출)"},
-    {"name": "건강보험자격득실확인서", "issuer": null, "source_quote": "건강보험자격득실확인서"},
-    {"name": "건강보험료 납부확인서", "issuer": null, "source_quote": "건강보험료 납부확인서"},
-    {"name": "건축물대장", "issuer": null, "source_quote": "건축물대장"}
+    {
+      "name": "가족관계증명서(상세)",
+      "issuer": "행정복지센터, 대법원전자가족관계등록시스템",
+      "canonical_name": "가족관계증명서(상세)",
+      "source_quote": "가족관계증명서(상세)(필수) — 행정복지센터, 대법원전자가족관계등록시스템"
+    },
+    {
+      "name": "주택 임대차계약서 사본",
+      "issuer": null,
+      "canonical_name": "임대차계약서 사본",
+      "source_quote": "주택 임대차계약서 사본(필수)"
+    },
+    {
+      "name": "통장 사본",
+      "issuer": null,
+      "canonical_name": "통장 사본",
+      "source_quote": "통장 사본(필수)"
+    },
+    {
+      "name": "지방세(재산세)미과세증명서",
+      "issuer": "행정복지센터 또는 위택스",
+      "canonical_name": null,
+      "source_quote": "지방세(재산세)미과세증명서(필수)"
+    },
+    {
+      "name": "본인신용정보조회서",
+      "issuer": "신용정보원(크레딧포유)",
+      "canonical_name": null,
+      "source_quote": "본인신용정보조회서(필수) — 신용정보원(크레딧포유)"
+    },
+    {
+      "name": "월세 납부 증명자료",
+      "issuer": null,
+      "canonical_name": null,
+      "source_quote": "2026. 6. ~ 8. 월세 납부 증명자료(필수)"
+    },
+    {
+      "name": "주민등록표 등본",
+      "issuer": null,
+      "canonical_name": "주민등록표 등본",
+      "source_quote": "주민등록표 등본 — 사전 동의 필요 (미 동의시 신청자 제출)"
+    },
+    {
+      "name": "건강보험자격득실확인서",
+      "issuer": null,
+      "canonical_name": "건강보험 자격득실확인서",
+      "source_quote": "건강보험자격득실확인서"
+    },
+    {
+      "name": "건강보험료 납부확인서",
+      "issuer": null,
+      "canonical_name": "건강보험료 납부확인서",
+      "source_quote": "건강보험료 납부확인서"
+    },
+    {
+      "name": "건축물대장",
+      "issuer": null,
+      "canonical_name": "건축물대장 등초본",
+      "source_quote": "건축물대장"
+    }
   ],
   "conflicts": [
     {

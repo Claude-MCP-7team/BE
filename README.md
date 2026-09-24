@@ -14,6 +14,7 @@
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 전체 아키텍처 · ADR 6건 · 무료 티어 실사 · 성능 예산(실측) |
 | [`docs/DB_SCHEMA.md`](docs/DB_SCHEMA.md) | 테이블 14종 설계 · 인덱스 전략 · 스토리지 예산 |
 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | **인수인계** — 현재 상태 · 작업 순서 · 설계 결정 · 개발 환경 함정 |
+| [`docs/AI_ROLE.md`](docs/AI_ROLE.md) | **AI 파트 설계 설명** — 역할 경계 · 환각 차단 4겹 · 데모 실측 · 발표용 문장 |
 
 ---
 
@@ -102,6 +103,14 @@ python -m batch.build_snapshot data/policies.json -o snapshot.json
 ONTONG_API_KEY=... python -m batch.collect.cli fetch --region 41000   # 41000=경기 전체
 python -m batch.collect.cli survey data/raw/<타임스탬프>   # 원본으로 재조사
 
+# 8. MCP 서버 — Claude Code / Desktop 이 판정 API 를 도구로 쓴다 (API 키 불필요, 구독으로 동작)
+pip install -e ".[mcp]"
+SNAPSHOT_PATH=data/manual/snapshot.json uvicorn app.main:app --port 8765   # 먼저 API 서버
+#   이 저장소 폴더에서 `claude` 를 열면 .mcp.json 의 "ypc" 서버가 붙는다 (처음엔 승인 프롬프트).
+#   "나 24살이고 용인 수지구 살아. 작년 5월에 이사 왔고 대학생이야. 받을 수 있는 정책 있어?"
+#   → Claude 가 find_region_code → judge → questions → (답변) → judge → plan 을 부른다.
+#   도구: find_region_code · judge · questions · combinations · plan · policy (tools/mcp_server.py)
+
 # 7. A2 공고문 구조화 (AI 역할) — 원본 → LLM → PolicySchema (build_snapshot 입력)
 pip install -e ".[batch]"                                   # anthropic SDK 포함
 python -m batch.agents.cli structure data/raw/<타임스탬프> --dry-run          # 대상 확인
@@ -153,6 +162,10 @@ tests/      unit / golden(정확도 하네스) / e2e
 - [x] `tests/e2e/` — 제출용 시나리오 6종 (목록 → 판정 → 역질문 → 재판정 → 조합 → 일정)
 - [x] `Dockerfile` · `render.yaml` · CORS — 배포 (`docs/DEPLOY.md`)
 - [x] `batch/agents/` — A2 공고문 구조화 · 인용문 원문 대조 · 병합 · 리포트 (AI-M1~M3, `app/llm/prompts/a2_structure.md`)
+- [x] `batch/agents/documents.py` — 서류명 정규화 보조: 표기 꼬리 제거 + 모델의 정식 명칭(마스터 목록 글자 그대로일 때만) → `doc_code` (AI-M4)
+- [x] `batch/agents/crosscheck.py` — 교차검증: 두 모델의 A2 결과를 맞춰 한쪽만·값 불일치를 NEEDS_REVIEW 로 (`--cross-check`, AI-M4)
+- [x] `batch/agents/golden.py` + `tests/golden/` — 데모 5건 골든 정답표와 채점기 (AI-M2-3)
+- [x] `tools/mcp_server.py` + `.mcp.json` — 판정 API 를 MCP 도구 6종으로 노출. Claude Code 가 대화형 코디네이터가 된다 (경진대회 "클로드 코드 활용")
 - [x] `app/llm/explain.py` — C2 판정 설명문: 결정론 템플릿(기본) + LLM 다듬기(숫자 근거 검사, 실패 시 템플릿). `POST /v1/judge?explain=template|llm|none`
 - [ ] `batch/crawl` — 원문 공고문 크롤러 (BE-M1-4). 지금은 API 자유 텍스트 필드만 구조화한다
 - [ ] A2 실제 공고문 3~5건 정확도 검증 (AI-M2-3) — API 키 확보 후 `--limit 5` 로 실행
