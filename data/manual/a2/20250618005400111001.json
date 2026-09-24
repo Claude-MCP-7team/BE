@@ -1,0 +1,22 @@
+{
+  "conditions": [
+    {"kind": "eligibility", "field": "household_income_ratio_median", "op": "<=", "value_number": 250, "value_text": null, "value_bool": null, "value_list": null, "unit": "%",
+     "source_quote": "(가구소득요건) 가구원 수에 따른 기준 중위소득 250% 이하에 해당하는 자",
+     "time_satisfiable": false, "askable": true, "question_template": "가구원 합산 소득이 기준 중위소득의 몇 % 정도인가요? (가구원은 등본상 배우자·부모·자녀·미성년 형제자매)",
+     "ambiguous": false, "confidence": "CONFIRMED", "note": null}
+  ],
+  "unrepresentable_conditions": [
+    {"summary": "개인소득: 총급여 7,500만원 이하이고 종합소득금액 6,300만원 이하", "source_quote": "직전 과세기간의 총급여액이 7,500만원 이하이며, 종합소득과세표준에 합산되는 종합소득금액이 6,300만원 이하인 경우", "reason": "원 단위 개인소득. 중위소득 비율로 변환하지 않는다"},
+    {"summary": "직전 3개년도 중 금융소득종합과세 대상자였던 적이 없어야 함", "source_quote": "직전 3개년도 중 1회 이상 금융소득종합과세 대상자에 해당하지 않는 자", "reason": "금융소득 과세 이력 필드가 없다"},
+    {"summary": "비과세 혜택 일몰로 2025.12.31 이후 신규 가입 중단", "source_quote": "청년도약계좌의 비과세 혜택이 '25.12.31일부로 일몰됨에 따라 상품 신규 가입신청 중단", "reason": "신청 자체가 종료됨. 기간 정보이지 자격 조건이 아니다 — 신청기간 종료 처리 필요"}
+  ],
+  "benefit": {"type": "cash_monthly", "amount_krw": null, "duration_months": 60, "estimated_total_krw": null, "amount_confidence": "ESTIMATED",
+              "source_quote": "가입자의 소득구간 및 월 납입액에 따라 최대 6%까지 정부기여금을 지원"},
+  "period": {"apply_start": null, "apply_end": null, "is_rolling": false, "source_quote": null},
+  "documents": [],
+  "conflicts": [
+    {"type": "explicit_policy", "target_policy_name": "청년희망적금", "target_category": null, "target_benefit_type": null, "target_authority": null,
+     "source_quote": "현재 청년희망적금을 가입 유지하고 있는 경우 가입 불가능", "confidence": "CONFIRMED"}
+  ],
+  "dept": {"name": "서민금융콜센터", "tel": "1397", "source_quote": "서민금융콜센터(1397 바로연결번호 3번)"}
+}

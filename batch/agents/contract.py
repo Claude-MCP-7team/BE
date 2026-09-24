@@ -99,6 +99,8 @@ A2_OUTPUT_SCHEMA: dict[str, Any] = _obj(
                 {
                     "name": {"type": "string"},
                     "issuer": _NULLABLE_STR,
+                    # [서류 마스터 목록] 중 하나. 같은 서류가 확실할 때만, 아니면 null
+                    "canonical_name": _NULLABLE_STR,
                     "source_quote": {"type": "string"},
                 }
             ),

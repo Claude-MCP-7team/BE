@@ -40,8 +40,10 @@ def structured():
     return dict(_structured())
 
 
-def test_다섯_건이_모두_구조화된다(structured):
-    assert len(structured) == 5, sorted(structured)
+def test_열한_건이_모두_구조화된다(structured):
+    # The manual corpus now includes the original five notices plus six
+    # additional live-notice rehearsals from the AI branch.
+    assert len(structured) == 11, sorted(structured)
 
 
 def test_인용문이_전부_원문에_있다(structured):

@@ -1,0 +1,40 @@
+{
+  "conditions": [
+    {"kind": "eligibility", "field": "age", "op": "between", "value_number": null, "value_text": null, "value_bool": null, "value_list": [19, 39], "unit": "세",
+     "source_quote": "기준중위소득 120%이하 평택시 거주 19세~39세 이하 1인 가구 청년",
+     "time_satisfiable": true, "askable": false, "question_template": null, "ambiguous": false, "confidence": "CONFIRMED", "note": "API 코드값(19~39)과 일치"},
+    {"kind": "eligibility", "field": "household_income_ratio_median", "op": "<=", "value_number": 120, "value_text": null, "value_bool": null, "value_list": null, "unit": "%",
+     "source_quote": "기준중위소득 120% 이하(3,077,086원)",
+     "time_satisfiable": false, "askable": true, "question_template": "가구 소득이 기준 중위소득의 몇 % 정도인가요? (1인 가구 120% = 월 3,077,086원)", "ambiguous": false, "confidence": "CONFIRMED", "note": null},
+    {"kind": "eligibility", "field": "household_size", "op": "==", "value_number": 1, "value_text": null, "value_bool": null, "value_list": null, "unit": "명",
+     "source_quote": "평택시 거주 19세~39세 이하 1인 가구 청년",
+     "time_satisfiable": false, "askable": true, "question_template": "주민등록상 혼자 사는 1인 가구인가요?", "ambiguous": false, "confidence": "CONFIRMED", "note": null}
+  ],
+  "unrepresentable_conditions": [
+    {"summary": "임차보증금 9,000만 원 이하·월세 50만 원 이하 세입자", "source_quote": "임차보증금 9,000만 원 이하 및 월세 50만 원 이하 세입 거주자", "reason": "보증금·월세 금액 필드가 없다"},
+    {"summary": "주택·분양권·조합원 입주권 소유자 제외", "source_quote": "주택 소유자, 분양권 또는 조합원 입주권이 있는 사람", "reason": "주택 소유 필드가 없다"},
+    {"summary": "일반재산 총액 9천만원 초과자 제외", "source_quote": "일반재산(토지, 건축물, 보증금, 차량시가표준액) 총액 9천만원을 초과하는 사람", "reason": "재산 필드가 없다"},
+    {"summary": "차량시가표준액 2,500만원 이상 자동차 소유자 제외", "source_quote": "차량시가표준액 2,500만원 이상의 자동차를 소유한 사람", "reason": "차량 필드가 없다"},
+    {"summary": "기초 생계·의료·주거급여 대상자 제외 (교육급여는 가능)", "source_quote": "기초 생계·의료·주거급여 대상자(교육급여 대상자는 신청 가능)", "reason": "수급 여부 필드가 없다"},
+    {"summary": "임대인이 부모(동거인 포함)인 경우 제외", "source_quote": "임대인이 신청인의 부모(동거인 포함)인 경우", "reason": "임대인 관계 필드가 없다"}
+  ],
+  "benefit": {"type": "cash_monthly", "amount_krw": 200000, "duration_months": 12, "estimated_total_krw": 2400000, "amount_confidence": "CONFIRMED",
+              "source_quote": "월 20만 원 월세 지원(최대 12개월/ 240만 원, 생애 1회)"},
+  "period": {"apply_start": "2026-04-06", "apply_end": "2026-04-17", "is_rolling": false, "source_quote": "20260406 ~ 20260417"},
+  "documents": [
+    {"name": "등본", "issuer": null, "canonical_name": "주민등록표 등본", "source_quote": "- 등본"},
+    {"name": "가족관계증명서", "issuer": null, "canonical_name": "가족관계증명서(상세)", "source_quote": "- 가족관계증명서"},
+    {"name": "본인신용정보조회서", "issuer": null, "canonical_name": null, "source_quote": "- 본인신용정보조회서"},
+    {"name": "확정일자가 날인된 임대차계약서 사본", "issuer": null, "canonical_name": "임대차계약서 사본", "source_quote": "확정일자가 날인된 임대차계약서 사본"},
+    {"name": "주택 임대차 계약 신고필증", "issuer": null, "canonical_name": null, "source_quote": "주택 임대차 계약 신고필증"},
+    {"name": "건강보험 확인서류", "issuer": null, "canonical_name": null, "source_quote": "건강보험 확인서류"},
+    {"name": "지방세 세목별 과세증명서(전국)", "issuer": null, "canonical_name": null, "source_quote": "지방세 세목별 과세증명서(전국)"}
+  ],
+  "conflicts": [
+    {"type": "explicit_policy", "target_policy_name": "청년월세 한시 특별지원", "target_category": null, "target_benefit_type": null, "target_authority": null,
+     "source_quote": "공공주거사업(행복주택, 임대주택, 공적 대출, 청년월세 한시 특별지원 등) 참여자", "confidence": "CONFIRMED"},
+    {"type": "category_overlap", "target_policy_name": null, "target_category": "housing", "target_benefit_type": null, "target_authority": null,
+     "source_quote": "공공주거사업(행복주택, 임대주택, 공적 대출, 청년월세 한시 특별지원 등) 참여자", "confidence": "ESTIMATED"}
+  ],
+  "dept": {"name": "경기도 평택시 기획항만경제실", "tel": null, "source_quote": "경기도 평택시 기획항만경제실"}
+}

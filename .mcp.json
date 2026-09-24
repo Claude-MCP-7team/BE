@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ypc": {
+      "command": ".venv/Scripts/python.exe",
+      "args": ["tools/mcp_server.py"],
+      "env": {
+        "YPC_API_BASE": "http://127.0.0.1:8765",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}

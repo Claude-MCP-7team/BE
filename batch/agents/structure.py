@@ -39,6 +39,7 @@ from app.schemas.policy import (
 )
 from app.schemas.validate import SchemaViolation, validate_policy
 from batch.agents.contract import A2_OUTPUT_SCHEMA, STRUCTURABLE_FIELDS
+from batch.agents.documents import master_names, resolve_doc_code
 from batch.agents.questions import ASKABLE_FIELDS, question_for
 from batch.agents.text import Record, assemble_text, describe_known_rules, quote_found
 
@@ -92,8 +93,12 @@ def structure_policy(
     if not text:
         return base, report
 
-    known = describe_known_rules(base)
-    user = f"{text}\n\n{known}" if known else text
+    blocks = [text]
+    if known := describe_known_rules(base):
+        blocks.append(known)
+    # 서류 마스터 목록은 텍스트 뒤에. 앞에 두면 같은 내용이 매 정책 프롬프트 캐시 뒤에서 반복된다.
+    blocks.append("[서류 마스터 목록]\n" + "\n".join(f"- {n}" for n in master_names()))
+    user = "\n\n".join(blocks)
     data = llm.complete_json(
         system=system_prompt or load_prompt("a2_structure"),
         user=user,
@@ -222,7 +227,12 @@ def merge(
             continue
         if verified(d.get("source_quote"), f"documents[{i}]"):
             documents.append(
-                Document(name=name, issuer=d.get("issuer") or None, source_quote=d["source_quote"])
+                Document(
+                    doc_code=resolve_doc_code(name, d.get("canonical_name")),
+                    name=name,
+                    issuer=d.get("issuer") or None,
+                    source_quote=d["source_quote"],
+                )
             )
             names.add(name)
             report.accepted_documents += 1

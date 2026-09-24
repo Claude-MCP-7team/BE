@@ -7,7 +7,10 @@
       "value_number": null,
       "value_text": null,
       "value_bool": null,
-      "value_list": [19, 34],
+      "value_list": [
+        19,
+        34
+      ],
       "unit": "세",
       "source_quote": "19세~34세 독립거주 무주택 청년",
       "time_satisfiable": true,
@@ -87,12 +90,42 @@
     "source_quote": "신청은 '26년 3월 30일 09:00부터 '26년 5월 29일 16:00까지 가능하며"
   },
   "documents": [
-    {"name": "월세지원 신청서", "issuer": null, "source_quote": "월세지원 신청서, 소득·재산 신고서"},
-    {"name": "소득·재산 신고서", "issuer": null, "source_quote": "월세지원 신청서, 소득·재산 신고서"},
-    {"name": "임대차계약서", "issuer": null, "source_quote": "임대차계약서 및 최근 3개월간 월세 이체 증빙서류"},
-    {"name": "월세 이체 증빙서류", "issuer": null, "source_quote": "최근 3개월간 월세 이체 증빙서류"},
-    {"name": "통장 사본", "issuer": null, "source_quote": "통장 사본, 가족관계증명서"},
-    {"name": "가족관계증명서", "issuer": null, "source_quote": "통장 사본, 가족관계증명서"}
+    {
+      "name": "월세지원 신청서",
+      "issuer": null,
+      "canonical_name": null,
+      "source_quote": "월세지원 신청서, 소득·재산 신고서"
+    },
+    {
+      "name": "소득·재산 신고서",
+      "issuer": null,
+      "canonical_name": null,
+      "source_quote": "월세지원 신청서, 소득·재산 신고서"
+    },
+    {
+      "name": "임대차계약서",
+      "issuer": null,
+      "canonical_name": "임대차계약서 사본",
+      "source_quote": "임대차계약서 및 최근 3개월간 월세 이체 증빙서류"
+    },
+    {
+      "name": "월세 이체 증빙서류",
+      "issuer": null,
+      "canonical_name": null,
+      "source_quote": "최근 3개월간 월세 이체 증빙서류"
+    },
+    {
+      "name": "통장 사본",
+      "issuer": null,
+      "canonical_name": "통장 사본",
+      "source_quote": "통장 사본, 가족관계증명서"
+    },
+    {
+      "name": "가족관계증명서",
+      "issuer": null,
+      "canonical_name": "가족관계증명서(상세)",
+      "source_quote": "통장 사본, 가족관계증명서"
+    }
   ],
   "conflicts": [
     {

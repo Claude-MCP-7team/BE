@@ -7,7 +7,10 @@
       "value_number": null,
       "value_text": null,
       "value_bool": null,
-      "value_list": [19, 49],
+      "value_list": [
+        19,
+        49
+      ],
       "unit": "세",
       "source_quote": "19~49세 청년",
       "time_satisfiable": true,
@@ -43,16 +46,19 @@
     {
       "name": "주민등록초본",
       "issuer": null,
+      "canonical_name": "주민등록표 초본",
       "source_quote": "포천시 주민등록 청년: 주민등록초본 1부"
     },
     {
       "name": "재직증명서",
       "issuer": null,
+      "canonical_name": "재직증명서",
       "source_quote": "포천시 소재 직장 재직자: 재직증명서 1부"
     },
     {
       "name": "재학증명서",
       "issuer": null,
+      "canonical_name": "재학증명서(대학)",
       "source_quote": "포천시 소재 대학(원) 재학생: 재학증명서 1부"
     }
   ],

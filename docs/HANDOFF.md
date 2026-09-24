@@ -1,4 +1,4 @@
-# 인수인계 — YPC 백엔드
+﻿# 인수인계 — YPC 백엔드
 
 > 이 문서만 읽고 이어서 작업할 수 있도록 쓴다.
 > 마지막 갱신: `3904cf9` 시점.
@@ -175,6 +175,18 @@ normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn
   published 1,596건 중 키워드 빈도: 중위소득 118 · 무주택 67 · 유사사업 45 · 기초수급 41 · 중복수혜 40 · 세대주 19 · 1인가구 19 ·
   거주 N개월 17 · 재직 N개월 16. 즉 A2 가 새로 만들 룰의 대부분은 **소득 비율**이고, 무주택·재산은 규칙화 불가로 남는다 — 이 둘을
   판정 confidence 에 어떻게 반영할지가 §8 #10 의 무게다.
+
+**A2 부속 세 가지** (전부 키 없이 테스트됨):
+
+- `batch/agents/documents.py` — 서류 표기 꼬리("1부", "(필수)", "등")를 걷어내고 플래너의 `resolve()` 로 doc_code 를 찾는다.
+  모델이 준 `canonical_name` 은 마스터 정식 명칭과 **글자 그대로** 같을 때만 쓴다 (별칭·유사 이름 불인정). 마스터 목록은
+  사용자 메시지 끝에 붙어 프롬프트 캐시를 깨지 않는다. 마스터에 없는 서류는 §8 #14.
+- `batch/agents/crosscheck.py` — `--cross-check` (기본 두 번째 모델 `claude-sonnet-5`, `--model-b`). 같은 (field, op, value) 면 유지(confidence 는 낮은 쪽),
+  한쪽에만 있으면 유지+NEEDS_REVIEW, 값이 다르면 A 유지+NEEDS_REVIEW+ambiguous, 서류·상충은 합집합. **룰을 지우는 경우는 없다.**
+  `quality.cross_check` 가 AGREE/DISAGREE 로 채워진다. `--responses` 모드에서는 `<plcyNo>.b.json` 이 있는 정책만 교차검증한다.
+- `batch/agents/golden.py` + `tests/golden/a2_expected.json` — 데모 5건의 정답 룰·금지 필드·doc_code·상충 하한·표식.
+  `python -m batch.agents.golden <policies.json> tests/golden/a2_expected.json` 이 정책별 재현율을 낸다. 실제 모델을 처음 돌릴 때
+  이 숫자를 기준으로 프롬프트를 고친다.
 
 **C2 설명문도 생겼다** (`app/llm/explain.py`, 프롬프트 `app/llm/prompts/c2_explain.md`):
 
@@ -1095,6 +1107,15 @@ FE 에 이미 전달한 것 (화면에 영향이 있다):
 | 9 | 배포 Base URL | `https://be-27y9.onrender.com` (§1). 남은 건 반대 방향 — FE 주소다 |
 | 17 | 역질문 답변(근속·거주 개월수)이 판정에 반영되지 않음 | `resolve()` 가 `answers` 로 폴백한다. 미래 날짜는 일부러 주지 않는다 (§3) |
 | 18 | 숫자 입력의 단위 실수를 아무것도 잡지 않음 | `FIELD_BOUNDS` + `check_bounds()`, 계약에 `numeric_bounds` 로 실려 나간다 (§3) |
+| 7 | 온통청년 API 명세 | **외부** | ② 작업을 막고 있음 |
+| 8 | 서류 마스터 36종 검증 | 사람 | CSV 수정만 필요 |
+| 9 | 배포 Base URL · CORS | 팀 | Render Free 예정 |
+| 10 | `needs_review_fields` 의 `unrepresentable_conditions` 표식을 판정 confidence 에 반영할지 | BE | 엔진이 못 보는 조건이 있는 정책이 CONFIRMED·ELIGIBLE 로 나간다 |
+| 11 | ~~A2 실행용 `ANTHROPIC_API_KEY`~~ → **팀 결정(2026-09-21): 키를 쓰지 않는다** | 결정됨 | 제출 범위(P0 3~5건)는 손으로 옮긴 11건 + 같은 검증 경로로 충족. 실제 모델 실행·교차검증·A/B 는 미실행으로 남긴다. 도구(`--limit`, `--cross-check`, 골든 채점)는 그대로 있어 키가 생기면 30분에 돌릴 수 있다. 대화형 시연은 MCP + Claude 구독으로 |
+| 12 | 충족 예상일이 다른 룰과 모순될 때 | BE | 24세 사용자의 청년기본소득: 거주 36개월은 "2029-05-15부터 가능"인데 그때는 27세라 나이 룰이 깨진다. 룰별 날짜만 내고 정책 수준 교차검증은 없음 (`tools/demo_scenario.py` A-1) |
+| 14 | 서류 마스터에 없는 서류 (실제 공고에서 자주 나옴) | 사람 | `지방세(재산세) 미과세증명서`(위택스, 가평 월세), `본인신용정보조회서`(크레딧포유), `소득·재산 신고서`(서식). 마스터에 행을 추가해야 계획 소요일이 잡힌다. A2 는 목록에 없는 서류를 추측으로 잇지 않는다 (`batch/agents/documents.py`) |
+| 15 | **지역 코드 단위 불일치 — 시 코드 사용자가 경기도 정책 대부분에서 부적격** | BE + FE | API 는 구가 있는 시를 **구 코드**로 준다(용인 = `41461,41463,41465`). 지역 제한 정책 2,364건 중 **801건**. 사용자가 시 코드 `41460` 을 넣으면 접두 체인 `['00','41','41460']` 이 어느 구 코드와도 안 겹쳐 청년기본소득(경기 전역)까지 INELIGIBLE 이 된다. 반대로 사용자 `41465` 는 시 코드 `41460` 으로 적힌 정책과 안 맞는다. 방향: (a) `region_chain` 이 구 코드에서 시 코드(앞 4자리+`0`)도 만들고, (b) FE 는 구가 있는 시에서 구를 고르게 하거나 BE 가 시→구 전개표를 갖는다 |
+| 13 | `apply_end` 가 지난 정책이 `ELIGIBLE`·조합 후보로 나온다 | BE | `aplyPrdSeCd=0057001`(기간) 이면서 종료일이 과거인 정책은 `published` 로 남는다(normalize 는 `0057003` 만 expired). 국토부 청년월세(5/29 마감)가 9/19 판정에서 적격이고 조합에 480만원으로 들어간다. 판정은 두더라도 조합·계획에서는 빼거나 '마감' 표시가 필요 (`demo_scenario.py` D-2) |
 
 ---
 
