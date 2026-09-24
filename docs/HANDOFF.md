@@ -27,7 +27,7 @@
 **BE 는 배포돼 있고 DB·CORS 까지 붙어 있다** (`https://be-27y9.onrender.com`).
 FE 가 브라우저에서 판정부터 세션 저장까지 전 경로를 호출할 수 있는 상태다 (§8).
 
-남은 것은 **코드가 아니라 데이터와 결정**이다: 스냅샷을 실공고로 바꿀지(#17),
+남은 것은 **코드가 아니라 데이터**다: 배포된 목록이 2026-10-02 에 0건이 된다(#19),
 서류 유효기간 근거(#8). 자세한 것은 §8.
 
 ---
@@ -38,7 +38,7 @@ FE 가 브라우저에서 판정부터 세션 저장까지 전 경로를 호출�
 | --- | --- |
 | HEAD | `dev` 최신 — `git log -1` 로 확인할 것 |
 | 팀 저장소 | `Claude-MCP-7team/BE` 의 **`dev`** 브랜치 |
-| 배포 | `https://be-27y9.onrender.com` (Render, oregon). **데모 스냅샷 5건** — 실데이터가 아니다 |
+| 배포 | `https://be-27y9.onrender.com` (Render, oregon). **실공고 3건** (seed 5건 중 기간이 열린 것, 2026-09-24 확인). 10-02 이후 0건이 된다 — §8 #19 |
 | DB | **연결됨** (2026-09-21). `ypc-db` Postgres 18, oregon. 세션 저장·조회 동작 |
 | CORS | `https://fe-psi-tan.vercel.app` + 로컬 `:5173`·`:5174`. **배포된 FE 에서 호출된다** (2026-09-24 확인) |
 | FE 협업 | [FE#21](https://github.com/Claude-MCP-7team/FE/issues/21) 이 배포·연동 점검의 실시간 창구다 |
@@ -1015,17 +1015,17 @@ pytest && ruff check . && mypy && python tools/export_contract.py && git diff --
 | 19 | 배포 스냅샷이 **2026-10-02 에 0건이 된다** | 데이터 | seed 가 실공고라 신청기간이 지나면 빌더가 걸러낸다: 09-24 **3건** → 09-30 2건 → 10-01 1건 → 10-03 **0건**. 0건이면 빌더가 거부해 Docker 빌드가 실패하므로 빈 목록이 배포되지는 않지만, **재배포 자체가 막힌다.** 제출일(10/1)에는 1건이다. 공고를 새로 수집하려면 `ONTONG_API_KEY` 와 외부망이 필요하다 (#16 과 같은 뿌리) |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
 
-### 배포 완료 상태 (2026-09-21)
+### 배포 완료 상태 (2026-09-24)
 
 FE 의 배포 점검([FE#21](https://github.com/Claude-MCP-7team/FE/issues/21))에서 요청한
-4개 항목 중 3개가 끝났다. 절차는 전부 `docs/DEPLOY.md` 에 있다.
+4개 항목이 전부 끝났다. 절차는 전부 `docs/DEPLOY.md` 에 있다.
 
 | | 확인한 응답 |
 | --- | --- |
 | 최신 코드 | `POST /v1/judge` 에 `{oops` → **422** `invalid-request` |
 | CORS | `OPTIONS /v1/judge` → **200** + `access-control-allow-origin` |
 | DB | `POST /v1/sessions` → **201** + `session_id` / `/readyz` 의 `database.ready=true` |
-| 스냅샷 | 실공고 5건 seed → 게시 3건 (2026-09-24 기준). #17 닫힘, #19 로 이어짐 |
+| 스냅샷 | `GET /v1/meta/snapshot` → **`policy_count: 3`**. `/v1/policies` 가 `GG-12048`·`GG-12010`·`JB-5885` 를 돌려준다 (2026-09-24 확인). #17 닫힘, #19 로 이어짐 |
 
 **여기까지 오면서 걸린 것들** (전부 `docs/DEPLOY.md` 에 적어 뒀다):
 

@@ -122,6 +122,49 @@ curl -s https://<서비스>/readyz | python -m json.tool
 `configured=true, ready=false` 면 DSN 은 읽혔는데 연결이 안 되는 것이다 — Internal URL
 을 썼는지, 같은 리전인지 본다.
 
+## 재배포 (Render)
+
+**서비스 주소는 `https://be-27y9.onrender.com` 이고, 대시보드의 서비스 이름은
+`be-27y9` 다.** `render.yaml` 에는 `ypc-backend` 로 적혀 있지만 대시보드에서는
+다른 이름으로 만들어졌다 — 이름으로 찾으면 못 찾는다.
+
+DB(`ypc-db`) 페이지가 아니라 **웹 서비스** 페이지에서 한다. DB 페이지에 들어가
+있다면 사이드바 맨 위 **← Environment** 로 나가서 `WEB SERVICE` 딱지가 붙은 쪽을
+고른다.
+
+우측 상단 **Manual Deploy → Deploy latest commit**.
+`Clear build cache & deploy` 는 캐시가 꼬였을 때만 — 느리기만 하다.
+
+### 배포됐는지는 대시보드가 아니라 응답으로 확인한다
+
+대시보드에 **Live** 라고 떠 있어도 옛 커밋일 수 있다. 실제로 한 번 그랬고,
+15커밋이 밀려 있는 걸 FE 가 500 을 보고해서야 알았다. 커밋 해시를 눈으로 맞추는
+것도 놓치기 쉬우니 응답을 받아 본다.
+
+```bash
+curl -sS https://be-27y9.onrender.com/v1/meta/snapshot
+# {"ready":true, ..., "policy_count":3, "rule_count":10, ...}
+```
+
+`policy_count` 가 기대한 건수인지 본다. 빌드 로그(**Logs** 탭)에도 같은 수가
+`snapshot: N policies` 로 한 줄 찍힌다 — 무료 플랜은 셸이 없어서 이미지 안을
+들여다볼 방법이 이것뿐이다.
+
+목록의 내용까지 보려면:
+
+```bash
+curl -sS https://be-27y9.onrender.com/v1/policies
+```
+
+**자동 배포가 꺼져 있지 않은지도 한 번 본다.** Settings → Build & Deploy 의
+**Auto-Deploy** 가 `Yes` 인지, **Branch** 가 `dev` 인지. 브랜치가 `main` 이면
+`dev` 에 아무리 푸시해도 배포되지 않는데, 어디에도 에러가 뜨지 않는다.
+
+### PowerShell 에서는 `curl.exe`
+
+PowerShell 의 `curl` 은 `Invoke-WebRequest` 의 alias 라 `-sS` 같은 플래그를
+못 받는다. `curl.exe` 라고 확장자까지 적어야 진짜 curl 이 돈다.
+
 ## CORS — preflight 가 405 면 설정이 빈 것이다
 
 `CORS_ORIGINS` 가 비어 있으면 **미들웨어 자체가 등록되지 않는다.** 그러면 `OPTIONS` 를
@@ -211,6 +254,6 @@ CORS_ORIGINS=https://ypc-fe.example,https://staging.ypc-fe.example
 ## 무료 티어에서 알아둘 것
 
 - 유휴 상태면 컨테이너가 내려간다. 첫 요청이 수십 초 걸린다 — 시연 전에 `/healthz`
-  를 한 번 깨워둘 것
+  를 한 번 깨워둘 것. 재배포 직후 확인이 느린 것도 대개 이것이지 고장이 아니다
 - 스냅샷을 다시 올리려면 영구 디스크가 필요하다. 없으면 재시작할 때마다 이미지
   안의 데모 스냅샷으로 돌아간다
