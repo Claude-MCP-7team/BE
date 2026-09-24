@@ -14,18 +14,67 @@ API 서버의 결정론 코드가 한다. Claude 는 도구를 고르고 결과�
 
 Claude Code 에 등록: 저장소의 .mcp.json 이 이 서버를 가리킨다. 저장소 폴더에서 claude 를
 열면 "ypc" 도구가 보인다 (mcp 패키지: pip install -e ".[mcp]").
+
+`.mcp.json` 은 `python` 을 부른다 — 인터프리터 경로를 적을 수 없기 때문이다.
+가상환경의 python 은 Windows 가 `.venv/Scripts/python.exe`, macOS·Linux 가
+`.venv/bin/python` 이고, JSON 에는 분기가 없다. 한쪽을 적으면 다른 쪽에서
+서버가 아예 안 뜬다 (실제로 `Scripts/python.exe` 로 적혀 있어 Linux 에서
+ENOENT 로 죽고 있었다).
+
+그래서 아래 `_relaunch_in_venv()` 가 의존성이 없을 때만 저장소의 .venv 로 다시
+띄운다. 이미 맞는 인터프리터면 아무 일도 하지 않는다.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import pathlib
+import subprocess
+import sys
 from typing import Any
 
-import httpx
-from mcp.server.mcpserver import MCPServer
+_RELAUNCHED = "YPC_MCP_VENV_RELAUNCH"
 
-from app.llm.answers import apply_answers
+
+def _relaunch_in_venv() -> None:
+    """의존성이 없으면 저장소의 .venv 인터프리터로 다시 띄운다.
+
+    `os.execv` 를 쓰지 않는다. Windows 에서는 execv 가 프로세스를 교체하는 대신
+    새로 만들고 원래 것을 끝내서, stdio 파이프를 쥐고 있는 MCP 클라이언트가
+    서버가 죽었다고 본다. 자식으로 돌리면 파이프가 그대로 상속되고 부모는 하나만
+    기다리면 된다.
+    """
+    if os.environ.get(_RELAUNCHED):  # 재실행한 인터프리터에도 없으면 그냥 실패시킨다
+        return
+    if importlib.util.find_spec("mcp") is not None:
+        return  # 지금 인터프리터로 충분하다
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    for relative in ("bin/python", "Scripts/python.exe"):
+        candidate = root / ".venv" / relative
+        if not candidate.exists():
+            continue
+        env = {**os.environ, _RELAUNCHED: "1"}
+        raise SystemExit(
+            subprocess.run([str(candidate), __file__, *sys.argv[1:]], env=env).returncode
+        )
+
+
+_relaunch_in_venv()
+
+import httpx  # noqa: E402
+
+try:
+    from mcp.server.mcpserver import MCPServer  # noqa: E402
+except ModuleNotFoundError as exc:  # pragma: no cover - 설치 안내 경로
+    raise SystemExit(
+        "mcp 패키지가 없습니다. 저장소 폴더에서: pip install -e \".[mcp]\"\n"
+        f"(지금 인터프리터: {sys.executable})"
+    ) from exc
+
+from app.llm.answers import apply_answers  # noqa: E402
 
 API_BASE = os.environ.get("YPC_API_BASE", "http://127.0.0.1:8765")
 
