@@ -237,7 +237,7 @@
       "outside_calendar_coverage": false,
       "dept_name": "행정안전부",
       "dept_tel": null,
-      "origin_url": "https://www.work24.go.kr/wk/a/b/1700/themeEmpInfoSrchList.do?occupation=&notSrcKeyword=&thmaHrplCd=E00007&resultCnt=10&searchMode=Y&keywordJobCont=&firstJobName=%EA%B1%B4%EC%84%A4%C2%B7%EC%B1%84%EA%B5%B4&keywordStaAreaNm=&keywordBusiNm=&indArea=&currentPageNo=1&pageIndex=1&sortField=DATE&staArea=&region=&srcKeyword=%EC%82%AC%ED%9A%8C%EC%97%B0%EB%8C%80%EA%B2%BD%EC%A0%9C&sortOrderBy=DESC&keywordWantedTitle="
+      "origin_url": "https://mois.go.kr/frt/bbs/type002/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000215&nttId=126775"
     },
     {
       "policy_id": "20260918005400113447",
@@ -348,7 +348,7 @@
       "outside_calendar_coverage": false,
       "dept_name": "국가유산청 문화유산국",
       "dept_tel": null,
-      "origin_url": "www.work.go.kr"
+      "origin_url": "http://www.kaum.or.kr/bbs/board.php?bo_table=recruitment"
     },
     {
       "policy_id": "20260921005400113467",

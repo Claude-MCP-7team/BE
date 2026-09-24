@@ -39,6 +39,20 @@ class Source(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     content_hash: str | None = None
 
 
+def public_url(source: Source) -> str | None:
+    """화면에 거는 원문 링크. **모든 엔드포인트가 같은 값을 내야 한다.**
+
+    예전에는 `/v1/judge` 가 `origin_url or announcement_url`, `/v1/plan` 이
+    `announcement_url or origin_url` 을 썼다. 같은 정책인데 화면마다 다른 링크가
+    걸렸고, 23건 중 8건이 실제로 달랐다. FE 가 판정 화면에서 본 링크와 일정 화면에서
+    누르는 링크가 다르면, 어느 쪽이 맞는지 아무도 확인하지 않는다.
+
+    `origin_url` 을 먼저 본다. 빌더가 이 값이 없는 정책을 게시하지 않으므로
+    게시된 정책에는 항상 있고, 수집기가 스킴까지 검사한 값이다.
+    """
+    return source.origin_url or source.announcement_url
+
+
 class Dept(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     """담당부서 — ESTIMATED/NEEDS_REVIEW 판정에 반드시 병기된다."""
 

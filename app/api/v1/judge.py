@@ -39,7 +39,7 @@ from app.schemas.catalog import PolicyListResponse, PolicySummary
 from app.schemas.enums import AuthorityLevel, Category
 from app.schemas.judgement import DISCLAIMER, JudgementResponse
 from app.schemas.plan import PlanResponse
-from app.schemas.policy import PolicySchema
+from app.schemas.policy import PolicySchema, public_url
 from app.schemas.user import UserProfile, region_chain
 from app.solver.combine import recommend
 
@@ -249,7 +249,7 @@ def _summarize(policy: PolicySchema, rule_count: int) -> PolicySummary:
         region_code=list(policy.meta.region_code),
         dept_name=policy.meta.dept.name,
         dept_tel=policy.meta.dept.tel,
-        origin_url=policy.source.origin_url or policy.source.announcement_url,
+        origin_url=public_url(policy.source),
         benefit_type=policy.benefit.type,
         amount_krw=policy.benefit.amount_krw,
         duration_months=policy.benefit.duration_months,

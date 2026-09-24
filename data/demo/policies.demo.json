@@ -4280,7 +4280,7 @@
       "api": "ontong",
       "api_policy_no": "20260317005400112169",
       "origin_url": "http://www.kaum.or.kr/bbs/board.php?bo_table=recruitment",
-      "announcement_url": "www.work.go.kr",
+      "announcement_url": null,
       "crawled_at": "raw",
       "content_hash": null
     },

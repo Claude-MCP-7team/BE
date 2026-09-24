@@ -289,8 +289,14 @@ def record_to_policy(
         period.apply_start, period.apply_end = _iso(m.group(1)), _iso(m.group(2))
 
     # --- 출처 · 분류 · 기관 ---------------------------------------------------
+    # 스킴이 없는 주소는 버린다. 공고 원본에는 `www.work.go.kr` 처럼 스킴 없는 값이
+    # 섞여 있는데, 그대로 `<a href>` 에 들어가면 브라우저가 **상대 경로**로 읽어
+    # FE 도메인 안으로 이동한다. 깨진 링크가 아니라 엉뚱한 페이지라 더 늦게 발견된다.
+    # origin_url 은 원래 걸렀는데 announcement_url 은 안 걸러서 한 건이 새어나갔다.
     urls = [u for k in ("refUrlAddr1", "refUrlAddr2", "aplyUrlAddr") if (u := _s(rec, k))]
     origin = next((u for u in urls if u.startswith("http")), None)
+    apply_url = _s(rec, "aplyUrlAddr")
+    announcement = apply_url if apply_url.startswith("http") else None
     lclsf = _s(rec, "lclsfNm").split(",")[0]
     if lclsf not in _CATEGORY:
         review.append("category")  # 기본값으로 메우되 조용히 메우지는 않는다
@@ -329,7 +335,7 @@ def record_to_policy(
             api="ontong",
             api_policy_no=plcy_no,
             origin_url=origin,
-            announcement_url=_s(rec, "aplyUrlAddr") or None,
+            announcement_url=announcement,
             crawled_at=crawled_at,
         ),
         period=period,

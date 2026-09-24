@@ -360,6 +360,45 @@ def test_시나리오6_마감이_지나기_전에_못_끝내면_INFEASIBLE_이�
     assert plan["status"] == "INFEASIBLE"
 
 
+def test_모든_화면이_같은_원문_링크를_낸다(client, profile):
+    """판정과 일정이 다른 링크를 내면 어느 쪽이 맞는지 아무도 확인하지 않는다.
+
+    예전에는 `/v1/judge` 가 `origin_url or announcement_url`, `/v1/plan` 이
+    `announcement_url or origin_url` 을 썼다. 23건 중 8건이 실제로 달랐고,
+    FE 가 계약 검증에서 걸려서야 드러났다 (FE#21).
+    """
+    answered = {**profile, "answers": {"household_income_ratio_median": 85}}
+    판정 = {r["policy_id"]: r["origin_url"] for r in results_of(client, answered).values()}
+    일정 = {
+        p["policy_id"]: p["origin_url"]
+        for p in client.post("/v1/plan", json=answered).json()["plans"]
+    }
+    목록 = {
+        i["policy_id"]: i["origin_url"]
+        for i in client.get("/v1/policies", params={"limit": 100}).json()["items"]
+    }
+
+    for pid, url in 일정.items():
+        assert url == 판정[pid] == 목록[pid], pid
+
+
+def test_원문_링크에는_스킴이_있다(client, profile):
+    """스킴이 없으면 브라우저가 `<a href>` 를 **상대 경로**로 읽는다.
+
+    `www.work.go.kr` 이 FE 도메인 안의 경로로 해석돼 엉뚱한 페이지로 간다. 깨진
+    링크가 아니라 그럴듯한 오동작이라 더 늦게 발견된다. 공고 원본에 스킴 없는
+    주소가 실제로 섞여 있어서 수집기가 버린다.
+    """
+    answered = {**profile, "answers": {"household_income_ratio_median": 85}}
+    urls = [i["origin_url"] for i in client.get("/v1/policies", params={"limit": 100}).json()["items"]]
+    urls += [r["origin_url"] for r in results_of(client, answered).values()]
+    urls += [p["origin_url"] for p in client.post("/v1/plan", json=answered).json()["plans"]]
+
+    assert urls
+    for url in urls:
+        assert url and url.startswith(("http://", "https://")), url
+
+
 def test_ics_로_내보낼_수_있다(client, profile):
     r = client.post("/v1/plan.ics", json=profile)
     assert r.status_code == 200

@@ -42,7 +42,7 @@ from app.schemas.plan import (
     PlanSummary,
     PolicyPlan,
 )
-from app.schemas.policy import Document, PolicySchema
+from app.schemas.policy import Document, PolicySchema, public_url
 
 # 서류를 손에 넣은 뒤 접수까지의 여유 영업일.
 # 0 으로 두면 '서류 나오는 날 = 마감일'이 되어, 온라인 접수 오류나 창구 마감시간
@@ -118,7 +118,7 @@ def _plan_for(policy: PolicySchema, today: date, cal: HolidayCalendar) -> Policy
         estimated=prep_estimated,
         dept_name=policy.meta.dept.name,
         dept_tel=policy.meta.dept.tel,
-        origin_url=policy.source.announcement_url or policy.source.origin_url,
+        origin_url=public_url(policy.source),
     )
 
     deadline = _parse_date(policy.period.apply_end)
