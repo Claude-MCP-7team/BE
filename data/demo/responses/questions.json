@@ -4,16 +4,17 @@
     {
       "field": "household_income_ratio_median",
       "text": "건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
-      "resolves": 1,
-      "affects": 1,
+      "resolves": 2,
+      "affects": 2,
       "answer_type": "number",
       "choices": [],
       "source_quote": "소득기준 : 1인 가구 기준 중위소득 150% 이하",
       "source_policy_ids": [
-        "GG-12010"
+        "GG-12010",
+        "20260528005400113227"
       ]
     }
   ],
   "total_unresolved_fields": 1,
-  "needs_info_policies": 1
+  "needs_info_policies": 2
 }

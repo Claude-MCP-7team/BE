@@ -71,24 +71,26 @@ def test_네_가지_판정_상태가_모두_담겨_있다(fresh: dict[str, objec
     """FE 는 PASS/FAIL/UNKNOWN/FUTURE_PASS 배지를 만든다.
 
     Mock 에 한 종류만 있으면 나머지 배지는 화면에서 한 번도 안 그려진 채 제출된다.
-
-    네 가지가 두 파일에 나뉘어 있다. seed 가 실공고라 지역이 서로 배타적이어서,
-    한 사용자가 동시에 닿는 공고가 최대 두 건뿐이기 때문이다. 배지 하나를 더
-    보여주려고 공고를 지어내지는 않는다 — 어느 파일에 있든 합쳐서 네 가지가
-    다 나오는지만 본다.
     """
-    judged = [fresh["judge.all.json"], fresh["judge.future.json"]]
-    total = {
-        key: sum(body["summary"][key] for body in judged)  # type: ignore[index]
-        for key in ("eligible", "ineligible", "needs_info", "future_eligible")
-    }
-    for key, count in total.items():
-        assert count >= 1, f"{key} 예시가 없다: {total}"
+    summary = fresh["judge.all.json"]["summary"]  # type: ignore[index]
+    for key in ("eligible", "ineligible", "needs_info", "future_eligible"):
+        assert summary[key] >= 1, f"{key} 예시가 없다: {summary}"
 
-    results = [r for body in judged for r in body["results"]]  # type: ignore[index]
+    results = fresh["judge.all.json"]["results"]  # type: ignore[index]
     assert any(r["future_eligible_from"] for r in results), "충족 예상일 예시가 없다"
     assert any(r["unmatched"] for r in results), "부적격 사유 예시가 없다"
     assert any(r["unknown"] for r in results), "미확인 조건 예시가 없다"
+
+
+def test_연락처가_빈_카드도_녹화되어_있다(fresh: dict[str, object]) -> None:
+    """`dept_tel` 은 A2 를 거친 공고만 가지고 있다.
+
+    Mock 이 전부 연락처를 들고 있으면 FE 는 그 필드를 필수로 그리고, 실제 목록에서
+    카드 대부분이 깨진다. 빈 것과 있는 것이 둘 다 들어 있어야 한다.
+    """
+    items = fresh["policies.json"]["items"]  # type: ignore[index]
+    tels = [i["dept_tel"] for i in items]
+    assert any(t for t in tels) and any(not t for t in tels), tels
 
 
 def test_조합과_일정에_볼_것이_들어_있다(fresh: dict[str, object]) -> None:
@@ -122,7 +124,11 @@ def test_녹화본이_실공고에서_나왔다(fresh: dict[str, object]) -> Non
     assert "[데모]" not in blob, "합성 seed 의 흔적이 남아 있다"
 
     for item in fresh["policies.json"]["items"]:  # type: ignore[index]
-        assert item["origin_url"].startswith("https://"), item["policy_id"]
+        # 스킴까지 확인한다. 공고 원본에는 `www.pdschool.kr` 처럼 스킴 없는 주소가
+        # 섞여 있는데, 그대로 내보내면 브라우저가 상대 경로로 읽어 FE 도메인 안으로
+        # 이동한다 — 깨진 링크가 아니라 **엉뚱한 페이지**라 더 늦게 발견된다.
+        # http 도 허용한다. 실제 정부 사이트 중에 아직 http 인 곳이 있다.
+        assert item["origin_url"].startswith(("http://", "https://")), item["policy_id"]
 
 
 def test_stabilize_는_다른_값을_건드리지_않는다() -> None:

@@ -2,10 +2,10 @@
   "session_id": "anonymous",
   "snapshot_version": "demo-2026-09-24",
   "summary": {
-    "eligible": 1,
-    "ineligible": 1,
-    "needs_info": 1,
-    "future_eligible": 0
+    "eligible": 7,
+    "ineligible": 14,
+    "needs_info": 2,
+    "future_eligible": 1
   },
   "results": [
     {
@@ -27,7 +27,7 @@
         {
           "rule_id": "GG-12010:age",
           "field": "age",
-          "user_value": 24,
+          "user_value": 23,
           "source_quote": "지원 대상 연령 19세 ~ 39세",
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5921"
         },
@@ -69,7 +69,7 @@
     },
     {
       "policy_id": "JB-5885",
-      "verdict": "ELIGIBLE",
+      "verdict": "INELIGIBLE",
       "confidence": "NEEDS_REVIEW",
       "matched": [
         {
@@ -84,18 +84,219 @@
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885"
         },
         {
-          "rule_id": "JB-5885:age",
-          "field": "age",
-          "user_value": 24,
-          "source_quote": "지원 대상 연령 24세 ~ 24세",
-          "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885"
-        },
-        {
           "rule_id": "JB-5885:a2:residence_months_continuous:1",
           "field": "residence_months_continuous",
           "user_value": 56,
           "source_quote": "경기도 3년 이상 계속 또는 합산 10년 이상 거주자",
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885"
+        }
+      ],
+      "unmatched": [
+        {
+          "rule_id": "JB-5885:age",
+          "field": "age",
+          "user_value": 23,
+          "required": [
+            24,
+            24
+          ],
+          "source_quote": "지원 대상 연령 24세 ~ 24세",
+          "unit": "세",
+          "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885",
+          "time_satisfiable": true,
+          "satisfiable_from": "2027-03-15",
+          "permanently_unsatisfiable": false
+        }
+      ],
+      "unknown": [],
+      "future_eligible_from": "2027-03-15",
+      "needs_review_fields": [
+        "unrepresentable_conditions"
+      ],
+      "explanation": "'2026 경기도 청년기본소득 3분기'은(는) 지금 기준으로 조건 1개가 맞지 않아요. 나이: 내 값 23세, 공고 기준 24세 (\"지원 대상 연령 24세 ~ 24세\"). 이 조건은 2027-03-15부터 충족돼요. 다른 조건 2개는 충족했어요. 공고문이 두 가지로 읽히는 조건이 있어 경기도일자리재단(1877-0566)에 확인을 권해요.",
+      "dept_name": "경기도일자리재단",
+      "dept_tel": "1877-0566",
+      "origin_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260923005400213577",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "20260923005400213577:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "전국 (zipCd 256개 — 수집 묶음의 전 시군구)",
+          "source_url": "https://www.debatekorea.org/2026ifwy"
+        },
+        {
+          "rule_id": "20260923005400213577:age",
+          "field": "age",
+          "user_value": 23,
+          "source_quote": "지원 대상 연령 18세 ~ 39세",
+          "source_url": "https://www.debatekorea.org/2026ifwy"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'2026 IFWY 은평 컨퍼런스'의 확인된 조건 2개를 모두 충족해요.",
+      "dept_name": "서울특별시 은평구 교육문화국",
+      "dept_tel": null,
+      "origin_url": "https://www.debatekorea.org/2026ifwy",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260918005400113447",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "20260918005400113447:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "전국 (zipCd 256개 — 수집 묶음의 전 시군구)",
+          "source_url": "https://mosp.mnd.go.kr/"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'군장병 대학 원격강좌 학점취득 지원 확대'의 확인된 조건 1개를 모두 충족해요.",
+      "dept_name": "국방부",
+      "dept_tel": null,
+      "origin_url": "https://mosp.mnd.go.kr/",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260625005400113245",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "20260625005400113245:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "시행 지역 zipCd: 11110, 11140, 11170, 11200, 11215, 11230, 11260, 11290, 11305, 11320, 11350, 11380, 11410, 11440, 11470, 11500, 11530, 11545, 11560, 11590, 11620, 11650, 11680, 11710, 11740, 12110, 12130, 12150, 12170, 12190, 12210, 12240, 12270, 12300, 12330, 12710, 12720, 12730, 12740, 12750, 12760, 12770, 12780, 12790, 12800, 12810, 12820, 12830, 12840, 12850, 12860, 12870, 26110, 26140, 26170, 26200, 26230, 26260, 26290, 26320, 26350, 26380, 26410, 26440, 26470, 26500, 26530, 26710, 27110, 27140, 27170, 27200, 27230, 27260, 27290, 27710, 27720, 28125, 28177, 28185, 28200, 28237, 28245, 28290, 28710, 28720, 30110, 30140, 30170, 30200, 30230, 31110, 31140, 31170, 31200, 31710, 36110, 41111, 41113, 41115, 41117, 41131, 41133, 41135, 41150, 41171, 41173, 41192, 41194, 41196, 41210, 41220, 41250, 41271, 41273, 41281, 41285, 41287, 41290, 41310, 41360, 41370, 41390, 41410, 41430, 41450, 41461, 41463, 41465, 41480, 41500, 41550, 41570, 41591, 41593, 41595, 41597, 41610, 41630, 41650, 41670, 41800, 41820, 41830, 43111, 43112, 43113, 43114, 43130, 43150, 43720, 43730, 43740, 43745, 43750, 43760, 43770, 43800, 44131, 44133, 44150, 44180, 44200, 44210, 44230, 44250, 44270, 44710, 44760, 44770, 44790, 44800, 44810, 44825, 47111, 47113, 47130, 47150, 47170, 47190, 47210, 47230, 47250, 47280, 47290, 47730, 47750, 47760, 47770, 47820, 47830, 47840, 47850, 47900, 47920, 47930, 47940, 48121, 48123, 48125, 48127, 48129, 48170, 48220, 48240, 48250, 48270, 48310, 48330, 48720, 48730, 48740, 48820, 48840, 48850, 48860, 48870, 48880, 48890, 50110, 50130, 51110, 51130, 51150, 51170, 51190, 51210, 51230, 51720, 51730, 51750, 51760, 51770, 51780, 51790, 51800, 51810, 51820, 51830, 52111, 52113, 52130, 52140, 52180, 52190, 52210, 52710, 52720, 52730, 52740, 52750, 52770, 52790, 52800 (구 전체라 시 코드 11210, 11300, 11540, 28120, 28170, 28180, 28230, 28240, 41110, 41130, 41170, 41190, 41270, 41280, 41460, 41590, 43110, 44130, 44820, 47110, 48120, 52110 포함)",
+          "source_url": "https://mois.go.kr/frt/bbs/type002/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000215&nttId=126775"
+        },
+        {
+          "rule_id": "20260625005400113245:age",
+          "field": "age",
+          "user_value": 23,
+          "source_quote": "지원 대상 연령 19세 ~ 39세",
+          "source_url": "https://mois.go.kr/frt/bbs/type002/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000215&nttId=126775"
+        },
+        {
+          "rule_id": "20260625005400113245:job",
+          "field": "employment_status",
+          "user_value": "job_seeking",
+          "source_quote": "취업 상태 요건 (jobCd=0013003)",
+          "source_url": "https://mois.go.kr/frt/bbs/type002/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000215&nttId=126775"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'사회연대경제 청년일경험'의 확인된 조건 3개를 모두 충족해요.",
+      "dept_name": "행정안전부",
+      "dept_tel": null,
+      "origin_url": "https://mois.go.kr/frt/bbs/type002/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000215&nttId=126775",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260910005400213398",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "20260910005400213398:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "전국 (zipCd 256개 — 수집 묶음의 전 시군구)",
+          "source_url": "https://youth.yongin.go.kr/web/main/bbs/info_notice/2691?cp=1&sortOrder=BA_REGDATE&sortDirection=DESC&bcId=info_notice&baNotice=false&baCommSelec=false&baOpenDay=false&baUse=true"
+        },
+        {
+          "rule_id": "20260910005400213398:age",
+          "field": "age",
+          "user_value": 23,
+          "source_quote": "지원 대상 연령 18세 ~ 39세",
+          "source_url": "https://youth.yongin.go.kr/web/main/bbs/info_notice/2691?cp=1&sortOrder=BA_REGDATE&sortDirection=DESC&bcId=info_notice&baNotice=false&baCommSelec=false&baOpenDay=false&baUse=true"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'2026 청년의 날 기념 「제6회 용인청년페스티벌」 개최'의 확인된 조건 2개를 모두 충족해요.",
+      "dept_name": "경기도 용인시",
+      "dept_tel": null,
+      "origin_url": "https://youth.yongin.go.kr/web/main/bbs/info_notice/2691?cp=1&sortOrder=BA_REGDATE&sortDirection=DESC&bcId=info_notice&baNotice=false&baCommSelec=false&baOpenDay=false&baUse=true",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260923005400113563",
+      "verdict": "ELIGIBLE",
+      "confidence": "CONFIRMED",
+      "matched": [
+        {
+          "rule_id": "20260923005400113563:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "전국 (zipCd 256개 — 수집 묶음의 전 시군구)",
+          "source_url": "http://www.mcst.go.kr"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [],
+      "explanation": "'생활밀착형 체육시설 공급 확대'의 확인된 조건 1개를 모두 충족해요.",
+      "dept_name": "문화체육관광부 체육국",
+      "dept_tel": null,
+      "origin_url": "http://www.mcst.go.kr",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260921005400113467",
+      "verdict": "ELIGIBLE",
+      "confidence": "NEEDS_REVIEW",
+      "matched": [
+        {
+          "rule_id": "20260921005400113467:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "전국 (zipCd 256개 — 수집 묶음의 전 시군구)",
+          "source_url": "https://mosp.mnd.go.kr/"
         }
       ],
       "unmatched": [],
@@ -104,10 +305,83 @@
       "needs_review_fields": [
         "unrepresentable_conditions"
       ],
-      "explanation": "'2026 경기도 청년기본소득 3분기'의 확인된 조건 3개를 모두 충족해요. 다만 공고문이 두 가지로 읽히는 조건이 있어 경기도일자리재단(1877-0566)에 확인을 권해요.",
-      "dept_name": "경기도일자리재단",
-      "dept_tel": "1877-0566",
-      "origin_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885",
+      "explanation": "'군장병 전자책 구독·구매 지원'의 확인된 조건 1개를 모두 충족해요. 다만 공고문이 두 가지로 읽히는 조건이 있어 국방부에 확인을 권해요.",
+      "dept_name": "국방부",
+      "dept_tel": null,
+      "origin_url": "https://mosp.mnd.go.kr/",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260317005400112169",
+      "verdict": "ELIGIBLE",
+      "confidence": "NEEDS_REVIEW",
+      "matched": [
+        {
+          "rule_id": "20260317005400112169:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "시행 지역 zipCd: 11110, 11140, 11170, 11200, 11215, 11230, 11260, 11290, 11305, 11320, 11350, 11380, 11410, 11440, 11470, 11500, 11530, 11545, 11560, 11590, 11620, 11650, 11680, 11710, 11740, 12110, 12130, 12150, 12170, 12190, 12210, 12240, 12270, 12300, 12330, 12710, 12720, 12730, 12740, 12750, 12760, 12770, 12780, 12790, 12800, 12810, 12820, 12830, 12840, 12850, 12860, 12870, 26110, 26140, 26170, 26200, 26230, 26260, 26290, 26320, 26350, 26380, 26410, 26440, 26470, 26500, 26530, 26710, 27110, 27140, 27170, 27200, 27230, 27260, 27290, 27710, 27720, 28125, 28177, 28185, 28200, 28237, 28245, 28290, 28710, 28720, 30110, 30140, 30170, 30200, 30230, 31110, 31140, 31170, 31200, 31710, 36110, 41111, 41113, 41115, 41117, 41131, 41133, 41135, 41150, 41171, 41173, 41192, 41194, 41196, 41210, 41220, 41250, 41271, 41273, 41281, 41285, 41287, 41290, 41310, 41360, 41370, 41390, 41410, 41430, 41450, 41461, 41463, 41465, 41480, 41500, 41550, 41570, 41591, 41593, 41595, 41597, 41610, 41630, 41650, 41670, 41800, 41820, 41830, 43111, 43112, 43113, 43114, 43130, 43150, 43720, 43730, 43740, 43745, 43750, 43760, 43770, 43800, 44131, 44133, 44150, 44180, 44200, 44210, 44230, 44250, 44270, 44710, 44760, 44770, 44790, 44800, 44810, 44825, 47111, 47113, 47130, 47150, 47170, 47190, 47210, 47230, 47250, 47280, 47290, 47730, 47750, 47760, 47770, 47820, 47830, 47840, 47850, 47900, 47920, 47930, 47940, 48121, 48123, 48125, 48127, 48129, 48170, 48220, 48240, 48250, 48270, 48310, 48330, 48720, 48730, 48740, 48820, 48840, 48850, 48860, 48870, 48880, 48890, 50110, 50130, 51110, 51130, 51150, 51170, 51190, 51210, 51230, 51720, 51730, 51750, 51760, 51770, 51780, 51790, 51800, 51810, 51820, 51830, 52111, 52113, 52130, 52140, 52180, 52190, 52210, 52710, 52720, 52730, 52740, 52750, 52770, 52790, 52800 (구 전체라 시 코드 11210, 11300, 11540, 28120, 28170, 28180, 28230, 28240, 41110, 41130, 41170, 41190, 41270, 41280, 41460, 41590, 43110, 44130, 44820, 47110, 48120, 52110 포함)",
+          "source_url": "http://www.kaum.or.kr/bbs/board.php?bo_table=recruitment"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [],
+      "future_eligible_from": null,
+      "needs_review_fields": [
+        "unrepresentable_conditions"
+      ],
+      "explanation": "'2026년 매장유산 미정리유물 보존 및 활용사업'의 확인된 조건 1개를 모두 충족해요. 다만 공고문이 두 가지로 읽히는 조건이 있어 국가유산청 문화유산국에 확인을 권해요.",
+      "dept_name": "국가유산청 문화유산국",
+      "dept_tel": null,
+      "origin_url": "http://www.kaum.or.kr/bbs/board.php?bo_table=recruitment",
+      "disclaimer_required": true
+    },
+    {
+      "policy_id": "20260528005400113227",
+      "verdict": "NEEDS_INFO",
+      "confidence": "NEEDS_REVIEW",
+      "matched": [
+        {
+          "rule_id": "20260528005400113227:region",
+          "field": "region_code",
+          "user_value": [
+            "00",
+            "41",
+            "41820"
+          ],
+          "source_quote": "시행 지역 zipCd: 11110, 11140, 11170, 11200, 11215, 11230, 11260, 11290, 11305, 11320, 11350, 11380, 11410, 11440, 11470, 11530, 11545, 11560, 11590, 11620, 11650, 11680, 11740, 12110, 12130, 12150, 12170, 12190, 12210, 12240, 12270, 12300, 12330, 12710, 12720, 12730, 12740, 12750, 12760, 12770, 12780, 12790, 12800, 12810, 12820, 12830, 12840, 12850, 12860, 12870, 26110, 26140, 26170, 26200, 26230, 26260, 26290, 26320, 26350, 26380, 26410, 26440, 26470, 26500, 26530, 26710, 27110, 27140, 27170, 27200, 27230, 27260, 27290, 27710, 27720, 28125, 28185, 28200, 28237, 28245, 28290, 28710, 28720, 30110, 30140, 30170, 30200, 30230, 31110, 31140, 31170, 31200, 31710, 36110, 41131, 41133, 41135, 41150, 41210, 41220, 41250, 41281, 41285, 41287, 41290, 41310, 41360, 41370, 41390, 41410, 41430, 41461, 41463, 41465, 41480, 41500, 41570, 41591, 41593, 41595, 41597, 41610, 41630, 41650, 41670, 41800, 41820, 41830, 43111, 43112, 43113, 43114, 43130, 43150, 43720, 43730, 43740, 43745, 43750, 43760, 43770, 43800, 44131, 44133, 44150, 44180, 44200, 44210, 44230, 44250, 44270, 44710, 44760, 44770, 44790, 44800, 44810, 44825, 47111, 47113, 47130, 47150, 47170, 47190, 47210, 47230, 47250, 47280, 47290, 47730, 47750, 47760, 47770, 47820, 47830, 47840, 47850, 47900, 47920, 47930, 47940, 48121, 48123, 48125, 48127, 48129, 48170, 48220, 48240, 48250, 48270, 48310, 48330, 48720, 48730, 48740, 48820, 48840, 48850, 48860, 48870, 48880, 48890, 50110, 50130, 51110, 51130, 51150, 51170, 51190, 51210, 51230, 51720, 51730, 51750, 51760, 51770, 51780, 51790, 51800, 51810, 51820, 51830, 52111, 52113, 52130, 52140, 52180, 52190, 52210, 52710, 52720, 52730, 52740, 52750, 52770, 52790, 52800 (구 전체라 시 코드 11210, 11300, 11540, 28120, 28180, 28230, 28240, 41130, 41280, 41460, 41590, 43110, 44130, 44820, 47110, 48120, 52110 포함)",
+          "source_url": "https://www.foodvoucher.go.kr/view/fm/vucintro/agriFood"
+        },
+        {
+          "rule_id": "20260528005400113227:age",
+          "field": "age",
+          "user_value": 23,
+          "source_quote": "지원 대상 연령 18세 ~ 34세",
+          "source_url": "https://www.foodvoucher.go.kr/view/fm/vucintro/agriFood"
+        }
+      ],
+      "unmatched": [],
+      "unknown": [
+        {
+          "rule_id": "20260528005400113227:a2:household_income_ratio_median:0",
+          "field": "household_income_ratio_median",
+          "source_quote": "생계급여(기준 중위소득 32%이하) 수급가구 중 임산부·영유아·아동·청년 포함가구",
+          "question_template": "건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
+          "source_url": "https://www.foodvoucher.go.kr/view/fm/vucintro/agriFood"
+        }
+      ],
+      "future_eligible_from": null,
+      "needs_review_fields": [
+        "unrepresentable_conditions"
+      ],
+      "explanation": "'(농식품부) 농식품 바우처'은(는) 판단에 1가지 정보가 더 필요해요. 지금까지 확인된 조건 2개는 충족했어요. (1) 건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
+      "dept_name": "농림축산식품부",
+      "dept_tel": "1551-0857",
+      "origin_url": "https://www.foodvoucher.go.kr/view/fm/vucintro/agriFood",
       "disclaimer_required": true
     }
   ],

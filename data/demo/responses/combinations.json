@@ -1,6 +1,6 @@
 {
   "snapshot_version": "demo-2026-09-24",
-  "eligible_count": 2,
+  "eligible_count": 8,
   "scenarios": [
     {
       "kind": "conservative",
@@ -9,7 +9,7 @@
       "combinations": [
         {
           "rank": 1,
-          "total_krw": 850000,
+          "total_krw": 1496000,
           "members": [
             {
               "policy_id": "GG-12010",
@@ -18,9 +18,45 @@
               "amount_estimated": true
             },
             {
-              "policy_id": "JB-5885",
-              "title": "2026 경기도 청년기본소득 3분기",
-              "estimated_total_krw": 250000,
+              "policy_id": "20260923005400213577",
+              "title": "2026 IFWY 은평 컨퍼런스",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260918005400113447",
+              "title": "군장병 대학 원격강좌 학점취득 지원 확대",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260625005400113245",
+              "title": "사회연대경제 청년일경험",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260910005400213398",
+              "title": "2026 청년의 날 기념 「제6회 용인청년페스티벌」 개최",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260923005400113563",
+              "title": "생활밀착형 체육시설 공급 확대",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260921005400113467",
+              "title": "군장병 전자책 구독·구매 지원",
+              "estimated_total_krw": 128000,
+              "amount_estimated": false
+            },
+            {
+              "policy_id": "20260317005400112169",
+              "title": "2026년 매장유산 미정리유물 보존 및 활용사업",
+              "estimated_total_krw": 128000,
               "amount_estimated": true
             }
           ],
@@ -37,7 +73,7 @@
       "combinations": [
         {
           "rank": 1,
-          "total_krw": 850000,
+          "total_krw": 1496000,
           "members": [
             {
               "policy_id": "GG-12010",
@@ -46,9 +82,45 @@
               "amount_estimated": true
             },
             {
-              "policy_id": "JB-5885",
-              "title": "2026 경기도 청년기본소득 3분기",
-              "estimated_total_krw": 250000,
+              "policy_id": "20260923005400213577",
+              "title": "2026 IFWY 은평 컨퍼런스",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260918005400113447",
+              "title": "군장병 대학 원격강좌 학점취득 지원 확대",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260625005400113245",
+              "title": "사회연대경제 청년일경험",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260910005400213398",
+              "title": "2026 청년의 날 기념 「제6회 용인청년페스티벌」 개최",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260923005400113563",
+              "title": "생활밀착형 체육시설 공급 확대",
+              "estimated_total_krw": 128000,
+              "amount_estimated": true
+            },
+            {
+              "policy_id": "20260921005400113467",
+              "title": "군장병 전자책 구독·구매 지원",
+              "estimated_total_krw": 128000,
+              "amount_estimated": false
+            },
+            {
+              "policy_id": "20260317005400112169",
+              "title": "2026년 매장유산 미정리유물 보존 및 활용사업",
+              "estimated_total_krw": 128000,
               "amount_estimated": true
             }
           ],

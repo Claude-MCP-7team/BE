@@ -35,20 +35,16 @@ OUT = DEMO / "responses"
 # 갈라지면 FE 가 보는 Mock 과 발표에서 도는 화면이 달라진다.
 FIXED_TODAY = "2026-09-24"
 
-# 어떤 사용자로 부를지. seed 가 실공고라서 지역이 서로 배타적이고, 한 사람이
-# 동시에 닿는 공고는 최대 두 건이다 — 네 가지 배지를 한 응답에 담을 수 없어서
-# 사용자를 나눈다 (tests/e2e/test_demo_scenarios.py 의 이유와 같다).
+# 어떤 사용자로 부를지.
 #
-#   main      소득 미기재 → 적격 1 · 확인필요 1 · 부적격 1
-#   answered  역질문에 답한 뒤 → 적격 2 (조합·서류가 의미 있게 채워진다)
-#   future    한 살 어린 판 → 충족예상일 배지
-MAIN, ANSWERED, FUTURE = "main", "answered", "future"
+#   main      커밋된 데모 사용자. 소득 미기재라 네 가지 배지가 한 응답에 다 나온다
+#   answered  역질문에 답한 뒤 → 조합·서류가 의미 있게 채워진다
+MAIN, ANSWERED = "main", "answered"
 
 # (파일명, 메서드, 경로, 어떤 프로필로 / GET 이면 None)
 CALLS: list[tuple[str, str, str, str | None]] = [
     ("judge.json", "POST", "/v1/judge", MAIN),
     ("judge.all.json", "POST", "/v1/judge?include=all", MAIN),
-    ("judge.future.json", "POST", "/v1/judge?include=all", FUTURE),
     ("questions.json", "POST", "/v1/questions", MAIN),
     # 조합·일정은 역질문에 답한 뒤라야 볼 게 생긴다. 미확인 상태로 부르면
     # 적격이 1건뿐이라 조합에 담길 게 없고, 서류 배열이 통째로 비어 FE 가
@@ -82,7 +78,7 @@ ERROR_CALLS: list[tuple[str, str, str, bytes]] = [
 # 변화와 시계 차이를 구분할 수 없게 된다. 녹화기와 대조 테스트가 **같은 함수**를
 # 쓰므로 둘이 갈라질 수 없다.
 VOLATILE = {
-    "latency_ms": 0,  # 실제로는 측정값. 공고 3건이면 0~1ms 다
+    "latency_ms": 0,  # 실제로는 측정값. 공고 23건이면 0~1ms 다
     "loaded_at": f"{FIXED_TODAY}T00:00:00+00:00",
 }
 
@@ -124,11 +120,7 @@ def record() -> dict[str, Any]:
     load_from_json(holder, msgspec.json.encode(accepted), version=f"demo-{FIXED_TODAY}")
 
     main_profile = json.loads((DEMO / "profile.demo.json").read_text(encoding="utf-8"))
-    profiles = {
-        MAIN: main_profile,
-        ANSWERED: {**main_profile, "answers": ANSWER},
-        FUTURE: json.loads((DEMO / "profile.future.json").read_text(encoding="utf-8")),
-    }
+    profiles = {MAIN: main_profile, ANSWERED: {**main_profile, "answers": ANSWER}}
 
     from app.main import app
 
