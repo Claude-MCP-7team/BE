@@ -138,8 +138,10 @@ jobs:
           docker run -d --name ypc -p 8000:8000 \
             -e SNAPSHOT_PATH=/app/data/demo/snapshot.json \
             -e CORS_ORIGINS=https://ypc-fe.example \
-            -e YPC_FIXED_TODAY=2026-10-01 \
+            -e YPC_FIXED_TODAY=2026-09-24 \
             ypc-backend:ci
+        # 기준일은 data/demo/ seed 를 수집한 날이다. 앞뒤로 옮기면 판정이 달라진다 —
+        # seed 가 실공고라 나이·마감이 날짜를 탄다 (data/demo/README.md).
 
       - name: 스냅샷을 적재하고 준비 상태가 될 때까지 기다린다
         run: |
@@ -153,21 +155,37 @@ jobs:
           exit 1
 
       - name: 판정이 실제로 돈다
+        # 사용자 두 명을 다 보낸다. seed 가 실공고라 지역이 서로 배타적이어서,
+        # 한 사람이 동시에 닿는 공고가 최대 두 건이다 — 네 가지 판정 상태가
+        # 한 응답에 다 담기지 않는다 (data/demo/README.md).
+        #
+        # 배포된 이미지에서 배지 네 개가 전부 나오는지가 여기서 보려는 것이라,
+        # 한 명만 보내고 단언을 낮추면 확인이 사라진다.
         run: |
-          curl -fsS -X POST http://127.0.0.1:8000/v1/judge \
-            -H "Content-Type: application/json" \
-            -d @data/demo/profile.demo.json -o judge.json
+          for who in demo future; do
+            curl -fsS -X POST http://127.0.0.1:8000/v1/judge \
+              -H "Content-Type: application/json" \
+              -d @data/demo/profile.$who.json -o judge.$who.json
+          done
           python3 - <<'PY'
           import json
 
-          body = json.load(open("judge.json", encoding="utf-8"))
-          summary = body["summary"]
-          print("summary:", summary)
-          assert summary["eligible"] >= 1, summary
-          assert summary["future_eligible"] == 1, summary
-          assert body["results"], "결과가 비어 있습니다"
-          missing = [r["policy_id"] for r in body["results"] if not r["origin_url"]]
-          assert not missing, f"근거 링크 없는 결과: {missing}"
+          total = {"eligible": 0, "ineligible": 0, "needs_info": 0, "future_eligible": 0}
+          for who in ("demo", "future"):
+              body = json.load(open(f"judge.{who}.json", encoding="utf-8"))
+              summary = body["summary"]
+              print(f"{who}:", summary)
+              assert body["results"], f"{who}: 결과가 비어 있습니다"
+              missing = [r["policy_id"] for r in body["results"] if not r["origin_url"]]
+              assert not missing, f"{who}: 근거 링크 없는 결과: {missing}"
+              for key in total:
+                  total[key] += summary[key]
+
+          # 네 가지가 합쳐서 한 번씩은 나와야 한다. 하나라도 0이면 FE 가 그 배지를
+          # 배포된 서버에서 한 번도 못 받아 본다.
+          print("합계:", total)
+          for key, count in total.items():
+              assert count >= 1, f"{key} 가 한 번도 안 나왔다: {total}"
           PY
 
       - name: ETag 가 브라우저에 노출된다
