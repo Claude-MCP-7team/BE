@@ -43,7 +43,7 @@ FE 가 브라우저에서 판정부터 세션 저장까지 전 경로를 호출�
 | CORS | `https://fe-psi-tan.vercel.app` + 로컬 `:5173`·`:5174`. **배포된 FE 에서 호출된다** (2026-09-24 확인) |
 | FE 협업 | [FE#21](https://github.com/Claude-MCP-7team/FE/issues/21) 이 배포·연동 점검의 실시간 창구다 |
 | 리모트 이름 | **기계마다 다르다.** `git remote -v` 로 확인할 것 — 이 문서가 `team` 이라고 적어둔 탓에 `origin` 이 팀 저장소인 환경에서 혼선이 있었다 |
-| 테스트 | **668건 통과** (DB 통합 포함, skip 0) |
+| 테스트 | **697건 통과** (DB 통합 포함, skip 0) |
 | CI | 통과 (lint · **타입** · 마이그레이션 · 제약조건 · 테스트 · 계약 드리프트 · 벤치마크 · cp949 · 이미지 빌드) |
 
 > ⚠️ 위 숫자는 갱신 시점의 값이다. **믿지 말고 직접 돌려볼 것.**
@@ -66,7 +66,7 @@ python bench/engine_bench.py
 pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
 ```
 
-`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 668건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
+`DATABASE_URL` 과 `PROFILE_ENC_KEYS` 가 있으면 697건 전부 돈다. 없으면 DB 통합 28건이 skip 된다 — **skip 된 걸 통과로 착각하지 말 것.**
 
 **API 키 없이도 전 경로가 돈다.** `data/demo/` 의 고정 정책 5건이 그 바닥을 받친다:
 
@@ -728,6 +728,15 @@ tests/
 
 scripts/
 └─ preflight.sh       🔴 푸시 전 검사 — CI 세 잡의 조건을 로컬에서 재현 (§6)
+
+tools/                운영·개발 보조 (배포 이미지에는 안 들어간다)
+├─ mcp_server.py      🟡 판정 API 를 Claude 의 도구로 노출 — 대화형 시연 경로
+│                     `/v1/*` 를 감싸는 얇은 어댑터다. 판정·날짜·조합은 전부 API 가
+│                     하고 Claude 는 도구를 고르고 결과를 말로 옮길 뿐이다.
+│                     LLM 이 API 키가 아니라 사용자 구독으로 도는 유일한 길 (§8 #11)
+├─ export_contract.py `docs/contracts/*.json` 생성 — CI 가 드리프트를 본다 (§4 계약면)
+├─ record_mock_responses.py  FE Mock 12건 녹화 (§4 FE Mock)
+└─ demo_scenario.py   시연 대본 — 알려진 결함 재현에도 쓴다 (§8)
 
 batch/
 ├─ collect/           온통청년 수집기 + G0 조사 하네스 + normalize(코드값 → 룰)
