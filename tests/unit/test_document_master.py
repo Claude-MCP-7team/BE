@@ -20,8 +20,10 @@ import pytest
 from app.planner.documents import (
     ISSUE_KINDS,
     NAME_ALIASES,
+    DocumentMasterError,
     load_master,
     master,
+    parse_master,
     resolve,
 )
 
@@ -238,3 +240,54 @@ def test_수식어가_붙은_표기도_같은_서류로_본다():
     for 표기 in ("임대차계약서", "주택 임대차계약서 사본", "주택임대차계약서"):
         spec = resolve(None, 표기)
         assert spec is not None and spec.doc_code == "D035", 표기
+
+
+# --- 빈 칸이 확정값으로 새어나가지 않게 ------------------------------------
+
+
+def _row(**over) -> dict[str, str]:
+    """로더를 통과하는 최소 행. 검사하려는 칸만 바꿔 쓴다."""
+    base = {
+        "doc_id": "D900",
+        "서류명": "테스트 증명서",
+        "발급유형": "ONLINE_INSTANT",
+        "발급채널": "정부24",
+        "소요영업일_최소": "0",
+        "소요영업일_최대": "0",
+        "수수료_온라인": "0",
+        "수수료_방문": "0",
+        "인증강도": "SIMPLE",
+        "유효기간_일": "",
+        "조건분기": "",
+        "출처링크": "",
+        "검증유형": "출처없음",
+        "근거문구": "",
+        "검증일": "",
+        "유효기간_근거": "",
+        "검증상태": "확인필요",
+        "비고": "",
+    }
+    base.update(over)
+    return base
+
+
+def test_소요일이_비면_거부한다():
+    """빈 칸을 0 으로 메우면 '즉시 발급'이 **확정값으로** 나간다.
+
+    마스터 값은 `lead_time_estimated=False` 라 화면에서 추정 표시가 붙지 않는다.
+    사용자는 마감 전날 떼도 된다고 읽고, 실제로는 3일 걸리는 서류였으면 마감을
+    놓친다. 미매핑으로 두면 추정 표시가 붙은 채 나가므로 그쪽이 낫다.
+
+    진짜 즉시 발급이면 `0` 을 적으면 된다 — 적는 사람이 한 글자를 더 쓰는 대신,
+    읽는 사람이 '빈 칸인가 0인가'를 추측하지 않아도 된다.
+    """
+    with pytest.raises(DocumentMasterError, match="소요영업일_최소"):
+        parse_master([_row(소요영업일_최소="")])
+
+    # 0 이라고 적으면 통과한다
+    assert parse_master([_row(소요영업일_최소="0")])["D900"].lead_min_business_days == 0
+
+
+def test_커밋된_표에는_빈_소요일이_없다(specs):
+    """위 검증이 실제 표를 막고 있지 않은지. 36행 전부 값이 있어야 한다."""
+    assert all(s.lead_min_business_days is not None for s in specs.values())

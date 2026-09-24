@@ -184,6 +184,18 @@ def parse_master(rows: list[dict[str, str]]) -> dict[str, DocumentSpec]:
         if kind not in ISSUE_KINDS:
             raise DocumentMasterError(f"{i}행({code}): 모르는 발급유형 {kind!r}")
 
+        # 빈 칸을 0 으로 메우지 않는다. 메우면 '즉시 발급'이 **확정값으로** 나가고
+        # (마스터 값은 lead_time_estimated=False 다), 사용자는 마감 전날 떼도 된다고
+        # 읽는다. 소요일을 모르는 서류는 마스터에 넣지 않는 편이 낫다 — 미매핑은
+        # 추정 표시가 붙은 채로 나가서 화면에서 구별된다.
+        #
+        # 진짜 즉시 발급이면 `0` 을 적는다. 적는 사람이 한 글자를 더 쓰는 대신,
+        # 읽는 사람이 '빈 칸인가 0인가'를 추측하지 않아도 된다.
+        if not (row.get("소요영업일_최소") or "").strip():
+            raise DocumentMasterError(
+                f"{i}행({code}): 소요영업일_최소가 비어 있습니다. "
+                "즉시 발급이면 0 을 적고, 모르면 이 행을 넣지 마세요"
+            )
         lead_min = _int_or(row.get("소요영업일_최소", ""), 0)
         lead_max = _int_or(
             row.get("소요영업일_최대", ""),
