@@ -64,7 +64,7 @@ def test_전국_정책은_지역_코드가_00_하나로_접힌다():
 
 def test_모르는_코드는_룰을_만들지_않고_검토_필드에_남긴다():
     """틀린 부적격보다 '확인 필요'가 낫다. 조용히 통과시키지도 않는다."""
-    p = record_to_policy(rec(jobCd="0013003,0013009", schoolCd="0049002", earnCndSeCd="0043003"))
+    p = record_to_policy(rec(jobCd="0013003,0013009", schoolCd="0049009", earnCndSeCd="0043003"))
     assert "employment_status" not in rules_of(p)
     assert "education" not in rules_of(p)
     assert p.quality.needs_review_fields == [
@@ -83,6 +83,36 @@ def test_확인된_코드는_사용자_필드_값으로_매핑된다():
     # 나이·지역은 프로필 필수값이라 묻지 않는다. 나머지는 역질문으로 해소 가능해야 한다
     for f in ("employment_status", "marital_status", "education"):
         assert r[f].askable and r[f].question_template
+
+
+def test_졸업_예정은_재학으로_접는다():
+    """'졸업 예정자'는 아직 졸업자가 아니다.
+
+    코드표(docs/ontong_codes.md)에는 '고졸 예정'·'대졸 예정'이 따로 있지만, 우리
+    Education enum 에는 없다. 졸업으로 접으면 아직 재학 중인 사용자가 '졸업자 대상'
+    공고에 적격으로 나간다 — 반대 방향으로 접어야 안전하다.
+    """
+    assert rules_of(record_to_policy(rec(schoolCd="0049003")))["education"].value == [
+        "high_school_enrolled"
+    ]
+    assert rules_of(record_to_policy(rec(schoolCd="0049006")))["education"].value == [
+        "university_enrolled"
+    ]
+
+
+def test_일하는_형태를_employed_로_넓히지_않는다():
+    """코드 의미를 안다고 매핑하면 안 되는 경우.
+
+    프리랜서·일용근로자·단기근로자·영농종사자는 전부 '일하는 중'이지만 enum 의
+    `employed` 보다 좁다. `employed` 로 적으면 '일용직 대상' 공고가 정규직
+    사용자에게도 적격으로 나간다 — 확인 필요로 남기는 쪽이 낫다.
+
+    코드표를 받았다고 이걸 채우고 싶어지는 자리라, 못 채우게 막아 둔다.
+    """
+    for code in ("0013004", "0013005", "0013007", "0013008"):
+        p = record_to_policy(rec(jobCd=code))
+        assert "employment_status" not in rules_of(p), code
+        assert "employment_status" in p.quality.needs_review_fields, code
 
 
 def test_원문_링크가_없으면_게시하지_않고_마감이면_expired():
