@@ -208,6 +208,16 @@ KNOWN_UNMATCHED = {
     "월세 이체 증빙서류",
     "월세지원 신청서",
     "소득·재산 신고서",
+    # Additional notices added by the AI rehearsal corpus. These names need
+    # master CSV entries or explicit aliases before they can carry confirmed
+    # issue/fee metadata in the application plan.
+    "등본",
+    "경력증명서",
+    "사업자등록증",
+    "건강보험 확인서류",
+    "주택 임대차 계약 신고필증",
+    "확정일자가 날인된 임대차계약서 사본",
+    "지방세 세목별 과세증명서(전국)",
 }
 
 
