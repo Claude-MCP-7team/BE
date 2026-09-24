@@ -1,16 +1,16 @@
 {
-  "snapshot_version": "demo-2026-10-01",
+  "snapshot_version": "demo-2026-09-24",
   "questions": [
     {
-      "field": "similar_program_participation_2y",
-      "text": "최근 2년 안에 다른 자격증 응시료 지원사업에 참여한 적이 있나요?",
+      "field": "household_income_ratio_median",
+      "text": "건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
       "resolves": 1,
       "affects": 1,
-      "answer_type": "boolean",
+      "answer_type": "number",
       "choices": [],
-      "source_quote": "최근 2년 이내 도(道) 또는 시·군의 유사 자격증 응시료 지원사업에 참여한 자는 제외",
+      "source_quote": "소득기준 : 1인 가구 기준 중위소득 150% 이하",
       "source_policy_ids": [
-        "DEMO-GG-2026-0004"
+        "GG-12010"
       ]
     }
   ],

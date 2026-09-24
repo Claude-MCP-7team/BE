@@ -3,9 +3,9 @@
   "snapshot_version": "demo-2026-09-24",
   "summary": {
     "eligible": 1,
-    "ineligible": 1,
-    "needs_info": 1,
-    "future_eligible": 0
+    "ineligible": 2,
+    "needs_info": 0,
+    "future_eligible": 1
   },
   "results": [
     {
@@ -16,7 +16,7 @@
         {
           "rule_id": "GG-12048:age",
           "field": "age",
-          "user_value": 24,
+          "user_value": 23,
           "source_quote": "지원 대상 연령 19세 ~ 49세",
           "source_url": "https://youth.gg.go.kr/gg/info/education-and-self-development.do?mode=view&arcNo=12048&pager.offset=0&pagerLimit=8"
         }
@@ -54,7 +54,7 @@
     },
     {
       "policy_id": "GG-12010",
-      "verdict": "NEEDS_INFO",
+      "verdict": "ELIGIBLE",
       "confidence": "NEEDS_REVIEW",
       "matched": [
         {
@@ -71,7 +71,7 @@
         {
           "rule_id": "GG-12010:age",
           "field": "age",
-          "user_value": 24,
+          "user_value": 23,
           "source_quote": "지원 대상 연령 19세 ~ 39세",
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5921"
         },
@@ -88,24 +88,23 @@
           "user_value": 1,
           "source_quote": "19 ~ 39세 1인 청년(미혼) 독립가구",
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5921"
-        }
-      ],
-      "unmatched": [],
-      "unknown": [
+        },
         {
           "rule_id": "GG-12010:a2:household_income_ratio_median:3",
           "field": "household_income_ratio_median",
+          "user_value": 85,
           "source_quote": "소득기준 : 1인 가구 기준 중위소득 150% 이하",
-          "question_template": "건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5921"
         }
       ],
+      "unmatched": [],
+      "unknown": [],
       "future_eligible_from": null,
       "needs_review_fields": [
         "household_income_ratio_median",
         "unrepresentable_conditions"
       ],
-      "explanation": "'2026년 3분기 가평군 청년 1인가구 월세 지원사업'은(는) 판단에 1가지 정보가 더 필요해요. 지금까지 확인된 조건 4개는 충족했어요. (1) 건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
+      "explanation": "'2026년 3분기 가평군 청년 1인가구 월세 지원사업'의 확인된 조건 5개를 모두 충족해요. 다만 공고문이 두 가지로 읽히는 조건이 있어 가평군 기획예산담당관(031-580-2388)에 확인을 권해요.",
       "dept_name": "가평군 기획예산담당관",
       "dept_tel": "031-580-2388",
       "origin_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5921",
@@ -113,7 +112,7 @@
     },
     {
       "policy_id": "JB-5885",
-      "verdict": "ELIGIBLE",
+      "verdict": "INELIGIBLE",
       "confidence": "NEEDS_REVIEW",
       "matched": [
         {
@@ -128,13 +127,6 @@
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885"
         },
         {
-          "rule_id": "JB-5885:age",
-          "field": "age",
-          "user_value": 24,
-          "source_quote": "지원 대상 연령 24세 ~ 24세",
-          "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885"
-        },
-        {
           "rule_id": "JB-5885:a2:residence_months_continuous:1",
           "field": "residence_months_continuous",
           "user_value": 56,
@@ -142,13 +134,29 @@
           "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885"
         }
       ],
-      "unmatched": [],
+      "unmatched": [
+        {
+          "rule_id": "JB-5885:age",
+          "field": "age",
+          "user_value": 23,
+          "required": [
+            24,
+            24
+          ],
+          "source_quote": "지원 대상 연령 24세 ~ 24세",
+          "unit": "세",
+          "source_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885",
+          "time_satisfiable": true,
+          "satisfiable_from": "2027-03-15",
+          "permanently_unsatisfiable": false
+        }
+      ],
       "unknown": [],
-      "future_eligible_from": null,
+      "future_eligible_from": "2027-03-15",
       "needs_review_fields": [
         "unrepresentable_conditions"
       ],
-      "explanation": "'2026 경기도 청년기본소득 3분기'의 확인된 조건 3개를 모두 충족해요. 다만 공고문이 두 가지로 읽히는 조건이 있어 경기도일자리재단(1877-0566)에 확인을 권해요.",
+      "explanation": "'2026 경기도 청년기본소득 3분기'은(는) 지금 기준으로 조건 1개가 맞지 않아요. 나이: 내 값 23세, 공고 기준 24세 (\"지원 대상 연령 24세 ~ 24세\"). 이 조건은 2027-03-15부터 충족돼요. 다른 조건 2개는 충족했어요. 공고문이 두 가지로 읽히는 조건이 있어 경기도일자리재단(1877-0566)에 확인을 권해요.",
       "dept_name": "경기도일자리재단",
       "dept_tel": "1877-0566",
       "origin_url": "https://apply.jobaba.net/bsns/bsnsDetailView.do?bsnsSeq=5885",

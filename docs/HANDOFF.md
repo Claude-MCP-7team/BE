@@ -186,7 +186,7 @@ normalize 가 만든 PolicySchema 를 **base** 로 받아, 자유 텍스트(`*Cn
 - `batch/agents/crosscheck.py` — `--cross-check` (기본 두 번째 모델 `claude-sonnet-5`, `--model-b`). 같은 (field, op, value) 면 유지(confidence 는 낮은 쪽),
   한쪽에만 있으면 유지+NEEDS_REVIEW, 값이 다르면 A 유지+NEEDS_REVIEW+ambiguous, 서류·상충은 합집합. **룰을 지우는 경우는 없다.**
   `quality.cross_check` 가 AGREE/DISAGREE 로 채워진다. `--responses` 모드에서는 `<plcyNo>.b.json` 이 있는 정책만 교차검증한다.
-- `batch/agents/golden.py` + `tests/golden/a2_expected.json` — 데모 5건의 정답 룰·금지 필드·doc_code·상충 하한·표식.
+- `batch/agents/golden.py` + `tests/golden/a2_expected.json` — 실공고 11건(`data/manual/raw/`)의 정답 룰·금지 필드·doc_code·상충 하한·표식.
   `python -m batch.agents.golden <policies.json> tests/golden/a2_expected.json` 이 정책별 재현율을 낸다. 실제 모델을 처음 돌릴 때
   이 숫자를 기준으로 프롬프트를 고친다.
 
@@ -717,8 +717,9 @@ app/
     └─ catalog.py     목록 응답 — BE↔FE 표현면. C1 Freeze 와 분리해 두었다
 
 data/
-├─ demo/              🟢 고정 데모 5건 + 사용자 1명 (합성). 키 없이 전 경로가 돈다
-│   └─ responses/     🟢 FE Mock — 실제 응답 12건 녹화본 (아래 참고)
+├─ demo/              🟢 고정 데모 — **실공고 5건**(2026-09-24 수집) + 사용자 2명
+│   │                    키 없이 전 경로가 돈다. 기간이 지나면 게시 건수가 준다
+│   └─ responses/     🟢 FE Mock — 실제 응답 13건 녹화본 (아래 참고)
 ├─ manual/            실제 공고 손입력 + A2 응답 (`--responses` 로 키 없이 검증)
 └─ documents/         서류 마스터 36종 CSV
 
@@ -1008,9 +1009,10 @@ pytest && ruff check . && mypy && python tools/export_contract.py && git diff --
 | 5 | 인증 방식 (익명 세션 vs 로그인) | 팀 | 현재 익명 세션 |
 | 6 | 응답 envelope (`{data, request_id}` 래핑) | FE | 현재 페이로드 직접 반환 |
 | 8 | 서류 마스터 — 유효기간 근거 (법령 조문) | 사람 | 소요일·수수료 23/36. **유효기간은 1/36**(D012) 이라 나머지는 화면에서 계속 추정치다 (§2-③) |
-| 16 | 실공고로 중복수혜 조합(시나리오 5)을 보여줄 데이터 | 데이터 | 상충 쌍이던 국토부 청년월세가 2026-05-29 에 마감됐다. 신청기간이 열려 있는 전국·경기 단위 주거 정책 1건이 더 필요하다 (`data/manual/README.md`). 합성 데이터로는 `data/demo/` 에서 돌고 `tests/e2e` 가 단언한다 |
-| 17 | 스냅샷을 실공고로 바꿀지 | 팀 | 지금은 데모 5건이 배포돼 있다. `data/manual/a2/` 의 실공고 5건으로 바꾸면 `[데모]` 딱지는 사라지지만 **시나리오 5 상충 쌍이 빠진다** (#16 과 같은 뿌리). FE 도 실공고 쪽이 낫다는 의견 (FE#21) |
+| 16 | 실공고로 중복수혜 조합(시나리오 5)을 보여줄 데이터 | 데이터 | 가평 월세(`GG-12010`)가 국토부 청년월세를 **명시적으로 배제**한다 — 진짜 상충 쌍이다. 그런데 국토부 공고가 2026-05-29 에 마감돼 두 공고가 한 스냅샷에 같이 설 수 없다. 신청기간이 겹치는 주거 공고 1건이 더 있으면 복원된다. `test_시나리오5_상충_선언은_있지만_기간이_겹치지_않는다` 가 그때 깨지면서 알려준다 |
+| ~~17~~ | ~~스냅샷을 실공고로 바꿀지~~ | 닫힘 (2026-09-24) | **실공고로 교체했다.** 비용은 시나리오 5 상충 쌍(#16) + 데모 프로필·시나리오 전면 재작성이었다. 남은 문제는 **목록이 만료된다**는 것 — 아래 #19 |
 | 18 | 무료 Postgres 가 **2026-10-21 에 삭제**된다 | 팀 | 제출(10/1) 이후다. 그 뒤로 데모를 유지하려면 유료 전환이나 재생성이 필요하다 |
+| 19 | 배포 스냅샷이 **2026-10-02 에 0건이 된다** | 데이터 | seed 가 실공고라 신청기간이 지나면 빌더가 걸러낸다: 09-24 **3건** → 09-30 2건 → 10-01 1건 → 10-03 **0건**. 0건이면 빌더가 거부해 Docker 빌드가 실패하므로 빈 목록이 배포되지는 않지만, **재배포 자체가 막힌다.** 제출일(10/1)에는 1건이다. 공고를 새로 수집하려면 `ONTONG_API_KEY` 와 외부망이 필요하다 (#16 과 같은 뿌리) |
 | 11 | A2 실행용 `ANTHROPIC_API_KEY` (누구 계정, 예산) | 팀 | 아래 비용 추정 참고 |
 
 ### 배포 완료 상태 (2026-09-21)
@@ -1023,7 +1025,7 @@ FE 의 배포 점검([FE#21](https://github.com/Claude-MCP-7team/FE/issues/21))�
 | 최신 코드 | `POST /v1/judge` 에 `{oops` → **422** `invalid-request` |
 | CORS | `OPTIONS /v1/judge` → **200** + `access-control-allow-origin` |
 | DB | `POST /v1/sessions` → **201** + `session_id` / `/readyz` 의 `database.ready=true` |
-| 스냅샷 | 데모 5건 — 팀 결정 대기 (#17) |
+| 스냅샷 | 실공고 5건 seed → 게시 3건 (2026-09-24 기준). #17 닫힘, #19 로 이어짐 |
 
 **여기까지 오면서 걸린 것들** (전부 `docs/DEPLOY.md` 에 적어 뒀다):
 

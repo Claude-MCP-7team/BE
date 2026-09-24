@@ -1,7 +1,7 @@
 {
   "ready": true,
-  "version": "demo-2026-10-01",
-  "policy_count": 5,
-  "rule_count": 13,
-  "loaded_at": "2026-10-01T00:00:00+00:00"
+  "version": "demo-2026-09-24",
+  "policy_count": 3,
+  "rule_count": 10,
+  "loaded_at": "2026-09-24T00:00:00+00:00"
 }

@@ -71,17 +71,36 @@ def test_네_가지_판정_상태가_모두_담겨_있다(fresh: dict[str, objec
     """FE 는 PASS/FAIL/UNKNOWN/FUTURE_PASS 배지를 만든다.
 
     Mock 에 한 종류만 있으면 나머지 배지는 화면에서 한 번도 안 그려진 채 제출된다.
-    """
-    summary = fresh["judge.all.json"]["summary"]  # type: ignore[index]
-    assert summary["eligible"] >= 1, summary
-    assert summary["ineligible"] >= 1, summary
-    assert summary["needs_info"] >= 1, summary
-    assert summary["future_eligible"] >= 1, summary
 
-    results = fresh["judge.all.json"]["results"]  # type: ignore[index]
+    네 가지가 두 파일에 나뉘어 있다. seed 가 실공고라 지역이 서로 배타적이어서,
+    한 사용자가 동시에 닿는 공고가 최대 두 건뿐이기 때문이다. 배지 하나를 더
+    보여주려고 공고를 지어내지는 않는다 — 어느 파일에 있든 합쳐서 네 가지가
+    다 나오는지만 본다.
+    """
+    judged = [fresh["judge.all.json"], fresh["judge.future.json"]]
+    total = {
+        key: sum(body["summary"][key] for body in judged)  # type: ignore[index]
+        for key in ("eligible", "ineligible", "needs_info", "future_eligible")
+    }
+    for key, count in total.items():
+        assert count >= 1, f"{key} 예시가 없다: {total}"
+
+    results = [r for body in judged for r in body["results"]]  # type: ignore[index]
     assert any(r["future_eligible_from"] for r in results), "충족 예상일 예시가 없다"
     assert any(r["unmatched"] for r in results), "부적격 사유 예시가 없다"
     assert any(r["unknown"] for r in results), "미확인 조건 예시가 없다"
+
+
+def test_조합과_일정에_볼_것이_들어_있다(fresh: dict[str, object]) -> None:
+    """빈 배열만 녹화되면 FE 가 그 화면을 한 번도 안 그려 본 채 제출한다."""
+    combos = fresh["combinations.json"]
+    assert combos["eligible_count"] >= 2, combos["eligible_count"]  # type: ignore[index]
+    for scenario in combos["scenarios"]:  # type: ignore[index]
+        assert scenario["combinations"], scenario["kind"]
+
+    plans = fresh["plan.json"]["plans"]  # type: ignore[index]
+    assert any(p["documents"] for p in plans), "서류가 붙은 일정이 없다"
+    assert any(p["recommended_start_date"] for p in plans), "역산된 착수일이 없다"
 
 
 def test_에러_응답도_녹화되어_있다(fresh: dict[str, object]) -> None:
@@ -93,11 +112,17 @@ def test_에러_응답도_녹화되어_있다(fresh: dict[str, object]) -> None:
         assert payload["title"], name  # type: ignore[index]
 
 
-def test_녹화본이_합성_데이터임을_알_수_있다(fresh: dict[str, object]) -> None:
-    """실데이터로 오인해 사용자 화면에 내보내면 안 된다 (data/demo/README.md)."""
+def test_녹화본이_실공고에서_나왔다(fresh: dict[str, object]) -> None:
+    """합성 데이터로 되돌아가면 여기서 잡는다 (data/demo/README.md).
+
+    합성 공고를 쓰는 것 자체는 선택이지만, 실데이터인 줄 알고 쓰는 건 아니다.
+    """
     blob = json.dumps(fresh, ensure_ascii=False)
-    assert "demo.invalid" in blob
-    assert "[데모]" in blob
+    assert "demo.invalid" not in blob, "합성 seed 의 흔적이 남아 있다"
+    assert "[데모]" not in blob, "합성 seed 의 흔적이 남아 있다"
+
+    for item in fresh["policies.json"]["items"]:  # type: ignore[index]
+        assert item["origin_url"].startswith("https://"), item["policy_id"]
 
 
 def test_stabilize_는_다른_값을_건드리지_않는다() -> None:

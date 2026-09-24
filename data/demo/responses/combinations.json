@@ -1,5 +1,5 @@
 {
-  "snapshot_version": "demo-2026-10-01",
+  "snapshot_version": "demo-2026-09-24",
   "eligible_count": 2,
   "scenarios": [
     {
@@ -9,59 +9,23 @@
       "combinations": [
         {
           "rank": 1,
-          "total_krw": 3000000,
+          "total_krw": 850000,
           "members": [
             {
-              "policy_id": "DEMO-MOEL-2026-0005",
-              "title": "[데모] 청년 구직활동 지원금",
-              "estimated_total_krw": 3000000,
-              "amount_estimated": false
-            }
-          ],
-          "excluded": [
+              "policy_id": "GG-12010",
+              "title": "2026년 3분기 가평군 청년 1인가구 월세 지원사업",
+              "estimated_total_krw": 600000,
+              "amount_estimated": true
+            },
             {
-              "policy_id": "DEMO-GG-2026-0001",
-              "title": "[데모] 경기도 청년 면접수당",
-              "estimated_total_krw": 500000,
-              "conflicts_with": "DEMO-MOEL-2026-0005",
-              "conflicts_with_title": "[데모] 청년 구직활동 지원금",
-              "confidence": "CONFIRMED",
-              "conflict_type": "explicit_policy",
-              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
-              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
-              "dept_name": "경기도 청년정책과",
-              "dept_tel": "031-000-0000"
+              "policy_id": "JB-5885",
+              "title": "2026 경기도 청년기본소득 3분기",
+              "estimated_total_krw": 250000,
+              "amount_estimated": true
             }
           ],
-          "total_is_estimated": false
-        },
-        {
-          "rank": 2,
-          "total_krw": 500000,
-          "members": [
-            {
-              "policy_id": "DEMO-GG-2026-0001",
-              "title": "[데모] 경기도 청년 면접수당",
-              "estimated_total_krw": 500000,
-              "amount_estimated": false
-            }
-          ],
-          "excluded": [
-            {
-              "policy_id": "DEMO-MOEL-2026-0005",
-              "title": "[데모] 청년 구직활동 지원금",
-              "estimated_total_krw": 3000000,
-              "conflicts_with": "DEMO-GG-2026-0001",
-              "conflicts_with_title": "[데모] 경기도 청년 면접수당",
-              "confidence": "CONFIRMED",
-              "conflict_type": "explicit_policy",
-              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
-              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
-              "dept_name": "고용노동부 청년고용기획과",
-              "dept_tel": "044-000-0001"
-            }
-          ],
-          "total_is_estimated": false
+          "excluded": [],
+          "total_is_estimated": true
         }
       ],
       "approximate": false
@@ -73,59 +37,23 @@
       "combinations": [
         {
           "rank": 1,
-          "total_krw": 3000000,
+          "total_krw": 850000,
           "members": [
             {
-              "policy_id": "DEMO-MOEL-2026-0005",
-              "title": "[데모] 청년 구직활동 지원금",
-              "estimated_total_krw": 3000000,
-              "amount_estimated": false
-            }
-          ],
-          "excluded": [
+              "policy_id": "GG-12010",
+              "title": "2026년 3분기 가평군 청년 1인가구 월세 지원사업",
+              "estimated_total_krw": 600000,
+              "amount_estimated": true
+            },
             {
-              "policy_id": "DEMO-GG-2026-0001",
-              "title": "[데모] 경기도 청년 면접수당",
-              "estimated_total_krw": 500000,
-              "conflicts_with": "DEMO-MOEL-2026-0005",
-              "conflicts_with_title": "[데모] 청년 구직활동 지원금",
-              "confidence": "CONFIRMED",
-              "conflict_type": "explicit_policy",
-              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
-              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
-              "dept_name": "경기도 청년정책과",
-              "dept_tel": "031-000-0000"
+              "policy_id": "JB-5885",
+              "title": "2026 경기도 청년기본소득 3분기",
+              "estimated_total_krw": 250000,
+              "amount_estimated": true
             }
           ],
-          "total_is_estimated": false
-        },
-        {
-          "rank": 2,
-          "total_krw": 500000,
-          "members": [
-            {
-              "policy_id": "DEMO-GG-2026-0001",
-              "title": "[데모] 경기도 청년 면접수당",
-              "estimated_total_krw": 500000,
-              "amount_estimated": false
-            }
-          ],
-          "excluded": [
-            {
-              "policy_id": "DEMO-MOEL-2026-0005",
-              "title": "[데모] 청년 구직활동 지원금",
-              "estimated_total_krw": 3000000,
-              "conflicts_with": "DEMO-GG-2026-0001",
-              "conflicts_with_title": "[데모] 경기도 청년 면접수당",
-              "confidence": "CONFIRMED",
-              "conflict_type": "explicit_policy",
-              "source_quote": "경기도 청년 면접수당을 수급 중인 자는 본 지원금을 중복하여 받을 수 없다",
-              "source_url": "https://demo.invalid/policies/DEMO-MOEL-2026-0005",
-              "dept_name": "고용노동부 청년고용기획과",
-              "dept_tel": "044-000-0001"
-            }
-          ],
-          "total_is_estimated": false
+          "excluded": [],
+          "total_is_estimated": true
         }
       ],
       "approximate": false

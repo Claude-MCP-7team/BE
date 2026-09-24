@@ -25,18 +25,25 @@ COPY app ./app
 RUN pip install --no-cache-dir .
 
 # --- 스냅샷 --------------------------------------------------------------
-# 이미지 안에 데모 스냅샷을 만들어 둔다. 실데이터 스냅샷은 매일 바뀌고 수집 키가
+# 이미지 안에 데모 스냅샷을 만들어 둔다. 운영 스냅샷은 매일 바뀌고 수집 키가
 # 필요하므로 이미지에 넣지 않는다 — 대신 SNAPSHOT_PATH 로 갈아끼운다.
 #
-# 다만 **기본값으로 쓰지는 않는다.** 데모 데이터가 조용히 운영으로 나가면,
-# 사용자는 5건짜리 목록을 진짜 정책 목록으로 읽는다. 운영자가 경로를 명시해야 한다.
+# seed 는 실제 공고지만 **수집 시점에 얼어붙은 것**이다. 신청기간이 지나면
+# 빌더가 걸러내므로 재빌드할 때마다 목록이 줄고, 마지막 공고가 마감되는
+# 2026-10-02 이후에는 0건이 된다. 0건이면 빌더가 먼저 거부하고 종료코드 1 을
+# 내므로 이미지가 만들어지지 않는다 — 빈 목록이 배포되는 경로는 없다.
+#
+# 아래 검사는 그 다음 줄의 안전망이자 **건수를 빌드 로그에 남기는 장치**다.
+# 스냅샷이 몇 건짜리인지 이미지 밖에서 확인할 방법이 없어서(무료 플랜은 셸이
+# 없다), 배포된 목록이 3건인지 1건인지 묻는 데 로그밖에 쓸 게 없었다.
 COPY batch ./batch
 COPY data/demo ./data/demo
 RUN python -m batch.build_snapshot data/demo/policies.demo.json \
         -o /app/data/demo/snapshot.json --force \
-    && python -c "import pathlib, sys; \
-p = pathlib.Path('/app/data/demo/snapshot.json'); \
-sys.exit(0 if p.stat().st_size > 0 else 'snapshot is empty')"
+    && python -c "import json, pathlib, sys; \
+n = len(json.loads(pathlib.Path('/app/data/demo/snapshot.json').read_text(encoding='utf-8'))); \
+print(f'snapshot: {n} policies'); \
+sys.exit(0 if n else 'snapshot has no published policy - seed notices have all closed; collect fresh ones')"
 
 COPY data/documents ./data/documents
 
