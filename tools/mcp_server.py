@@ -38,6 +38,20 @@ from typing import Any
 _RELAUNCHED = "YPC_MCP_VENV_RELAUNCH"
 
 
+def _venv_python() -> pathlib.Path | None:
+    """저장소의 .venv 인터프리터. 없으면 None.
+
+    자리가 OS 마다 다르다 — Windows 는 `Scripts/python.exe`, macOS·Linux 는
+    `bin/python`. 둘 다 없는 환경도 정상이다 (CI 는 .venv 없이 전역에 설치한다).
+    """
+    root = pathlib.Path(__file__).resolve().parents[1]
+    for relative in ("bin/python", "Scripts/python.exe"):
+        candidate = root / ".venv" / relative
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _relaunch_in_venv() -> None:
     """의존성이 없으면 저장소의 .venv 인터프리터로 다시 띄운다.
 
@@ -51,15 +65,14 @@ def _relaunch_in_venv() -> None:
     if importlib.util.find_spec("mcp") is not None:
         return  # 지금 인터프리터로 충분하다
 
-    root = pathlib.Path(__file__).resolve().parents[1]
-    for relative in ("bin/python", "Scripts/python.exe"):
-        candidate = root / ".venv" / relative
-        if not candidate.exists():
-            continue
-        env = {**os.environ, _RELAUNCHED: "1"}
-        raise SystemExit(
-            subprocess.run([str(candidate), __file__, *sys.argv[1:]], env=env).returncode
-        )
+    interpreter = _venv_python()
+    if interpreter is None:
+        return  # .venv 가 없다 — 아래 import 가 실패하며 설치 방법을 알려준다
+
+    env = {**os.environ, _RELAUNCHED: "1"}
+    raise SystemExit(
+        subprocess.run([str(interpreter), __file__, *sys.argv[1:]], env=env).returncode
+    )
 
 
 _relaunch_in_venv()

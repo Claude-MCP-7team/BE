@@ -95,12 +95,18 @@ def test_mcp_설정이_OS별_인터프리터_경로를_박지_않는다():
 
 
 def test_의존성이_없으면_venv_로_다시_띄운다(monkeypatch):
-    """재실행이 없으면 시스템 python 으로 불린 순간 ModuleNotFoundError 로 죽는다."""
+    """재실행이 없으면 시스템 python 으로 불린 순간 ModuleNotFoundError 로 죽는다.
+
+    `.venv` 가 실제로 있는지에 기대지 않는다 — CI 는 가상환경 없이 전역에 설치해서
+    처음 쓴 테스트가 CI 에서만 깨졌다. 인터프리터를 찾는 일과 그걸로 다시 띄우는
+    일을 나눠 두고, 여기서는 뒤쪽만 본다.
+    """
     import subprocess
 
     import tools.mcp_server as server
 
     called: dict[str, object] = {}
+    fake = pathlib.Path("/nowhere/.venv/bin/python")
 
     def fake_run(argv, **kw):
         called["argv"] = argv
@@ -109,16 +115,29 @@ def test_의존성이_없으면_venv_로_다시_띄운다(monkeypatch):
 
     monkeypatch.delenv(server._RELAUNCHED, raising=False)
     monkeypatch.setattr(server.importlib.util, "find_spec", lambda name: None)
+    monkeypatch.setattr(server, "_venv_python", lambda: fake)
     monkeypatch.setattr(server.subprocess, "run", fake_run)
 
     with pytest.raises(SystemExit):
         server._relaunch_in_venv()
 
-    argv = called["argv"]
-    assert str(argv[0]).endswith(("python", "python.exe")), argv
-    assert ".venv" in str(argv[0])
+    assert called["argv"][0] == str(fake)
     # 표식이 없으면 재실행된 인터프리터에도 mcp 가 없을 때 무한히 다시 띄운다
     assert called["env"][server._RELAUNCHED] == "1"
+
+
+def test_venv_가_없으면_그냥_넘어간다(monkeypatch):
+    """CI 처럼 가상환경 없이 전역 설치한 환경. 여기서 죽으면 서버가 안 뜬다."""
+    import tools.mcp_server as server
+
+    monkeypatch.delenv(server._RELAUNCHED, raising=False)
+    monkeypatch.setattr(server.importlib.util, "find_spec", lambda name: None)
+    monkeypatch.setattr(server, "_venv_python", lambda: None)
+    monkeypatch.setattr(
+        server.subprocess, "run", lambda *a, **k: pytest.fail("띄울 인터프리터가 없다")
+    )
+
+    server._relaunch_in_venv()  # 조용히 돌아오고, import 단계에서 안내가 나간다
 
 
 def test_표식이_있으면_다시_띄우지_않는다(monkeypatch):
