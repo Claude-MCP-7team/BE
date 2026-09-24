@@ -1,0 +1,44 @@
+{
+  "conditions": [],
+  "unrepresentable_conditions": [
+    {
+      "summary": "대학박물관 20개관에서 78명을 공개채용하는 사업이라, 실제 자격은 각 박물관 채용공고가 정한다",
+      "source_quote": "대학박물관(20개관) 내 미정리 유물 일제 등록 및 활용인원 채용(78명)",
+      "reason": "API 구조화 필드에는 연령·학력·소득 제한이 모두 '제한없음'으로 들어와 있지만, 실제 선발 기준은 기관별 채용공고에 있다. 제한없음을 그대로 믿고 '누구나 적격'으로 내보내면 실제로는 탈락할 사람에게 가능하다고 알려주게 된다."
+    }
+  ],
+  "benefit": {
+    "type": "service",
+    "amount_krw": null,
+    "duration_months": null,
+    "estimated_total_krw": null,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "미정리 유물에 대한 세척, 넘버링, 사진촬영 등 유물분류 작업"
+  },
+  "period": {
+    "apply_start": "2026-01-01",
+    "apply_end": "2026-11-30",
+    "is_rolling": false,
+    "source_quote": "20260101 ~ 20261130"
+  },
+  "documents": [
+    {
+      "name": "졸업증명서",
+      "issuer": null,
+      "canonical_name": "졸업증명서(대학)",
+      "source_quote": "최종학력 또는 재학(휴학)증명서"
+    },
+    {
+      "name": "재학증명서",
+      "issuer": null,
+      "canonical_name": "재학증명서(대학)",
+      "source_quote": "최종학력 또는 재학(휴학)증명서"
+    }
+  ],
+  "conflicts": [],
+  "dept": {
+    "name": "국가유산청 문화유산국",
+    "tel": null,
+    "source_quote": "국가유산청 문화유산국"
+  }
+}

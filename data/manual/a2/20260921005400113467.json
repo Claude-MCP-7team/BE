@@ -1,0 +1,31 @@
+{
+  "conditions": [],
+  "unrepresentable_conditions": [
+    {
+      "summary": "병(兵) 또는 상근예비역만 신청할 수 있다",
+      "source_quote": "신청자격 : 병(兵) 및 상근 예비역",
+      "reason": "프로필에 군 복무 상태를 받는 필드가 없다. employment_status 로 근사하면 복무 중이 아닌 사용자까지 적격으로 나가고, 반대로 부적격으로 두면 실제 대상자가 목록에서 사라진다."
+    }
+  ],
+  "benefit": {
+    "type": "cash_lump",
+    "amount_krw": 64000,
+    "duration_months": null,
+    "estimated_total_krw": 128000,
+    "amount_confidence": "CONFIRMED",
+    "source_quote": "지원금액 : 1인당 연간 64,000원, 복무 중 최대 128,000원"
+  },
+  "period": {
+    "apply_start": "2026-01-01",
+    "apply_end": "2026-11-30",
+    "is_rolling": false,
+    "source_quote": "20260101 ~ 20261130"
+  },
+  "documents": [],
+  "conflicts": [],
+  "dept": {
+    "name": "국방부",
+    "tel": null,
+    "source_quote": "국방부"
+  }
+}
