@@ -61,7 +61,7 @@ cd ypc-backend
 python -m venv .venv && . .venv/Scripts/activate   # Windows: .venv/Scripts/activate
 pip install -e ".[dev,batch]"
 
-pytest            # 442 passed, 28 skipped (DB 없으면 통합 테스트는 skip)
+pytest            # 670 passed, 32 skipped (DB 없으면 통합 테스트는 skip)
 ruff check .
 python bench/engine_bench.py
 pytest tests/e2e -v   # 제출용 시나리오 6종 — 데모가 살아 있는지 30초 확인
