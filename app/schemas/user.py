@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import Any, get_args
 
 import msgspec
 
@@ -76,6 +76,53 @@ def check_bounds(field: str, value: object) -> None:
         raise ValueError(
             f"{field} 는 {lo}~{hi} 범위여야 합니다 (받은 값: {value}). "
             f"단위를 확인하세요"
+        )
+
+
+# 값 집합이 정해진 답변 필드. FIELD_BOUNDS 의 enum 짝이다.
+#
+# 왜 따로 필요한가: `Core` 의 같은 필드는 Literal 로 타입이 잡혀 있어 msgspec 이
+# 디코드 단계에서 막는다. 그런데 `answers` 는 `dict[str, bool|int|float|str|None]`
+# 이라 **아무 문자열이나 들어온다.** 온보딩으로 들어온 값은 막히고 역질문으로 들어온
+# 같은 값은 통과하는 구멍이었다.
+#
+# 빠져 있으면 어떻게 조용히 틀리는가: 사용자가 "혼자 살아요"라고 답한 걸 그대로
+# 보내면 룰은 `marital_status == "single"` 과 비교해 **불일치**로 읽는다. 미혼이라고
+# 답한 사람이 미혼 조건에서 부적격이 되고, 422 도 NEEDS_INFO 도 아닌 그럴듯한
+# 부적격이라 아무도 신고하지 않는다. 데모 corpus 로 재현했을 때 가평 월세가 실제로
+# NEEDS_INFO → INELIGIBLE 로 뒤집혔다. 숫자 필드는 FIELD_BOUNDS 가 막고 있었고
+# enum 필드만 구멍이었다.
+FIELD_CHOICES: dict[str, frozenset[str]] = {
+    "education": frozenset(get_args(Education)),
+    "employment_status": frozenset(get_args(EmploymentStatus)),
+    "marital_status": frozenset(get_args(MaritalStatus)),
+}
+
+# 불리언만 받는 답변 필드. `History` 쪽은 `bool | None` 으로 타입이 잡혀 있다.
+BOOL_ANSWER_FIELDS: frozenset[str] = frozenset({"similar_program_participation_2y"})
+
+
+def check_choices(field: str, value: object) -> None:
+    """값 집합이 정해진 필드면 그 집합에 있는지 검사한다. 어기면 ValueError.
+
+    자연어를 코드값으로 바꾸는 일은 `app.llm.answers.normalize_answer` 가 하고,
+    못 바꾼 답은 아예 빼서 UNKNOWN 으로 남긴다. 판정 입력에 도달하기 전에 끝나야
+    하는 일이다 — 여기서 받아주면 그 설계가 무의미해진다.
+    """
+    if value is None:
+        return
+    if field in BOOL_ANSWER_FIELDS:
+        if not isinstance(value, bool):
+            raise ValueError(f"{field} 는 true/false 여야 합니다 (받은 값: {value!r})")
+        return
+    allowed = FIELD_CHOICES.get(field)
+    if allowed is None:
+        return
+    # bool 을 먼저 걸러낸다 — 문자열 필드에 True 가 오면 isinstance 만으로는 안 잡힌다
+    if isinstance(value, bool) or not isinstance(value, str) or value not in allowed:
+        raise ValueError(
+            f"{field} 는 {', '.join(sorted(allowed))} 중 하나여야 합니다 "
+            f"(받은 값: {value!r}). 사용자가 말한 그대로가 아니라 코드값으로 보내세요"
         )
 
 
@@ -155,6 +202,7 @@ class UserProfile(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
         # 들어온 값은 막히고 역질문으로 들어온 같은 값은 통과하는 구멍이 생긴다.
         for field, value in self.answers.items():
             check_bounds(field, value)
+            check_choices(field, value)
 
     # ---- 파생값 (룰 엔진이 평가 직전에 계산) -------------------------------
 

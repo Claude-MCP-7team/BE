@@ -1,0 +1,78 @@
+{
+  "_comment": "가평 월세 공고(GG-12010)를 두 번째로 읽은 결과. 실제 두 모델이 갈릴 만한 지점만 다르게 했다: 소득 기준을 150%가 아니라 원가구 문구(100%)로 읽었고, 1인 가구 조건은 보지 못했다. 인용문은 전부 원문 그대로라 대조를 통과한다 — 교차검증이 '인용이 틀려서'가 아니라 '해석이 갈려서' 작동하는지를 보기 위한 것이다. data/manual/a2 가 아니라 여기 두는 이유는 tests/e2e/test_crosscheck_real.py 도크스트링 참고.",
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [19, 39],
+      "unit": "세",
+      "source_quote": "신청일 기준 가평군에 주민등록을 두고 있는 19 ~ 39세 1인 청년(미혼) 독립가구",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "A 와 같게 읽었다"
+    },
+    {
+      "kind": "eligibility",
+      "field": "marital_status",
+      "op": "==",
+      "value_number": null,
+      "value_text": "single",
+      "value_bool": null,
+      "value_list": null,
+      "unit": null,
+      "source_quote": "19 ~ 39세 1인 청년(미혼) 독립가구",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "현재 혼인 상태를 알려주세요.",
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "A 와 같게 읽었다"
+    },
+    {
+      "kind": "eligibility",
+      "field": "household_income_ratio_median",
+      "op": "<=",
+      "value_number": 100,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "%",
+      "source_quote": "‣ 취업준비생, 학생 등 무직자: 원 가구 소득 반영 (건강보험료 부양자부담금)",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "부모님을 포함한 가구 소득이 기준 중위소득의 몇 % 정도인가요?",
+      "ambiguous": true,
+      "confidence": "ESTIMATED",
+      "note": "A 는 1인 가구 150% 로 읽었다. 같은 공고가 두 기준을 적어 둔 탓에 갈린다"
+    }
+  ],
+  "unrepresentable_conditions": [],
+  "benefit": {
+    "type": "cash_monthly",
+    "amount_krw": 200000,
+    "duration_months": 3,
+    "estimated_total_krw": 600000,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "월 20만원 월세 지원(1가구당 최대 2년, 생애 1회)"
+  },
+  "period": {
+    "apply_start": "2026-09-14",
+    "apply_end": "2026-09-30",
+    "is_rolling": false,
+    "source_quote": "신청기간 : 2026. 9. 14.(월) ~ 9. 30.(수) 18:00까지"
+  },
+  "documents": [],
+  "conflicts": [],
+  "dept": {
+    "name": "가평군청 기획예산담당관 인구정책팀",
+    "tel": "031-580-2388",
+    "source_quote": "가평군청 기획예산담당관 인구정책팀(☎031-580-2388)"
+  }
+}

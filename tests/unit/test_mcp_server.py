@@ -57,6 +57,26 @@ def test_프로필은_비운_값을_보내지_않는다():
     assert p["answers"] == {"similar_program_participation_2y": False}  # 모르는 필드 x 는 빠진다
 
 
+def test_core_의_enum_도_사용자_말을_코드값으로_바꾼다():
+    """도구 설명에 코드값을 적어 뒀어도 모델은 사용자 말을 그대로 넣을 수 있다.
+
+    core 는 Literal 로 타입이 잡혀 있어서 못 바꾼 값은 422 로 판정이 아예 죽는다.
+    바꿀 수 있는 건 바꿔 두는 쪽이 사용자가 보는 화면에서 차이가 크다.
+    """
+    p = _profile(
+        "2002-03-01", "41465", None, "대학 졸업했어요", "취준생이에요", None, "미혼", None, None, None
+    )
+    assert p["core"]["education"] == "university_graduated"
+    assert p["core"]["employment_status"] == "job_seeking"
+    assert p["core"]["marital_status"] == "single"
+
+
+def test_바꿀_수_없는_enum_값은_지우지_않고_그대로_둔다():
+    """조용히 지우면 그 조건을 본 적도 없이 판정이 나간다. 422 로 막히는 게 낫다."""
+    p = _profile("2002-03-01", "41465", None, "잘 모르겠어요", None, None, None, None, None, None)
+    assert p["core"]["education"] == "잘 모르겠어요"
+
+
 def test_도구_여섯_개가_등록되어_있다():
     import asyncio
 
