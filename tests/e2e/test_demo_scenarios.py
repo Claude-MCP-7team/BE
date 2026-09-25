@@ -410,9 +410,20 @@ def test_ics_로_내보낼_수_있다(client, profile):
 
 
 def test_같은_조건이면_몇_번을_물어도_같은_판정이다(client, profile):
-    first = client.post("/v1/judge", json=profile, params={"include": "all"}).content
+    """응답 바이트가 아니라 **판정 내용**을 비교한다.
+
+    바이트로 비교하면 `latency_ms` 와 `session_id` 가 섞여 들어와 호출이 1ms 를
+    넘기는 순간 실패한다 — 판정은 멀쩡한데 테스트만 빨개져서, 진짜 결정론이 깨졌을
+    때도 "또 그 플레이크"로 넘기게 된다.
+    """
+
+    def judgement() -> tuple[object, object]:
+        body = client.post("/v1/judge", json=profile, params={"include": "all"}).json()
+        return body["results"], body["summary"]
+
+    first = judgement()
     for _ in range(3):
-        assert client.post("/v1/judge", json=profile, params={"include": "all"}).content == first
+        assert judgement() == first
 
 
 def test_데모_seed_는_스키마를_만족한다():
