@@ -23,7 +23,13 @@ from app.core.problem import ALL_TYPES  # noqa: E402
 from app.schemas.enums import KNOWN_FIELDS, TIME_SATISFIABLE_FIELDS  # noqa: E402
 from app.schemas.judgement import JudgementResult  # noqa: E402
 from app.schemas.policy import PolicySchema  # noqa: E402
-from app.schemas.user import FIELD_BOUNDS, FIELD_UNITS, UserProfile  # noqa: E402
+from app.schemas.user import (  # noqa: E402
+    BOOL_ANSWER_FIELDS,
+    FIELD_BOUNDS,
+    FIELD_CHOICES,
+    FIELD_UNITS,
+    UserProfile,
+)
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "docs" / "contracts"
 
@@ -84,11 +90,20 @@ def main() -> None:
             field: {"min": lo, "max": hi, "unit": FIELD_UNITS[field]}
             for field, (lo, hi) in sorted(FIELD_BOUNDS.items())
         },
+        # 허용 값 집합도 같은 이유로 계약이다. answers 는 자유 dict 라 타입만으로는
+        # 막히지 않는다 — 사용자가 말한 "혼자 살아요"를 그대로 보내면 룰 비교가
+        # 불일치로 읽혀 조용한 오판정이 된다.
+        "enum_choices": {
+            field: sorted(choices) for field, choices in sorted(FIELD_CHOICES.items())
+        },
+        "bool_fields": sorted(BOOL_ANSWER_FIELDS),
         "note": (
             "룰의 field 는 known_fields 안에 있어야 한다. "
             "time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다. "
             "numeric_bounds 의 필드는 정수만 받으며, 범위 밖이면 "
-            "422 invalid-profile 로 거부된다."
+            "422 invalid-profile 로 거부된다. "
+            "enum_choices · bool_fields 의 필드는 answers 로 보낼 때도 코드값이어야 "
+            "하며, 사람이 말한 표현은 서버에 닿기 전에 코드값으로 바꿔야 한다."
         ),
     }
     # 에러 유형도 계약이다. FE 는 상태 코드가 아니라 이 code 로 분기한다.
