@@ -937,3 +937,27 @@ def test_계획_응답에_마스터_필드가_직렬화된다() -> None:
     assert grad.lead_time_min_business_days == 1
     assert grad.lead_time_business_days == 3
     assert grad.channel
+
+
+def test_서류가_없어도_비용_플래그가_응답에_실린다() -> None:
+    """FE 가 `cost_unknown_document_count` 를 **필수 필드로** 검증한다 (FE#21, PR #26).
+
+    `total_document_cost_krw` 만 보면 금액 미상 서류가 있어도 "0원"으로 읽혀서
+    유료 서류가 무료처럼 보인다. 그래서 FE 는 두 값을 같이 본다 — 그러려면 값이
+    0 일 때도 실려 나가야 한다.
+
+    지금은 `PlanResponse` 에 `omit_defaults` 가 없어서 그냥 나간다. 누군가
+    응답 크기를 줄이려고 그걸 켜면 **0인 필드가 통째로 사라지고** FE 계약이
+    조용히 깨진다. 서류가 하나도 없는 응답으로 고정해 둔다.
+    """
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30", documents=[])])
+    body = msgspec.json.decode(msgspec.json.encode(plan))
+
+    for field in (
+        "total_document_cost_krw",
+        "cost_unknown_document_count",
+        "visit_required_count",
+        "unverified_document_count",
+    ):
+        assert field in body, f"{field} 가 응답에서 빠졌다 — FE 계약이 깨진다"
+        assert body[field] == 0
