@@ -40,12 +40,14 @@ from datetime import date
 from typing import Any
 
 from app.core.clock import today_kst
+from app.core.regions import SIDO_NAMES, describe_region
 from app.schemas.enums import Category
 from app.schemas.policy import Dept, Meta, Period, PolicySchema, Quality, Rule, Source
 
 Record = dict[str, Any]
 
 NATIONWIDE_MIN_CODES = 100  # 실측: 시도 단위 최대 47, 전국 최소 189
+_SUMMARIZE_MIN_CODES = 20  # 이보다 짧은 목록은 그대로 적어도 읽힌다
 
 
 def code_universe(records: Iterable[Record]) -> frozenset[str]:
@@ -99,6 +101,13 @@ def resolve_region(
        넣는다 — 처인구 전용 공고에 기흥구 사용자가 딸려오는 과잉 포함이 생기지만,
        정책이 통째로 사라지는 것보다는 낫다 (CLAUDE.md).
 
+    3. **2 의 반대 방향 — 구 단위로 입력한 사용자가 시 단위 공고에서 떨어진다.**
+       2026 년에 화성시가 구 넷(41591·41593·41595·41597)으로 나뉘었는데, 그 전에
+       만든 공고는 여전히 41590(화성시)으로 적는다. 동탄구 사용자의 체인은
+       ['00','41','41597'] 이라 41590 과 안 겹치고, **받을 수 있는 정책이 부적격**
+       으로 나온다. 시 전체를 대상으로 한 공고는 그 시의 모든 구를 포함하므로,
+       묶음에 있는 구 코드를 같이 넣는다.
+
     (판정용 룰 값, 표시용 meta 값, 근거 문구)를 돌려준다. **둘을 나누는 이유**:
     판정은 250여 개 목록이 필요하지만, 그걸 `meta.region_code` 에까지 넣으면
     목록 응답 한 페이지가 40KB 씩 불어난다. 목록은 접힌 값으로 넓게 걸러 보여주고
@@ -109,11 +118,11 @@ def resolve_region(
         return [], [], ""
 
     given = set(codes)
-    expanded = _with_si_codes(given, universe)
+    expanded = _with_si_codes(_with_gu_codes(given, universe), universe)
 
     if universe is not None:
         # 같은 장소를 시(41590)로 적은 공고와 구(41591·41593…)로 적은 공고가 섞여
-        # 있다. 양쪽 다 시 코드까지 펼친 뒤에 비교해야 단위가 맞는다.
+        # 있다. 양쪽 다 시·구 코드까지 펼친 뒤에 비교해야 단위가 맞는다.
         if expanded >= _with_si_codes(set(universe), universe):
             return ["00"], ["00"], f"전국 (zipCd {len(codes)}개 — 수집 묶음의 전 시군구)"
     elif len(codes) >= NATIONWIDE_MIN_CODES:
@@ -122,12 +131,87 @@ def resolve_region(
 
     value = sorted(expanded)
     added = sorted(expanded - given)
-    quote = f"시행 지역 zipCd: {', '.join(codes)}"
-    if added:
-        quote += f" (구 전체라 시 코드 {', '.join(added)} 포함)"
+    quote = _exclusion_quote(codes, expanded, universe) if universe is not None else None
+    if quote is None:
+        quote = f"시행 지역 zipCd: {', '.join(codes)}"
+        if added:
+            quote += f" (구 전체라 시 코드 {', '.join(added)} 포함)"
     # 표시용은 접는다. 목록에서 넓게 보여주고 정확한 사유는 판정이 낸다.
     display = ["00"] if len(value) >= NATIONWIDE_MIN_CODES else value
     return value, display, quote
+
+
+def _gu_of(si: str, universe: frozenset[str]) -> set[str]:
+    return {c for c in universe if _si_code(c) == si}
+
+
+def _with_gu_codes(codes: set[str], universe: frozenset[str] | None) -> set[str]:
+    """시 코드 묶음에 그 시의 구 코드(묶음에 있는 것)를 더한다.
+
+    기준 집합이 없으면 어떤 구가 있는지 모르므로 그대로 둔다.
+    """
+    if universe is None:
+        return set(codes)
+    out = set(codes)
+    for code in codes:
+        if len(code) == 5 and code[4] == "0":
+            out |= _gu_of(code, universe)
+    return out
+
+
+def _exclusion_quote(
+    codes: list[str], expanded: set[str], universe: frozenset[str]
+) -> str | None:
+    """'거의 전부'인 목록을 **빠진 곳**으로 적는다. 짧아지지 않으면 None.
+
+    전국 공고 대부분은 zipCd 가 250여 개인데, 전국으로 접히지 않는 건 몇 곳이
+    빠져서다 (2026 년에 새로 생긴 인천 구, 농식품 바우처의 미추진 지자체). 그걸
+    코드 250여 개로 적으면 근거 문구가 2,000자가 되고, 정작 사용자가 알아야 할
+    '어디가 빠졌는가'는 그 안에 묻혀 **아무도 못 읽는다.** 판정 값(룰의 value)은
+    그대로 두고 문구만 바꾼다 — 판정은 이 문자열을 보지 않는다.
+
+    범위는 목록이 한 시도 안에 있으면 그 시도, 아니면 전국(수집 묶음 기준)이다.
+    묶음에 없는 코드는 여기서 '제외'로 셀 수 없으므로, 문구에 기준을 밝힌다.
+    """
+    if len(codes) < _SUMMARIZE_MIN_CODES:
+        return None  # 원래 읽을 수 있다. 작은 묶음에서 '전역'이라 부르는 오류만 생긴다
+    prefixes = {c[:2] for c in codes}
+    full = _with_si_codes(set(universe), universe)
+    if len(prefixes) == 1:
+        prefix = next(iter(prefixes))
+        full = {c for c in full if c.startswith(prefix)}
+        scope = f"{SIDO_NAMES.get(prefix, prefix)} 전역"
+    else:
+        scope = "전국"
+
+    missing = full - expanded
+
+    def whole_si_missing(si: str) -> bool:
+        # 구가 둘 이상인 시만 '시'로 묶는다. 인천 28155 처럼 끝자리가 0 이 아닌
+        # 단독 코드는 `_si_code` 가 28150 이라는 **없는 시**를 만들어 낸다.
+        gu = _gu_of(si, universe)
+        return len(gu) >= 2 and gu <= missing
+
+    # 구가 전부 빠진 시는 시 하나로 적는다 (수원시 네 구 → 수원시).
+    # 구가 일부만 빠졌으면 빠진 구만 적는다 — 시 전체가 빠진 게 아니다.
+    shown: list[str] = []
+    for code in sorted(missing):
+        if code not in universe and not whole_si_missing(code):
+            continue  # 펼치면서 생긴 시 코드 — 구 쪽에서 적힌다
+        if len(_gu_of(code, universe)) >= 2 and not whole_si_missing(code):
+            continue
+        si = _si_code(code)
+        if si is not None and whole_si_missing(si):
+            continue
+        shown.append(code)
+
+    if len(shown) * 2 > len(codes):
+        return None  # 빠진 쪽이 더 길다 — 목록 그대로가 낫다
+    base = f"{scope} (수집 묶음 기준 zipCd {len(codes)}개"
+    if not shown:
+        return base + ")"
+    places = ", ".join(describe_region(c) for c in shown)
+    return base + f") — 제외 {len(shown)}곳: {places}"
 
 
 def _with_si_codes(codes: set[str], universe: frozenset[str] | None) -> set[str]:

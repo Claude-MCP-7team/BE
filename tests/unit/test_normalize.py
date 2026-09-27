@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from app.core.regions import describe_region
 from app.schemas.validate import validate_policy
 from batch.collect.normalize import (
     NATIONWIDE_MIN_CODES,
@@ -221,7 +222,9 @@ def test_표시용_지역은_접고_판정용은_펼친다():
     목록은 넓게 걸러 보여주고(사용자는 카드를 본 뒤 판정에서 정확한 사유를 받는다),
     정확한 제외는 판정 룰이 한다. judge.py 의 필터는 meta 를, 엔진은 룰을 본다.
     """
-    universe = frozenset(f"{n:05d}" for n in range(11110, 11110 + 150))
+    # 시군구 코드는 끝자리가 0 이다. 연속 숫자(11111, 11112…)로 만들면 11110 의
+    # '구'로 읽혀 시→구 펼침이 전부를 덮고 전국으로 접힌다 — 실제 코드에는 없는 모양.
+    universe = frozenset(f"{11110 + 10 * n:05d}" for n in range(150))
     거의전국 = sorted(universe)[:-1]  # 한 곳만 뺀다
 
     value, display, _ = resolve_region(거의전국, universe)
@@ -245,3 +248,99 @@ def test_기준_집합이_없으면_개수로_판단하고_문구에_남긴다()
     value, _, quote = resolve_region(많음, None)
     assert value == ["00"]
     assert "기준 집합 없음" in quote
+
+
+# --- 근거 문구: 판정 값은 그대로, 사람이 읽을 수 있게 -----------------------
+
+
+def _전국(*extra: str) -> frozenset[str]:
+    """서울 25개 구 + 경기 몇 곳 + 추가 코드. '전국'의 축소판."""
+    return frozenset({f"{11110 + 10 * i}" for i in range(25)} | {"41220", "41820"} | set(extra))
+
+
+def test_거의_전국은_코드_목록이_아니라_빠진_곳으로_적는다():
+    """코드 250여 개를 근거 문구에 늘어놓으면 2,000자가 되고 아무도 못 읽는다.
+
+    정작 사용자가 알아야 하는 건 '어디가 빠졌는가'인데, 그게 목록에 묻힌다.
+    FE 가 이 문구를 근거로 화면에 그리면 카드 하나가 코드로 가득 찬다.
+    """
+    universe = _전국("28155")
+    given = sorted(universe - {"28155"})
+
+    value, _, quote = resolve_region(given, universe)
+    assert value == given, "문구만 바꿔야 한다 — 판정 값이 달라졌다"
+    assert quote == f"전국 (수집 묶음 기준 zipCd {len(given)}개) — 제외 1곳: 인천 28155"
+
+
+def test_구가_전부_빠진_시는_시_하나로_적는다():
+    universe = _전국("41192", "41194", "41196")
+    given = sorted(universe - {"41192", "41194", "41196"})
+
+    _, _, quote = resolve_region(given, universe)
+    assert "제외 1곳: 경기 부천시(41190)" in quote
+    assert "41192" not in quote
+
+
+def test_구가_일부만_빠지면_빠진_구만_적는다():
+    """시 전체가 빠진 것처럼 적으면 소사구 사용자가 받을 수 있는 걸 못 받는다고 읽는다."""
+    universe = _전국("41192", "41194", "41196")
+    given = sorted(universe - {"41194"})
+
+    _, _, quote = resolve_region(given, universe)
+    assert "제외 1곳: 경기 부천시 소사구(41194)" in quote
+    assert "41190" not in quote
+
+
+def test_끝자리가_0이_아닌_단독_코드로_없는_시를_만들지_않는다():
+    """인천 28155 의 '시 코드'를 기계적으로 만들면 28150 — 존재하지 않는 곳이다.
+
+    근거 문구에 없는 지역이 찍히면 담당부서에 확인하려는 사용자가 헤맨다.
+    """
+    universe = _전국("28155")
+    _, _, quote = resolve_region(sorted(universe - {"28155"}), universe)
+    assert "28150" not in quote
+
+
+def test_빠진_곳이_더_길면_목록을_그대로_적는다():
+    universe = _전국()
+    _, _, quote = resolve_region(["11110", "11120", "11130"], universe)
+    assert quote == "시행 지역 zipCd: 11110, 11120, 11130"
+
+
+def test_짧은_목록은_전역이라고_부르지_않는다():
+    """묶음에 경기 코드가 둘뿐이면 둘 다 적은 공고도 '경기 전역'이 된다.
+
+    '전역'은 묶음이 충분히 클 때만 맞는 말이다. 짧은 목록은 원래 읽을 수 있으니
+    요약할 이유도 없다.
+    """
+    universe = _전국()
+    _, _, quote = resolve_region(["41220", "41820"], universe)
+    assert quote == "시행 지역 zipCd: 41220, 41820"
+
+
+def test_시_코드로_적힌_공고는_그_시의_구_사용자도_받는다():
+    """2026 년에 화성시가 구 넷으로 나뉘었는데, 그 전 공고는 41590(화성시)으로 적는다.
+
+    동탄구 사용자의 체인은 ['00','41','41597'] 이라 41590 과 안 겹친다. 시 전체
+    대상 공고인데 **동탄구 사용자에게 부적격**으로 나온다. 틀린 부적격은 사용자가
+    그냥 넘어가므로 신고가 안 들어온다.
+    """
+    universe = frozenset({"41590", "41591", "41593", "41595", "41597", "41220"})
+    value, _, _ = resolve_region(["41590"], universe)
+    assert {"41591", "41593", "41595", "41597"} <= set(value)
+
+
+def test_시_코드를_펼치지_않으면_전국_공고가_접히지_않는다():
+    """시 코드로 적은 전국 공고가 구 코드가 섞인 기준 집합을 못 덮던 문제."""
+    universe = frozenset({"41590", "41591", "41593", "41595", "41597", "41220"})
+    value, _, quote = resolve_region(["41590", "41220"], universe)
+    assert value == ["00"]
+    assert "전국" in quote
+
+
+def test_모르는_코드에_이름을_지어_붙이지_않는다():
+    """개편으로 뜻이 바뀌었을 수 있는 코드에 추측한 이름을 달면 근거가 엉뚱한 곳을 가리킨다."""
+    assert describe_region("41192") == "경기 부천시 원미구(41192)"
+    assert describe_region("41190") == "경기 부천시(41190)"
+    assert describe_region("28155") == "인천 28155"
+    assert describe_region("12110") == "12110"
