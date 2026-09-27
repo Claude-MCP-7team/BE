@@ -39,5 +39,31 @@
       "unit": "개월"
     }
   },
-  "note": "룰의 field 는 known_fields 안에 있어야 한다. time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다. numeric_bounds 의 필드는 정수만 받으며, 범위 밖이면 422 invalid-profile 로 거부된다."
+  "enum_choices": {
+    "education": [
+      "graduate_school",
+      "high_school_enrolled",
+      "high_school_graduated",
+      "middle_or_below",
+      "university_enrolled",
+      "university_graduated"
+    ],
+    "employment_status": [
+      "employed",
+      "founder",
+      "job_seeking",
+      "neet",
+      "student"
+    ],
+    "marital_status": [
+      "divorced",
+      "married",
+      "single",
+      "widowed"
+    ]
+  },
+  "bool_fields": [
+    "similar_program_participation_2y"
+  ],
+  "note": "룰의 field 는 known_fields 안에 있어야 한다. time_satisfiable=true 는 time_satisfiable_fields 에만 허용된다. numeric_bounds 의 필드는 정수만 받으며, 범위 밖이면 422 invalid-profile 로 거부된다. enum_choices · bool_fields 의 필드는 answers 로 보낼 때도 코드값이어야 하며, 사람이 말한 표현은 서버에 닿기 전에 코드값으로 바꿔야 한다."
 }

@@ -87,7 +87,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - 설치 안내 경로
         f"(지금 인터프리터: {sys.executable})"
     ) from exc
 
-from app.llm.answers import apply_answers  # noqa: E402
+from app.llm.answers import apply_answers, normalize_answer  # noqa: E402
 
 API_BASE = os.environ.get("YPC_API_BASE", "http://127.0.0.1:8765")
 
@@ -184,8 +184,15 @@ def _profile(
         ("household_size", household_size),
         ("household_income_ratio_median", household_income_ratio_median),
     ):
-        if value is not None and value != "":
-            core[key] = value
+        if value is None or value == "":
+            continue
+        if key in ("education", "employment_status", "marital_status"):
+            # 도구 설명에 코드값을 적어 뒀지만 모델이 사용자 말("학생이에요")을 그대로
+            # 넣을 수 있다. 바꿀 수 있으면 바꾸고, 못 바꾸면 그대로 둬서 스키마가
+            # 422 로 막게 한다 — 모르는 값을 지워 버리면 조건을 본 적도 없이 판정이
+            # 나간다.
+            value = normalize_answer(key, value) or value
+        core[key] = value
     profile: dict[str, Any] = {"core": core}
     if answers:
         # "120%", "예", "작년 5월부터" 같은 자유 형식도 받는다. 못 바꾼 값은 빠져서 다시 묻게 된다.
