@@ -130,11 +130,7 @@ def test_g5_공휴일표에_빠지거나_더해진_날이_없다() -> None:
     """
     cal = bundled_calendar()
     expected = {d for d, _ in HOLIDAYS_2026}
-    actual = {
-        d
-        for d in _all_days(2026)
-        if cal.holiday_name(d) is not None
-    }
+    actual = {d for d in _all_days(2026) if cal.holiday_name(d) is not None}
     assert actual == expected
 
 
@@ -260,7 +256,7 @@ def test_서류_발급은_병렬이라_최댓값을_쓴다() -> None:
 
 
 def test_역산은_공휴일을_건너뛴다() -> None:
-    docs = [Document(name="등본", doc_code="RESIDENT", lead_time_business_days=3)]
+    docs = [Document(name="테스트서류", doc_code="RESIDENT", lead_time_business_days=3)]
     # 마감 2026-02-20(금), 준비 4영업일 → 2/19, 2/13, 2/12, 2/11
     plan = _plan_of([_policy("P1", apply_end="2026-02-20", documents=docs)], today=date(2026, 2, 2))
     assert _by_id(plan, "P1").recommended_start_date == "2026-02-11"
@@ -310,7 +306,7 @@ def test_이미_마감된_정책() -> None:
 
 def test_오늘_시작해야_하면_URGENT() -> None:
     # 마감 3/12(목), 준비 2영업일(서류1일+버퍼1일) → 착수 3/10 = 오늘
-    docs = [Document(name="등본", doc_code="R", lead_time_business_days=1)]
+    docs = [Document(name="테스트서류", doc_code="R", lead_time_business_days=1)]
     plan = _plan_of([_policy("P1", apply_end="2026-03-12", documents=docs)])
     item = _by_id(plan, "P1")
     assert item.status == "URGENT"
@@ -329,7 +325,7 @@ def test_지금_시작해도_늦으면_INFEASIBLE() -> None:
 
 def test_급한_순서로_정렬된다() -> None:
     docs_slow = [Document(name="심사", doc_code="S", lead_time_business_days=10)]
-    docs_fast = [Document(name="등본", doc_code="R", lead_time_business_days=1)]
+    docs_fast = [Document(name="테스트서류", doc_code="R", lead_time_business_days=1)]
     plan = _plan_of(
         [
             _policy("ROLL", is_rolling=True),
@@ -424,7 +420,7 @@ def test_같은_서류의_소요일이_다르면_오래_걸리는_쪽을_남긴�
 
 
 def test_서류_기한은_가장_이른_착수일이다() -> None:
-    doc = Document(name="등본", doc_code="R", lead_time_business_days=0)
+    doc = Document(name="테스트서류", doc_code="R", lead_time_business_days=0)
     plan = _plan_of(
         [
             _policy("P1", apply_end="2026-04-30", documents=[doc]),
@@ -442,7 +438,7 @@ def test_서류_비용이_합산된다() -> None:
                 "P1",
                 apply_end="2026-04-30",
                 documents=[
-                    Document(name="등본", doc_code="R", cost_krw=400),
+                    Document(name="테스트서류", doc_code="R", cost_krw=400),
                     Document(name="소득증명", doc_code="I", cost_krw=1000),
                 ],
             )
@@ -454,7 +450,11 @@ def test_서류_비용이_합산된다() -> None:
 def test_계획에_없는_정책의_서류는_목록에_없다() -> None:
     young = UserProfile(core=Core(birth_date=date(2015, 1, 1), region_code="41135"))
     snapshot = compile_snapshot(
-        [_policy("P1", apply_end="2026-04-30", documents=[Document(name="등본", doc_code="R")])],
+        [
+            _policy(
+                "P1", apply_end="2026-04-30", documents=[Document(name="테스트서류", doc_code="R")]
+            )
+        ],
         version="v",
     )
     verdicts = judge_all(snapshot, young, TODAY)
@@ -537,9 +537,7 @@ def test_ics_설명에_담당부서가_들어간다() -> None:
 
 
 def test_ics_UID_는_정책마다_다르다() -> None:
-    plan = _plan_of(
-        [_policy("P1", apply_end="2026-04-30"), _policy("P2", apply_end="2026-05-30")]
-    )
+    plan = _plan_of([_policy("P1", apply_end="2026-04-30"), _policy("P2", apply_end="2026-05-30")])
     text = to_ics(plan).decode("utf-8")
     uids = [ln for ln in text.split("\r\n") if ln.startswith("UID:")]
     assert len(uids) == len(set(uids)) == 4
@@ -554,7 +552,7 @@ def test_계획_응답은_JSON_으로_왕복한다() -> None:
             _policy(
                 "P1",
                 apply_end="2026-04-30",
-                documents=[Document(name="등본", doc_code="R", lead_time_business_days=0)],
+                documents=[Document(name="테스트서류", doc_code="R", lead_time_business_days=0)],
             )
         ]
     )

@@ -80,8 +80,7 @@ def test_확인완료로_올리려면_무엇을_봤는지_남아야_한다(specs
         and not (s.source_url and _DEEP_LINK.match(s.source_url))
     ]
     assert not 근거없이_확인됨, (
-        "확인완료로 표시했지만 무엇을 확인했는지 가리키는 링크가 없습니다: "
-        f"{근거없이_확인됨}"
+        f"확인완료로 표시했지만 무엇을 확인했는지 가리키는 링크가 없습니다: {근거없이_확인됨}"
     )
 
 
@@ -96,11 +95,7 @@ def test_링크만으로는_확인완료가_되지_않는다(specs):
     그래서 **그 페이지가 뭐라고 적었는지**를 한 줄로 남기게 한다. 옮겨 적는 순간
     CSV 값과 다르면 눈에 띈다.
     """
-    빈칸 = [
-        f"{s.doc_code} {s.name}"
-        for s in specs.values()
-        if s.verified and not s.evidence_quote
-    ]
+    빈칸 = [f"{s.doc_code} {s.name}" for s in specs.values() if s.verified and not s.evidence_quote]
     assert not 빈칸, f"확인완료인데 근거문구가 없습니다: {빈칸}"
 
     날짜없음 = [
@@ -125,8 +120,7 @@ def test_검증할_출처가_원래_없는_서류는_따로_분류한다(specs):
             s.issue_kind, "공적출처"
         )
         assert s.verification_kind == expected, (
-            f"{s.doc_code} {s.name}: 발급유형 {s.issue_kind} 인데 "
-            f"검증유형이 {s.verification_kind}"
+            f"{s.doc_code} {s.name}: 발급유형 {s.issue_kind} 인데 검증유형이 {s.verification_kind}"
         )
 
 
@@ -211,15 +205,15 @@ KNOWN_UNMATCHED = {
     "월세지원 신청서",
     "소득·재산 신고서",
     # Additional notices added by the AI rehearsal corpus. These names need
-    # master CSV entries or explicit aliases before they can carry confirmed
-    # issue/fee metadata in the application plan.
-    "등본",
-    "경력증명서",
-    "사업자등록증",
-    "건강보험 확인서류",
-    "주택 임대차 계약 신고필증",
-    "확정일자가 날인된 임대차계약서 사본",
-    "지방세 세목별 과세증명서(전국)",
+    # master CSV entries before they can carry confirmed issue/fee metadata.
+    # 발급처가 마스터 항목과 같은 '등본'·'확정일자가 날인된 임대차계약서 사본'은
+    # 별칭으로 해소했다. 아래는 마스터에 행 자체가 없는 서류라서, 소요일을 모르는
+    # 채로 넣으면 0일(=즉시 발급)로 굳는다 — 미매핑(2일 추정)이 더 보수적이다.
+    "경력증명서",  # 회사 발급. 재직증명서(D032)와 다른 서류
+    "사업자등록증",  # 본인 보관 증서. 홈택스 '사업자등록증명'(D010)과 다름
+    "건강보험 확인서류",  # 자격득실(D014)인지 납부확인서(D015)인지 공고가 안 밝힌다
+    "주택 임대차 계약 신고필증",  # 부동산거래관리시스템 발급
+    "지방세 세목별 과세증명서(전국)",  # 납세증명서(D012)와 다른 서식
 }
 
 

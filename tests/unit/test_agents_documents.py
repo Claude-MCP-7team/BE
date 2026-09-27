@@ -31,6 +31,30 @@ def test_모델의_정식_명칭은_마스터에_글자_그대로_있을_때만_
     assert resolve_doc_code("본인신용정보조회서", None) is None
 
 
+def test_수식어만_다른_표기는_별칭으로_흡수한다():
+    # 실공고에 나온 표기들 (이슈 #3). 발급처가 같은 서류에 수식어만 붙은 경우다.
+    assert resolve_doc_code("등본", None) == "D001"
+    assert resolve_doc_code("초본", None) == "D002"
+    assert resolve_doc_code("확정일자가 날인된 임대차계약서 사본", None) == "D035"
+    assert resolve_doc_code("주택 임대차계약서 사본", None) == "D035"
+
+
+def test_마스터에_없는_서류는_매핑하지_않는다():
+    """소요일을 모르는 서류를 마스터에 넣으면 '0일 확정'이 되어 계획이 틀린다.
+
+    미매핑은 DEFAULT_UNKNOWN_LEAD_BUSINESS_DAYS(2일) + estimated 로 나가므로
+    모르는 상태를 모른다고 말하는 쪽이 보수적이다 (이슈 #3의 5번 항목).
+    """
+    for name in [
+        "경력증명서",  # 회사 발급. 재직증명서(D032)와 다른 서류다
+        "사업자등록증",  # 본인 보관 증서. 홈택스 발급 '사업자등록증명'(D010)과 다르다
+        "건강보험 확인서류",  # 자격득실(D014)인지 납부확인서(D015)인지 공고가 밝히지 않는다
+        "주택 임대차 계약 신고필증",  # 부동산거래관리시스템 발급. 마스터에 없다
+        "지방세 세목별 과세증명서(전국)",  # 납세증명서(D012)와 다른 서식이다
+    ]:
+        assert resolve_doc_code(name, None) is None, name
+
+
 def test_비슷한_이름의_다른_서류로_넘어가지_않는다():
     # 마스터에 '지방세 납세증명서'가 있어도 '미과세증명서'는 다른 서류다. 유사도로 잇지 않는다.
     assert resolve_doc_code("지방세 미과세증명서", None) is None
