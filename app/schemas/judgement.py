@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import msgspec
 
-from app.schemas.enums import Confidence, Verdict
+from app.schemas.enums import BenefitType, Confidence, Verdict
 
 # 룰이 비교하는 값의 형태. object 로 두면 계약서(JSON Schema)를 만들 수 없고,
 # FE 가 어떤 타입이 올지 알 수 없다.
@@ -64,6 +64,9 @@ class UnknownRule(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
 
 class JudgementResult(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     policy_id: str
+    # 정책명. 판정 카드가 ID(`GG-12048`)만 그리지 않게 한다 (BE#8).
+    # 필수다 — 공고는 제목 없이 게시될 수 없어서(Meta.title 필수) 엔진이 항상 채운다.
+    title: str
     verdict: Verdict
     confidence: Confidence
 
@@ -97,6 +100,25 @@ class JudgementResult(msgspec.Struct, kw_only=True, forbid_unknown_fields=True):
     dept_name: str | None = None
     dept_tel: str | None = None
     origin_url: str | None = None
+
+    # --- 카드에 그릴 정책 메타데이터 (BE#8) ---------------------------------
+    # 이름·의미·기본값이 `/v1/policies` 의 PolicySummary 와 **같다.** FE 가 목록과
+    # 판정 카드를 같은 코드로 그릴 수 있어야 하고, 두 화면이 같은 정책에 다른 값을
+    # 보여주면 어느 쪽이 맞는지 아무도 확인하지 않는다 (원문 링크에서 한 번 겪었다).
+    #
+    # **모르는 값은 null 이다, 0 이 아니다.** amount_krw 가 null 이면 '금액 미상',
+    # 0 이면 '0원'이라는 주장이다. 둘을 섞으면 유료 지원이 '0원'으로 보인다.
+    #
+    # apply_end 가 null 인 경우는 둘이다: 상시모집(is_rolling=true) 이거나 공고에서
+    # 마감일을 못 읽은 경우. D-day 는 apply_end 가 있을 때만 계산한다.
+    benefit_type: BenefitType | None = None
+    amount_krw: int | None = None
+    duration_months: int | None = None
+    estimated_total_krw: int | None = None
+    amount_confidence: Confidence = "ESTIMATED"
+    apply_start: str | None = None
+    apply_end: str | None = None
+    is_rolling: bool = False
 
     disclaimer_required: bool = True
 

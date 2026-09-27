@@ -330,6 +330,51 @@ def test_모든_화면이_같은_원문_링크를_낸다(client, profile):
         assert url == 판정[pid] == 목록[pid], pid
 
 
+def test_판정_카드에_정책명_마감일_금액이_실린다(client, profile):
+    """판정 응답만으로 카드를 그릴 수 있어야 한다 (BE#8).
+
+    예전엔 `policy_id` 만 있어서 FE 가 `GG-12048` 을 그대로 그리거나, 목록을
+    따로 불러 합쳐야 했다. 그리고 **목록과 판정이 같은 정책에 같은 값을 내야
+    한다** — 원문 링크가 두 화면에서 달랐을 때 아무도 몰랐던 것과 같은 자리다.
+    """
+    판정 = results_of(client, profile)
+    목록 = {
+        i["policy_id"]: i
+        for i in client.get("/v1/policies", params={"limit": 100}).json()["items"]
+    }
+
+    fields = (
+        "title", "benefit_type", "amount_krw", "duration_months",
+        "estimated_total_krw", "amount_confidence", "apply_start", "apply_end",
+        "is_rolling",
+    )
+    for pid, result in 판정.items():
+        assert result["title"], pid
+        for field in fields:
+            assert result[field] == 목록[pid][field], (pid, field)
+
+    # 마감일이 있는 공고는 FE 가 D-day 를 계산할 수 있다
+    assert 판정[ELIGIBLE]["apply_end"] == "2026-11-30"
+
+
+def test_금액을_모르면_0_이_아니라_null_이다(client, profile):
+    """0 은 '0원'이라는 주장이고, null 은 주장이 없는 상태다.
+
+    둘을 섞으면 유료 지원이 '0원'으로 보인다 — 오늘 서류 비용에서 FE 가 실제로
+    그렇게 그렸다 (FE#21, FE PR #26). 게시 23건 중 금액이 있는 건 4건뿐이라,
+    나머지가 0 으로 나가면 카드 대부분이 '지원금 0원'이 된다.
+    """
+    판정 = results_of(client, profile)
+
+    모름 = [r for r in 판정.values() if r["amount_krw"] is None]
+    앎 = [r for r in 판정.values() if r["amount_krw"] is not None]
+    assert 모름 and 앎, "금액이 있는 것과 없는 것이 둘 다 있어야 이 검사가 의미 있다"
+
+    for r in 판정.values():
+        assert r["amount_krw"] != 0, r["policy_id"]
+        assert r["estimated_total_krw"] != 0, r["policy_id"]
+
+
 def test_원문_링크에는_스킴이_있다(client, profile):
     """스킴이 없으면 브라우저가 `<a href>` 를 **상대 경로**로 읽는다.
 

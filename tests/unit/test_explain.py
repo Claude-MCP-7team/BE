@@ -22,6 +22,7 @@ def matched(field="age", value=24):
 def ineligible(**over: Any) -> JudgementResult:
     base: dict[str, Any] = {
         "policy_id": "P",
+        "title": "테스트 정책",
         "verdict": "INELIGIBLE",
         "confidence": "CONFIRMED",
         "matched": [matched()],

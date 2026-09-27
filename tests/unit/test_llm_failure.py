@@ -41,7 +41,7 @@ needs_sdk = pytest.mark.skipif(
 
 def _result() -> JudgementResult:
     return JudgementResult(
-        policy_id="P1", verdict="ELIGIBLE", confidence="CONFIRMED",
+        policy_id="P1", title="테스트 정책", verdict="ELIGIBLE", confidence="CONFIRMED",
         origin_url="https://example.invalid/P1",
     )
 

@@ -232,6 +232,7 @@ def explain(
 
     return JudgementResult(
         policy_id=policy.policy_id,
+        title=policy.meta.title,
         verdict=verdict,  # type: ignore[arg-type]
         confidence=worst_confidence,  # type: ignore[arg-type]
         future_eligible_from=future_from,
@@ -242,6 +243,14 @@ def explain(
         dept_name=policy.meta.dept.name,
         dept_tel=policy.meta.dept.tel,
         origin_url=origin,
+        benefit_type=policy.benefit.type,
+        amount_krw=policy.benefit.amount_krw,
+        duration_months=policy.benefit.duration_months,
+        estimated_total_krw=policy.benefit.estimated_total_krw,
+        amount_confidence=policy.benefit.amount_confidence,
+        apply_start=policy.period.apply_start,
+        apply_end=policy.period.apply_end,
+        is_rolling=policy.period.is_rolling,
     )
 
 

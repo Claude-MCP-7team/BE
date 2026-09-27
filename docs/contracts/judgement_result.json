@@ -8,6 +8,9 @@
         "policy_id": {
           "type": "string"
         },
+        "title": {
+          "type": "string"
+        },
         "verdict": {
           "enum": [
             "ELIGIBLE",
@@ -105,6 +108,90 @@
           ],
           "default": null
         },
+        "benefit_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "cash_lump",
+                "cash_monthly",
+                "loan",
+                "service",
+                "voucher"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "amount_krw": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "duration_months": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "estimated_total_krw": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "amount_confidence": {
+          "enum": [
+            "CONFIRMED",
+            "ESTIMATED",
+            "NEEDS_REVIEW"
+          ],
+          "default": "ESTIMATED"
+        },
+        "apply_start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "apply_end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "is_rolling": {
+          "type": "boolean",
+          "default": false
+        },
         "disclaimer_required": {
           "type": "boolean",
           "default": true
@@ -112,6 +199,7 @@
       },
       "required": [
         "policy_id",
+        "title",
         "verdict",
         "confidence"
       ],

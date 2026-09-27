@@ -242,7 +242,10 @@ def test_미확인_필드는_None_으로_구분된다():
 
 
 def _result(**kw) -> JudgementResult:
-    base = dict(policy_id="P", verdict="ELIGIBLE", confidence="CONFIRMED", origin_url="https://x/1")
+    base = dict(
+        policy_id="P", title="테스트 정책", verdict="ELIGIBLE", confidence="CONFIRMED",
+        origin_url="https://x/1",
+    )
     base.update(kw)
     return JudgementResult(**base)
 
