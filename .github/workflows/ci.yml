@@ -1,0 +1,214 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ypc_test
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # batch 추가분까지 설치한다. mypy 가 app/llm/client.py 의 TYPE_CHECKING
+      # 블록에서 anthropic 타입을 해석해야 하는데, 없으면 여기서만 실패한다.
+      - name: 의존성 설치
+        run: pip install -e ".[dev,batch]"
+
+      - name: 린트 (역할 경계 포함)
+        run: ruff check .
+
+      # CI 가 돌리지 않는 동안 타입 에러가 11건에서 21건으로 늘었다. 그중 하나는
+      # 한 변수에 두 타입을 담아 실제로 읽기 어려워진 코드였다. 쌓이면 아무도
+      # 손대지 않으므로 여기서 0 을 유지한다.
+      - name: 타입 검사 (mypy strict)
+        run: mypy
+
+      - name: 마이그레이션 적용
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d ypc_test -v ON_ERROR_STOP=1 \
+               -f db/migrations/0001_init.sql
+
+      - name: DB 제약조건 검증
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d ypc_test -f db/verify_schema.sql
+
+      - name: 단위 테스트 (DB 통합 테스트 포함)
+        env:
+          # 이 값이 없으면 세션 저장소 테스트가 조용히 skip 된다.
+          # 안 도는 테스트는 없는 테스트다.
+          # 비밀번호는 DSN 에 박지 않고 PGPASSWORD 로 준다 (asyncpg 가 libpq 환경변수를
+          # 읽는다) — DSN 이 로그나 에러 메시지에 그대로 찍히는 경로가 많다.
+          DATABASE_URL: postgresql://postgres@localhost:5432/ypc_test
+          PGPASSWORD: postgres
+          # 같은 이유로 암호화 키도 준다. 없으면 /v1/sessions 가 저장소 없음(503)
+          # 으로 짧게 끝나, 그 엔드포인트를 훑는 테스트가 전부 skip 된다.
+          # 테스트 전용 키다 — 어디에도 쓰이지 않는다.
+          PROFILE_ENC_KEYS: "1:dGVzdC1vbmx5LWtleS1kby1ub3QtdXNlLTMyYnl0ZXM="
+        run: pytest
+
+      - name: DB 통합 테스트가 실제로 실행됐는지 확인
+        env:
+          DATABASE_URL: postgresql://postgres@localhost:5432/ypc_test
+          PGPASSWORD: postgres
+        run: |
+          # skip 된 채로 초록불이 뜨면 DB 계층이 검증되지 않은 채 배포된다
+          pytest tests/unit/test_db_sessions.py -q --no-header -p no:cacheprovider \
+            | tee /tmp/db-tests.log
+          if grep -qE '[0-9]+ skipped' /tmp/db-tests.log; then
+            echo "::error::DB 통합 테스트가 skip 되었습니다 — DATABASE_URL 을 확인하세요"
+            exit 1
+          fi
+
+      - name: 계약 스키마가 최신인지 확인
+        run: |
+          python tools/export_contract.py
+          git diff --exit-code docs/contracts/ || {
+            echo "::error::계약 스키마가 코드와 다릅니다. python tools/export_contract.py 를 실행하고 커밋하세요"
+            exit 1
+          }
+
+      - name: 엔진 벤치마크 (성능 회귀 감시)
+        run: python bench/engine_bench.py
+
+  # 한국어 Windows 는 기본 인코딩이 cp949 다. ubuntu 러너는 UTF-8 이라
+  # encoding 을 생략한 파일 입출력이 여기서는 통과하고 팀원 기계에서만 죽는다.
+  # 실제로 그렇게 터진 적이 있어서 (test_db_contract.py, UnicodeDecodeError)
+  # 로캘이 다른 환경을 CI 에 한 칸 둔다.
+  windows-cp949:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 의존성 설치
+        run: pip install -e ".[dev]"
+
+      - name: 단위 테스트 (cp949 로캘)
+        env:
+          # 파이썬의 UTF-8 모드를 끈다 = 로캘 기본 인코딩(cp949)을 그대로 쓴다
+          PYTHONUTF8: "0"
+        run: pytest
+
+      - name: 계약 내보내기 (cp949 로캘)
+        env:
+          PYTHONUTF8: "0"
+        run: python tools/export_contract.py
+
+      - name: 벤치마크 (cp949 로캘)
+        env:
+          PYTHONUTF8: "0"
+        run: python bench/engine_bench.py
+
+  # Dockerfile 은 로컬에서 검증하기 어렵다 — 개발 기계에 도커 데몬이 없을 수 있고,
+  # "빌드는 되겠지"로 남겨두면 배포 당일에야 깨진 걸 안다. 러너에는 도커가 있으므로
+  # 매 푸시마다 실제로 말아서 띄우고, docs/DEPLOY.md 가 주장하는 것들을 확인한다.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 이미지 빌드
+        run: docker build -t ypc-backend:ci .
+
+      - name: 컨테이너 기동
+        run: |
+          docker run -d --name ypc -p 8000:8000 \
+            -e SNAPSHOT_PATH=/app/data/demo/snapshot.json \
+            -e CORS_ORIGINS=https://ypc-fe.example \
+            -e YPC_FIXED_TODAY=2026-09-24 \
+            ypc-backend:ci
+        # 기준일은 data/demo/ seed 를 수집한 날이다. 앞뒤로 옮기면 판정이 달라진다 —
+        # seed 가 실공고라 나이·마감이 날짜를 탄다 (data/demo/README.md).
+
+      - name: 스냅샷을 적재하고 준비 상태가 될 때까지 기다린다
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/readyz | grep -q '"ready":true'; then
+              curl -sS http://127.0.0.1:8000/readyz; echo; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::60초 안에 준비 상태가 되지 않았습니다"
+          exit 1
+
+      - name: 판정이 실제로 돈다
+        # 배포된 이미지에서 **배지 네 개가 전부 나오는지**가 여기서 보려는 것이다.
+        # 단언을 낮추면 확인이 사라진다.
+        #
+        # 한 사용자로 넷이 다 나오는 건 목록이 충분히 다양해진 덕이다. 공고가
+        # 줄어 한 종류가 빠지면 여기서 먼저 깨진다 — 그게 발표 전에 알아야 할 일이다.
+        run: |
+          curl -fsS -X POST http://127.0.0.1:8000/v1/judge \
+            -H "Content-Type: application/json" \
+            -d @data/demo/profile.demo.json -o judge.json
+          python3 - <<'PY'
+          import json
+
+          body = json.load(open("judge.json", encoding="utf-8"))
+          summary = body["summary"]
+          print("summary:", summary)
+          assert body["results"], "결과가 비어 있습니다"
+
+          missing = [r["policy_id"] for r in body["results"] if not r["origin_url"]]
+          assert not missing, f"근거 링크 없는 결과: {missing}"
+
+          # 하나라도 0이면 FE 가 그 배지를 배포된 서버에서 한 번도 못 받아 본다.
+          for key in ("eligible", "ineligible", "needs_info", "future_eligible"):
+              assert summary[key] >= 1, f"{key} 가 한 번도 안 나왔다: {summary}"
+          PY
+
+      - name: ETag 가 브라우저에 노출된다
+        # 노출하지 않으면 FE 가 ETag 를 읽지 못해 304 캐시가 조용히 무력화된다.
+        # 에러가 나지 않는 고장이라, 여기서 안 잡으면 아무도 모른다.
+        run: |
+          headers=$(curl -fsS -D- -o /dev/null \
+            -H "Origin: https://ypc-fe.example" \
+            http://127.0.0.1:8000/v1/policies | tr 'A-Z' 'a-z')
+          echo "$headers"
+          echo "$headers" | grep -q 'access-control-allow-origin: https://ypc-fe.example' \
+            || { echo "::error::허용 출처에 CORS 가 열리지 않았습니다"; exit 1; }
+          echo "$headers" | grep -q 'access-control-expose-headers:.*etag' \
+            || { echo "::error::ETag 가 노출되지 않습니다 — FE 의 304 캐시가 죽습니다"; exit 1; }
+
+      - name: 루트로 돌지 않는다
+        run: |
+          uid=$(docker exec ypc id -u)
+          [ "$uid" != "0" ] || { echo "::error::컨테이너가 root 로 실행 중입니다"; exit 1; }
+          echo "uid=$uid"
+
+      - name: 배치 의존성이 이미지에 없다
+        # API 는 수집기도 Anthropic SDK 도 import 하지 않는다. 들어가 있으면
+        # 쓰지도 않는 의존성이 배포 표면에 남는다.
+        run: |
+          if docker exec ypc python -c "import anthropic" 2>/dev/null; then
+            echo "::error::anthropic SDK 가 서버 이미지에 들어 있습니다"
+            exit 1
+          fi
+          echo "배치 의존성 없음 — 의도대로"
+
+      - name: 컨테이너 로그
+        if: always()
+        run: docker logs ypc

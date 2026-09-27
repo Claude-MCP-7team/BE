@@ -1,0 +1,7 @@
+{
+  "type": "/problems/invalid-request",
+  "title": "요청이 올바르지 않습니다",
+  "status": 422,
+  "detail": "요청 본문이 올바른 JSON 이 아닙니다: JSON is malformed: object keys must be strings (byte 1)",
+  "instance": "/v1/judge"
+}

@@ -1,0 +1,49 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "age",
+      "op": "between",
+      "value_number": null,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": [19, 39],
+      "unit": "세",
+      "source_quote": "창의적인 창업 아이템을 가진 청년창업자를 발굴 선정하여",
+      "time_satisfiable": true,
+      "askable": false,
+      "question_template": null,
+      "ambiguous": false,
+      "confidence": "ESTIMATED",
+      "note": "본문에 연령이 없어 API 구조화 필드(19~39)를 근거로 쓴다"
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "창업 아이템을 심사해 '우수 초기창업자'로 선정된 사람만 받는다",
+      "source_quote": "창의적인 창업 아이템을 가진 청년창업자를 발굴 선정하여 지속가능성을 갖춘 기업으로 성장할 수 있도록 지원",
+      "reason": "심사 통과 여부는 사용자 프로필로 판정할 수 없다. 나이·지역만 보고 적격으로 내보내면 선정 절차가 있다는 사실이 화면에서 사라진다."
+    }
+  ],
+  "benefit": {
+    "type": "cash_lump",
+    "amount_krw": 10000000,
+    "duration_months": null,
+    "estimated_total_krw": 10000000,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "창업 사업화 자금 1인당 최대 10,000천원 지원"
+  },
+  "period": {
+    "apply_start": "2026-03-02",
+    "apply_end": "2026-11-30",
+    "is_rolling": false,
+    "source_quote": "20260302 ~ 20261130"
+  },
+  "documents": [],
+  "conflicts": [],
+  "dept": {
+    "name": "경기도 평택시 기획항만경제실",
+    "tel": null,
+    "source_quote": "경기도 평택시 기획항만경제실"
+  }
+}

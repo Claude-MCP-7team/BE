@@ -1,0 +1,8 @@
+{
+  "type": "/problems/policy-not-found",
+  "title": "그런 정책이 없습니다",
+  "status": 404,
+  "detail": "없는 정책입니다: NO-SUCH-POLICY",
+  "instance": "/v1/policies/NO-SUCH-POLICY",
+  "policy_id": "NO-SUCH-POLICY"
+}

@@ -1,0 +1,7 @@
+{
+  "type": "/problems/invalid-profile",
+  "title": "조건 입력이 올바르지 않습니다",
+  "status": 422,
+  "detail": "household_income_ratio_median 는 0~1000 범위여야 합니다 (받은 값: 3000000). 단위를 확인하세요 - at `$.core`",
+  "instance": "/v1/judge"
+}

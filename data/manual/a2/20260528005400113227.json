@@ -1,0 +1,54 @@
+{
+  "conditions": [
+    {
+      "kind": "eligibility",
+      "field": "household_income_ratio_median",
+      "op": "<=",
+      "value_number": 32,
+      "value_text": null,
+      "value_bool": null,
+      "value_list": null,
+      "unit": "기준 중위소득 대비 %",
+      "source_quote": "생계급여(기준 중위소득 32%이하) 수급가구 중 임산부·영유아·아동·청년 포함가구",
+      "time_satisfiable": false,
+      "askable": true,
+      "question_template": "건강보험료 기준으로 소득이 기준 중위소득의 몇 % 정도인가요? (취업·창업자는 본인 보험료, 학생·취업준비생은 부모 등 부양자의 보험료 기준)",
+      "ambiguous": false,
+      "confidence": "CONFIRMED",
+      "note": "생계급여 수급 기준이 중위소득 32% 이하다. 수급 여부 자체를 묻는 필드가 없어 소득 비율로 근사한다"
+    }
+  ],
+  "unrepresentable_conditions": [
+    {
+      "summary": "생계급여 수급가구여야 하고, 그 가구에 임산부·영유아·아동·청년이 있어야 한다",
+      "source_quote": "생계급여(기준 중위소득 32%이하) 수급가구 중 임산부·영유아·아동·청년 포함가구",
+      "reason": "소득 32% 이하는 생계급여의 '기준'이지 수급 자체가 아니다. 소득만 맞고 수급자가 아닌 사람이 적격으로 나갈 수 있어, 소득 룰과 별도로 남긴다."
+    },
+    {
+      "summary": "생계급여 가구원 중 보장시설 수급자와 영양플러스 이용자는 가구원 수에서 뺀다",
+      "source_quote": "생계급여 수급가구 가구원 중 「국민기초생활 보장법」상 보장시설 수급자는 가구원 수 산출에서 제외",
+      "reason": "가구원 수를 다시 세는 규칙이라 household_size 에 그대로 넣을 수 없다. 넣으면 사용자가 입력한 가구원 수와 공고가 세는 수가 달라진다."
+    }
+  ],
+  "benefit": {
+    "type": "voucher",
+    "amount_krw": null,
+    "duration_months": null,
+    "estimated_total_krw": null,
+    "amount_confidence": "ESTIMATED",
+    "source_quote": "지원방식: 전자바우처(카드방식)"
+  },
+  "period": {
+    "apply_start": "2025-12-22",
+    "apply_end": "2026-12-11",
+    "is_rolling": false,
+    "source_quote": "20251222 ~ 20261211"
+  },
+  "documents": [],
+  "conflicts": [],
+  "dept": {
+    "name": "농림축산식품부",
+    "tel": "1551-0857",
+    "source_quote": "전화신청 : 고객지원센터 (1551-0857)를 통해 신청"
+  }
+}

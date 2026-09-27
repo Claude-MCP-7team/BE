@@ -1,0 +1,19 @@
+{
+  "conditions": [
+    {"kind": "eligibility", "field": "household_income_ratio_median", "op": "<=", "value_number": 180, "value_text": null, "value_bool": null, "value_list": null, "unit": "%",
+     "source_quote": "중위소득 180%",
+     "time_satisfiable": false, "askable": true, "question_template": "가구 소득이 기준 중위소득의 몇 % 정도인가요?",
+     "ambiguous": true, "confidence": "ESTIMATED",
+     "note": "공고가 '180%'라고만 적고 '이하'를 쓰지 않았다. 통상 상한이므로 <= 로 옮기되 담당부서 확인이 필요하다"}
+  ],
+  "unrepresentable_conditions": [
+    {"summary": "전월세 보증금 대출을 받아 상환 중이어야 함 (지원액이 대출잔액 기준)", "source_quote": "전월세 보증금 대출잔액의 1%, 가구당 최대 100만원(1회/1년)", "reason": "대출 보유·잔액 필드가 없다"},
+    {"summary": "신혼부부와 청년의 지원율·한도가 다름 (2%/300만원 vs 1%/100만원)", "source_quote": "신혼부부 최대 300만원, 청년 최대 100만원", "reason": "혜택이 신청인 유형에 따라 갈린다. 규칙이 아니라 금액 산정 문제"}
+  ],
+  "benefit": {"type": "cash_lump", "amount_krw": 1000000, "duration_months": null, "estimated_total_krw": 1000000, "amount_confidence": "ESTIMATED",
+              "source_quote": "청    년: 전월세 보증금 대출잔액의 1%, 가구당 최대 100만원(1회/1년)"},
+  "period": {"apply_start": "2026-03-09", "apply_end": "2026-03-27", "is_rolling": false, "source_quote": "20260309 ~ 20260327"},
+  "documents": [],
+  "conflicts": [],
+  "dept": {"name": "경기도 군포시", "tel": null, "source_quote": "경기도 군포시"}
+}
